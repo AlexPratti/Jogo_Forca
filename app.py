@@ -186,19 +186,19 @@ else:
                                     st.rerun()
                                     
             # Condições de vitória ou derrota
-            if st.session_state.erros >= st.session_state.max_erros:
+            if st.session_state.erros >= st.session_state.max_erros and not st.session_state.rodada_encerrada:
                 st.error("💀 Você foi enforcado! Game Over!")
                 st.error(f"A resposta era: {st.session_state.palavra}")
-                if not st.session_state.rodada_encerrada:
-                    st.session_state.derrotas += 1
-                    st.session_state.rodada_encerrada = True
+                st.session_state.derrotas += 1
+                st.session_state.rodada_encerrada = True
                 st.snow()
-            elif all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra):
+            
+            elif all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra) and not st.session_state.rodada_encerrada:
                 st.balloons()
                 st.success("Parabéns! Você acertou a resposta!")
-                if not st.session_state.rodada_encerrada:
-                    st.session_state.acertos += 1
-                    st.session_state.rodada_encerrada = True
+                st.session_state.acertos += 1
+                st.session_state.rodada_encerrada = True
+
 
             # Informações da rodada
             st.write(f"Letras erradas: {', '.join(st.session_state.letras_erradas)}")
