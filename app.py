@@ -105,7 +105,11 @@ else:
     if st.session_state.jogador.lower() == "pratti":
         arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
         if arquivo:
-            # Salva localmente
+            # Salva localmente o arquivo enviado
+            with open("perguntas.docx", "wb") as f:
+                f.write(arquivo.getbuffer())
+
+            # Faz upload para Supabase
             with open("perguntas.docx", "rb") as f:
                 status, resposta = upload_arquivo(f)
             if status == 200:
@@ -113,14 +117,9 @@ else:
             else:
                 st.error(f"Erro ao enviar arquivo. Código: {status} - {resposta}")
 
-
-        
             # Extrai perguntas
             pares = extrair_perguntas_respostas("perguntas.docx")
             st.session_state.pares = pares
-
-
-
         else:
             st.info("Nenhum arquivo carregado ainda.")
 
@@ -135,8 +134,8 @@ else:
         else:
             st.error("Não foi possível baixar o arquivo do Supabase.")
             st.session_state.fim_de_jogo = True
-    # Placar fixo no topo
 
+    # Placar fixo no topo
     st.markdown(
         f"""
         <div style='background-color:#222; color:white; padding:10px; border-radius:5px;'>
@@ -164,6 +163,7 @@ else:
         if st.button(label_btn):
             iniciar_nova_pergunta()
             st.rerun()
+
 
         if st.button("RESETAR"):
             st.session_state.indice = 0
