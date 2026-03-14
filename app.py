@@ -97,7 +97,7 @@ else:
     st.write(f"Jogador: {st.session_state.jogador}")
     st.write(f"ERROS: {st.session_state.erros}")
 
-    # Mostrar imagem da forca conforme erros
+    # Mostrar imagem da forca conforme erros (erro0 até erro6)
     nome_imagem = f"erro{st.session_state.erros}.png"
     try:
         st.image(nome_imagem, caption=f"Erros: {st.session_state.erros}/{st.session_state.max_erros}")
