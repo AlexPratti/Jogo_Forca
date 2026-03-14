@@ -10,7 +10,8 @@ st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
 URL_SUPABASE = st.secrets["URL_SUPABASE"]
 KEY_SUPABASE = st.secrets["KEY_SUPABASE"]
 
-supabase = create_client(url, key)
+
+supabase = create_client(URL_SUPABASE, KEY_SUPABASE)
 
 # CSS para fundo escuro e título laranja
 st.markdown(
