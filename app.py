@@ -35,6 +35,8 @@ else:
 if 'pares' not in st.session_state:
     st.session_state.pares = pares
     st.session_state.indice = None  # índice da pergunta atual
+    st.session_state.acertos = 0
+    st.session_state.derrotas = 0
 
 def iniciar_nova_pergunta():
     if st.session_state.indice is None:
@@ -55,6 +57,11 @@ def iniciar_nova_pergunta():
         st.session_state.palavra = None
 
 st.title("🎮 Jogo da Forca")
+
+# Placar
+st.sidebar.title("📊 Placar")
+st.sidebar.write(f"✅ Acertos: {st.session_state.acertos}")
+st.sidebar.write(f"❌ Derrotas: {st.session_state.derrotas}")
 
 # Botão para iniciar ou sortear nova pergunta
 if st.button("Jogar / Sortear nova pergunta"):
@@ -105,9 +112,11 @@ if st.session_state.get("pergunta"):
     # Condições de vitória ou derrota
     if st.session_state.erros >= st.session_state.max_erros:
         st.error(f"Game Over! A resposta era: {st.session_state.palavra}")
+        st.session_state.derrotas += 1
     elif all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra):
         st.balloons()
         st.success("Parabéns! Você acertou a resposta!")
+        st.session_state.acertos += 1
 
     # Mostra as letras que já foram tentadas
     st.write(f"Letras erradas: {', '.join(st.session_state.letras_erradas)}")
