@@ -82,19 +82,28 @@ else:
     # === Interface principal ===
     st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
-    # Linha de botões
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        if st.button("JOGAR"):
-            iniciar_nova_pergunta()
-            st.rerun()
-    with col2:
+    # Informações gerais no topo
+    st.write(f"Jogador: {st.session_state.jogador}")
+    st.write(f"Acertos: {st.session_state.acertos} | Derrotas: {st.session_state.derrotas}")
+    st.write(f"Erros atuais: {st.session_state.erros}/{st.session_state.max_erros}")
+
+    # Layout com três colunas: forca, controles, jogo
+    col_forca, col_controles, col_jogo = st.columns([1,0.8,2])
+
+    with col_forca:
+        nome_imagem = f"erro{st.session_state.erros}.png"
+        try:
+            st.image(nome_imagem, caption="Forca")
+        except:
+            st.warning(f"Imagem {nome_imagem} não encontrada.")
+
+    with col_controles:
+        st.markdown("### Controles")
         if st.button("LIMPAR FORCA"):
             st.session_state.erros = 0
             st.session_state.letras_corretas = []
             st.session_state.letras_erradas = []
             st.rerun()
-    with col3:
         if st.button("RESETAR"):
             st.session_state.indice = 0
             pergunta, resposta = st.session_state.pares[0]
@@ -106,25 +115,13 @@ else:
             st.session_state.acertos = 0
             st.session_state.derrotas = 0
             st.rerun()
-    with col4: st.button("CORES LETRAS")
-    with col5:
+        st.button("CORES LETRAS")
         if st.button("SAIR DO JOGO"):
             del st.session_state["jogador"]
             st.rerun()
-
-    # Status do jogador
-    st.write(f"Jogador: {st.session_state.jogador}")
-    st.write(f"ERROS: {st.session_state.erros}")
-
-    # Layout lateral: forca à esquerda, jogo à direita
-    col_forca, col_jogo = st.columns([1, 2])
-
-    with col_forca:
-        nome_imagem = f"erro{st.session_state.erros}.png"
-        try:
-            st.image(nome_imagem, caption=f"Erros: {st.session_state.erros}/{st.session_state.max_erros}")
-        except:
-            st.warning(f"Imagem {nome_imagem} não encontrada.")
+        if st.button("PRÓXIMO"):
+            iniciar_nova_pergunta()
+            st.rerun()
 
     with col_jogo:
         if st.session_state.pergunta:
@@ -141,7 +138,7 @@ else:
                       "J","K","L","M","N","Ñ","O","Ó","Ô","Õ","Ö","P","Q","R","S","T","U","Ú","Û","Ü","V","W","X","Y","Z"]
 
             st.markdown("<h3 style='background-color:blue; color:white; padding:5px;'>ESCOLHER UMA LETRA ABAIXO</h3>", unsafe_allow_html=True)
-            cols = st.columns(8, gap="small")  # teclado compacto
+            cols = st.columns(8, gap="small")
             for i, letra in enumerate(letras):
                 with cols[i % 8]:
                     if st.button(letra, key=f"btn_{letra}"):
@@ -174,9 +171,5 @@ else:
 
             st.write(f"Letras erradas: {', '.join(st.session_state.letras_erradas)}")
             st.write(f"Tentativas restantes: {st.session_state.max_erros - st.session_state.erros}")
-
-            if st.button("PRÓXIMO"):
-                iniciar_nova_pergunta()
-                st.rerun()
         else:
             st.info("Clique em **JOGAR** para começar.")
