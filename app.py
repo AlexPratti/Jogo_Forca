@@ -6,8 +6,10 @@ from supabase import create_client
 st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
 
 # Conexão com Supabase
-url = "https://SEU-PROJETO.supabase.co"
-key = "CHAVE-API"
+# O Streamlit busca os valores que você salvou no painel 'Secrets' automaticamente
+URL_SUPABASE = st.secrets["URL_SUPABASE"]
+KEY_SUPABASE = st.secrets["KEY_SUPABASE"]
+
 supabase = create_client(url, key)
 
 # CSS para fundo escuro e título laranja
