@@ -196,4 +196,7 @@ else:
             st.write(f"Tentativas restantes: {st.session_state.max_erros - st.session_state.erros}")
         else:
             if st.session_state.fim_de_jogo:
-                st.markdown("<h2 style='color:red;'>🏁 FIM DE JOGO)
+                st.markdown("<h2 style='color:red;'>🏁 FIM DE JOGO</h2>", unsafe_allow_html=True)
+                st.write(f"Placar final → Acertos: {st.session_state.acertos} | Derrotas: {st.session_state.derrotas}")
+            else:
+                st.info("Clique em **JOGAR** para começar.")
