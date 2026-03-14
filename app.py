@@ -54,6 +54,7 @@ if 'pares' not in st.session_state:
     st.session_state.letras_erradas = []
     st.session_state.erros = 0
     st.session_state.max_erros = 6
+    st.session_state.fim_de_jogo = False
 
 def iniciar_nova_pergunta():
     if st.session_state.indice is None:
@@ -68,10 +69,11 @@ def iniciar_nova_pergunta():
         st.session_state.letras_corretas = []
         st.session_state.letras_erradas = []
         st.session_state.erros = 0
+        st.session_state.fim_de_jogo = False
     else:
         st.session_state.pergunta = None
         st.session_state.palavra = None
-
+        st.session_state.fim_de_jogo = True
 # === Fluxo de entrada do nome do jogador ===
 if "jogador" not in st.session_state:
     nome = st.text_input("Digite seu nome:")
@@ -106,14 +108,19 @@ else:
 
     with col_controles:
         st.markdown("### Controles")
-        if st.button("JOGAR"):
+
+        # Botão dinâmico JOGAR/PRÓXIMO
+        label_btn = "JOGAR" if st.session_state.indice is None else "PRÓXIMO"
+        if st.button(label_btn):
             iniciar_nova_pergunta()
             st.rerun()
+
         if st.button("LIMPAR FORCA"):
             st.session_state.erros = 0
             st.session_state.letras_corretas = []
             st.session_state.letras_erradas = []
             st.rerun()
+
         if st.button("RESETAR"):
             st.session_state.indice = 0
             pergunta, resposta = st.session_state.pares[0]
@@ -124,15 +131,16 @@ else:
             st.session_state.erros = 0
             st.session_state.acertos = 0
             st.session_state.derrotas = 0
-            st.rerun()
-        st.button("CORES LETRAS")
-        if st.button("SAIR DO JOGO"):
-            del st.session_state["jogador"]
-            st.rerun()
-        if st.button("PRÓXIMO"):
-            iniciar_nova_pergunta()
+            st.session_state.fim_de_jogo = False
             st.rerun()
 
+        st.button("CORES LETRAS")
+
+        if st.button("SAIR DO JOGO"):
+            del st.session_state["jogador"]
+            st.session_state.indice = None
+            st.session_state.fim_de_jogo = False
+            st.rerun()
     with col_jogo:
         if st.session_state.pergunta:
             st.markdown(
@@ -149,7 +157,6 @@ else:
 
             st.markdown("<h3 style='background-color:blue; color:white; padding:5px;'>ESCOLHER UMA LETRA ABAIXO</h3>", unsafe_allow_html=True)
 
-            # Verifica se o jogo ainda está ativo
             jogo_ativo = (
                 st.session_state.erros < st.session_state.max_erros and
                 not all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra)
@@ -179,14 +186,14 @@ else:
                 st.error("💀 Você foi enforcado! Game Over!")
                 st.error(f"A resposta era: {st.session_state.palavra}")
                 st.session_state.derrotas += 1
-                st.snow()  # animação de derrota
+                st.snow()
             elif all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra):
                 st.balloons()
                 st.success("Parabéns! Você acertou a resposta!")
                 st.session_state.acertos += 1
 
-            # Informações da rodada (não o placar geral)
             st.write(f"Letras erradas: {', '.join(st.session_state.letras_erradas)}")
             st.write(f"Tentativas restantes: {st.session_state.max_erros - st.session_state.erros}")
         else:
-            st.info("Clique em **JOGAR** para começar.")
+            if st.session_state.fim_de_jogo:
+                st.markdown("<h2 style='color:red;'>🏁 FIM DE JOGO)
