@@ -13,7 +13,7 @@ headers = {"apikey": KEY_SUPABASE, "Authorization": f"Bearer {KEY_SUPABASE}"}
 
 def upload_arquivo(arquivo_binario):
     resp = requests.put(
-        f"{URL_SUPABASE}/storage/v1/object/{'forca'}/perguntas.docx",
+        f"{URL_SUPABASE}/storage/v1/object/forca/perguntas.docx",
         headers={
             "apikey": KEY_SUPABASE,
             "Authorization": f"Bearer {KEY_SUPABASE}",
@@ -21,7 +21,8 @@ def upload_arquivo(arquivo_binario):
         },
         data=arquivo_binario.read()
     )
-    return resp.status_code
+    return resp.status_code, resp.text  # retorna também o texto da resposta
+
 
 
 
@@ -111,16 +112,13 @@ else:
         arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
         if arquivo:
             # Salva localmente
-            with open("perguntas.docx", "wb") as f:
-                f.write(arquivo.getbuffer())
-        
-            # Faz upload para Supabase
             with open("perguntas.docx", "rb") as f:
-                status = upload_arquivo(f)
+                status, resposta = upload_arquivo(f)
             if status == 200:
                 st.success("Arquivo enviado com sucesso!")
             else:
-                st.error(f"Erro ao enviar arquivo. Código: {status}")
+                st.error(f"Erro ao enviar arquivo. Código: {status} - {resposta}")
+
         
             # Extrai perguntas
             pares = extrair_perguntas_respostas("perguntas.docx")
