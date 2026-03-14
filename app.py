@@ -129,12 +129,14 @@ else:
                         if letra not in st.session_state.letras_corretas:
                             st.session_state.letras_corretas.append(letra)
                             st.success(f"Acertou a letra {letra}!")
+                            # Atualiza imediatamente para mostrar a letra na palavra
+                            st.rerun()
                     else:
                         if letra not in st.session_state.letras_erradas:
                             st.session_state.letras_erradas.append(letra)
                             st.session_state.erros += 1
                             st.error(f"A letra {letra} não está na palavra.")
-                            # Força atualização imediata para mostrar a imagem do erro
+                            # Atualiza imediatamente para mostrar a imagem do erro
                             st.rerun()
 
         # Condições de vitória ou derrota
@@ -150,6 +152,11 @@ else:
         # Letras erradas
         st.write(f"Letras erradas: {', '.join(st.session_state.letras_erradas)}")
         st.write(f"Tentativas restantes: {st.session_state.max_erros - st.session_state.erros}")
+
+        # Botão para próxima pergunta
+        if st.button("PRÓXIMO"):
+            iniciar_nova_pergunta()
+            st.rerun()
 
     else:
         st.info("Clique em **JOGAR** para começar.")
