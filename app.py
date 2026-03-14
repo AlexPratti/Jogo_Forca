@@ -129,7 +129,18 @@ else:
     else:
         # Se não for Pratti, tenta baixar do Supabase
         try:
-            dados = supabase.storage.from_("forca").download("perguntas.docx")
+
+            conteudo = download_arquivo()
+            if conteudo:
+                with open("perguntas.docx", "wb") as f:
+                    f.write(conteudo)
+                pares = extrair_perguntas_respostas("perguntas.docx")
+            else:
+                st.error("Não foi possível baixar o arquivo do Supabase.")
+
+
+
+            
             if dados:
                 with open("temp.docx", "wb") as f:
                     f.write(dados)
