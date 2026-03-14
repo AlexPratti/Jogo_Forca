@@ -1,8 +1,14 @@
 import streamlit as st
 import random
 from docx import Document
+from supabase import create_client
 
 st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
+
+# Conexão com Supabase
+url = "https://SEU-PROJETO.supabase.co"
+key = "CHAVE-API"
+supabase = create_client(url, key)
 
 # CSS para fundo escuro e título laranja
 st.markdown(
@@ -63,7 +69,6 @@ def iniciar_nova_pergunta():
         st.session_state.pergunta = None
         st.session_state.palavra = None
         st.session_state.fim_de_jogo = True
-
 # === Fluxo de entrada do nome do jogador ===
 if "jogador" not in st.session_state:
     nome = st.text_input("Digite seu nome:")
@@ -77,16 +82,25 @@ else:
     if st.session_state.jogador.lower() == "pratti":
         arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
         if arquivo:
+            # Salva no Supabase
+            supabase.storage.from_("forca").upload("perguntas.docx", arquivo.read(), {"upsert": True})
             pares = extrair_perguntas_respostas(arquivo)
             st.session_state.pares = pares
         else:
             st.info("Nenhum arquivo carregado ainda.")
     else:
-        # Se não for Pratti e não há arquivo, fim de jogo
-        if not st.session_state.pares:
+        # Se não for Pratti, tenta baixar do Supabase
+        try:
+            dados = supabase.storage.from_("forca").download("perguntas.docx")
+            if dados:
+                with open("temp.docx", "wb") as f:
+                    f.write(dados)
+                pares = extrair_perguntas_respostas("temp.docx")
+                st.session_state.pares = pares
+            else:
+                st.session_state.fim_de_jogo = True
+        except:
             st.session_state.fim_de_jogo = True
-
-
     # Placar fixo no topo
     st.markdown(
         f"""
@@ -144,48 +158,6 @@ else:
             st.session_state.fim_de_jogo = False
             st.session_state.rodada_encerrada = False
             st.rerun()
-
-    with col_jogo:
-        if st.session_state.pergunta:
-            st.markdown(
-                f"<div style='background-color:#444; color:white; padding:15px; border-radius:5px; font-size:18px;'>"
-                f"{st.session_state.pergunta}</div>",
-                unsafe_allow_html=True
-            )
-
-            exibicao = " ".join([letra if letra in st.session_state.letras_corretas else "_" 
-                                 for letra in st.session_state.palavra])
-            st.subheader(exibicao)
-
-            letras = ["A","Á","Â","Ã","À","B","C","Ç","D","E","É","Ê","Ë","F","G","H","I","Í","Î","Ï",
-                      "J","K","L","M","N","Ñ","O","Ó","Ô","Õ","Ö","P","Q","R","S","T","U","Ú","Û","Ü","V","W","X","Y","Z"]
-
-            st.markdown("<h3 style='background-color:blue; color:white; padding:5px;'>ESCOLHER UMA LETRA ABAIXO</h3>", unsafe_allow_html=True)
-
-            jogo_ativo = (
-                st.session_state.erros < st.session_state.max_erros and
-                not all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra)
-            )
-
-            cols = st.columns(8, gap="small")
-            for i, letra in enumerate(letras):
-                with cols[i % 8]:
-                    if st.button(letra, key=f"btn_{letra}"):
-                        if not jogo_ativo or st.session_state.rodada_encerrada:
-                            st.warning("A rodada terminou! Clique em PRÓXIMO para continuar.")
-                        else:
-                            if letra in st.session_state.palavra:
-                                if letra not in st.session_state.letras_corretas:
-                                    st.session_state.letras_corretas.append(letra)
-                                    st.success(f"Acertou a letra {letra}!")
-                                    st.rerun()
-                            else:
-                                if letra not in st.session_state.letras_erradas:
-                                    st.session_state.letras_erradas.append(letra)
-                                    st.session_state.erros += 1
-                                    st.error(f"A letra {letra} não está na palavra.")
-                                    st.rerun()
-
             # Condições de vitória ou derrota
             if st.session_state.erros >= st.session_state.max_erros and not st.session_state.rodada_encerrada:
                 st.error("💀 Você foi enforcado! Game Over!")
