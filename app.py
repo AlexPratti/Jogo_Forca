@@ -82,7 +82,7 @@ else:
     # === Interface principal ===
     st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
-    # Informações gerais no topo
+    # Informações gerais no topo (fixas)
     st.write(f"Jogador: {st.session_state.jogador}")
     st.write(f"Acertos: {st.session_state.acertos} | Derrotas: {st.session_state.derrotas}")
     st.write(f"Erros atuais: {st.session_state.erros}/{st.session_state.max_erros}")
@@ -185,6 +185,7 @@ else:
                 st.success("Parabéns! Você acertou a resposta!")
                 st.session_state.acertos += 1
 
+            # Informações da rodada (não o placar geral)
             st.write(f"Letras erradas: {', '.join(st.session_state.letras_erradas)}")
             st.write(f"Tentativas restantes: {st.session_state.max_erros - st.session_state.erros}")
         else:
