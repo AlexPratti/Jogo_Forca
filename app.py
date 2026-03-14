@@ -70,12 +70,13 @@ if st.button("Jogar / Sortear nova pergunta"):
 
 # Só mostra o jogo se houver pergunta ativa
 if st.session_state.get("pergunta"):
-    # Exibição da imagem baseada no número de erros
-    nome_imagem = f"erro{st.session_state.erros}.png"
-    try:
-        st.image(nome_imagem, caption=f"Erros: {st.session_state.erros}/{st.session_state.max_erros}")
-    except:
-        st.warning(f"Imagem {nome_imagem} não encontrada.")
+    # Exibição da imagem baseada no número de erros (somente se > 0)
+    if st.session_state.erros > 0:
+        nome_imagem = f"erro{st.session_state.erros}.png"
+        try:
+            st.image(nome_imagem, caption=f"Erros: {st.session_state.erros}/{st.session_state.max_erros}")
+        except:
+            st.warning(f"Imagem {nome_imagem} não encontrada.")
 
     # Exibição da pergunta (caixa cinza grande)
     st.markdown(
