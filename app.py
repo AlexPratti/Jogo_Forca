@@ -18,9 +18,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Upload do arquivo Word
-arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
-
 def extrair_perguntas_respostas(docx_file):
     doc = Document(docx_file)
     linhas = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
@@ -32,19 +29,9 @@ def extrair_perguntas_respostas(docx_file):
             pares.append((pergunta, resposta))
     return pares
 
-# Carregar perguntas
-if arquivo:
-    pares = extrair_perguntas_respostas(arquivo)
-else:
-    pares = [
-        ("Linguagem usada para ciência de dados?", "PYTHON"),
-        ("Plataforma para hospedar repositórios?", "GITHUB"),
-        ("Framework para apps interativos em Python?", "STREAMLIT")
-    ]
-
 # Inicialização do estado
 if 'pares' not in st.session_state:
-    st.session_state.pares = pares
+    st.session_state.pares = []
     st.session_state.indice = None
     st.session_state.acertos = 0
     st.session_state.derrotas = 0
@@ -56,6 +43,7 @@ if 'pares' not in st.session_state:
     st.session_state.max_erros = 6
     st.session_state.fim_de_jogo = False
     st.session_state.rodada_encerrada = False
+
 def iniciar_nova_pergunta():
     if st.session_state.indice is None:
         st.session_state.indice = 0
@@ -85,6 +73,20 @@ if "jogador" not in st.session_state:
 else:
     st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
+    # Upload só aparece se jogador for Pratti
+    if st.session_state.jogador.lower() == "pratti":
+        arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
+        if arquivo:
+            pares = extrair_perguntas_respostas(arquivo)
+            st.session_state.pares = pares
+        else:
+            st.info("Nenhum arquivo carregado ainda.")
+    else:
+        # Se não for Pratti e não há arquivo, fim de jogo
+        if not st.session_state.pares:
+            st.session_state.fim_de_jogo = True
+
+
     # Placar fixo no topo
     st.markdown(
         f"""
@@ -98,6 +100,7 @@ else:
     )
 
     col_forca, col_controles, col_jogo = st.columns([1,0.8,2])
+
     with col_forca:
         nome_imagem = f"erro{st.session_state.erros}.png"
         try:
@@ -108,18 +111,17 @@ else:
     with col_controles:
         st.markdown("### Controles")
 
-        # Botão dinâmico JOGAR/PRÓXIMO
         label_btn = "JOGAR" if st.session_state.indice is None else "PRÓXIMO"
         if st.button(label_btn):
             iniciar_nova_pergunta()
             st.rerun()
 
-        # Botão RESETAR
         if st.button("RESETAR"):
             st.session_state.indice = 0
-            pergunta, resposta = st.session_state.pares[0]
-            st.session_state.pergunta = pergunta
-            st.session_state.palavra = resposta
+            if st.session_state.pares:
+                pergunta, resposta = st.session_state.pares[0]
+                st.session_state.pergunta = pergunta
+                st.session_state.palavra = resposta
             st.session_state.letras_corretas = []
             st.session_state.letras_erradas = []
             st.session_state.erros = 0
@@ -129,7 +131,6 @@ else:
             st.session_state.rodada_encerrada = False
             st.rerun()
 
-        # Botão SAIR DO JOGO logo abaixo de RESETAR
         if st.button("SAIR DO JOGO"):
             del st.session_state["jogador"]
             st.session_state.indice = None
@@ -184,7 +185,7 @@ else:
                                     st.session_state.erros += 1
                                     st.error(f"A letra {letra} não está na palavra.")
                                     st.rerun()
-                                    
+
             # Condições de vitória ou derrota
             if st.session_state.erros >= st.session_state.max_erros and not st.session_state.rodada_encerrada:
                 st.error("💀 Você foi enforcado! Game Over!")
@@ -192,13 +193,12 @@ else:
                 st.session_state.derrotas += 1
                 st.session_state.rodada_encerrada = True
                 st.snow()
-            
+
             elif all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra) and not st.session_state.rodada_encerrada:
                 st.balloons()
                 st.success("Parabéns! Você acertou a resposta!")
                 st.session_state.acertos += 1
                 st.session_state.rodada_encerrada = True
-
 
             # Informações da rodada
             st.write(f"Letras erradas: {', '.join(st.session_state.letras_erradas)}")
