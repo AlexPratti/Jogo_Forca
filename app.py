@@ -107,7 +107,7 @@ else:
             # Salva localmente
             with open("perguntas.docx", "wb") as f:
                 f.write(arquivo.getbuffer())
-    
+        
             # Faz upload para Supabase
             with open("perguntas.docx", "rb") as f:
                 status = upload_arquivo(f)
@@ -115,10 +115,11 @@ else:
                 st.success("Arquivo enviado com sucesso!")
             else:
                 st.error(f"Erro ao enviar arquivo. Código: {status}")
-    
+        
             # Extrai perguntas
             pares = extrair_perguntas_respostas("perguntas.docx")
             st.session_state.pares = pares
+
         else:
             st.info("Nenhum arquivo carregado ainda.")
 
