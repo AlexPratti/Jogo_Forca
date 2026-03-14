@@ -97,31 +97,43 @@ else:
         except:
             st.warning(f"Imagem {nome_imagem} não encontrada.")
 
-    with col_controles:
-        st.markdown("### Controles")
-        if st.button("LIMPAR FORCA"):
-            st.session_state.erros = 0
-            st.session_state.letras_corretas = []
-            st.session_state.letras_erradas = []
-            st.rerun()
-        if st.button("RESETAR"):
-            st.session_state.indice = 0
-            pergunta, resposta = st.session_state.pares[0]
-            st.session_state.pergunta = pergunta
-            st.session_state.palavra = resposta
-            st.session_state.letras_corretas = []
-            st.session_state.letras_erradas = []
-            st.session_state.erros = 0
-            st.session_state.acertos = 0
-            st.session_state.derrotas = 0
-            st.rerun()
-        st.button("CORES LETRAS")
-        if st.button("SAIR DO JOGO"):
-            del st.session_state["jogador"]
-            st.rerun()
-        if st.button("PRÓXIMO"):
-            iniciar_nova_pergunta()
-            st.rerun()
+with col_controles:
+    st.markdown("### Controles")
+
+    # Botão JOGAR no topo
+    if st.button("JOGAR"):
+        iniciar_nova_pergunta()
+        st.rerun()
+
+    # Demais botões abaixo
+    if st.button("LIMPAR FORCA"):
+        st.session_state.erros = 0
+        st.session_state.letras_corretas = []
+        st.session_state.letras_erradas = []
+        st.rerun()
+
+    if st.button("RESETAR"):
+        st.session_state.indice = 0
+        pergunta, resposta = st.session_state.pares[0]
+        st.session_state.pergunta = pergunta
+        st.session_state.palavra = resposta
+        st.session_state.letras_corretas = []
+        st.session_state.letras_erradas = []
+        st.session_state.erros = 0
+        st.session_state.acertos = 0
+        st.session_state.derrotas = 0
+        st.rerun()
+
+    st.button("CORES LETRAS")
+
+    if st.button("SAIR DO JOGO"):
+        del st.session_state["jogador"]
+        st.rerun()
+
+    if st.button("PRÓXIMO"):
+        iniciar_nova_pergunta()
+        st.rerun()
+
 
     with col_jogo:
         if st.session_state.pergunta:
