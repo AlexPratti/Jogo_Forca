@@ -187,12 +187,15 @@ else:
             if st.session_state.erros >= st.session_state.max_erros:
                 st.error("💀 Você foi enforcado! Game Over!")
                 st.error(f"A resposta era: {st.session_state.palavra}")
+                if not st.session_state.fim_de_jogo:   # evita contar duas vezes
                 st.session_state.derrotas += 1
                 st.snow()
             elif all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra):
                 st.balloons()
                 st.success("Parabéns! Você acertou a resposta!")
+                if not st.session_state.fim_de_jogo:   # evita contar duas vezes
                 st.session_state.acertos += 1
+
 
             st.write(f"Letras erradas: {', '.join(st.session_state.letras_erradas)}")
             st.write(f"Tentativas restantes: {st.session_state.max_erros - st.session_state.erros}")
