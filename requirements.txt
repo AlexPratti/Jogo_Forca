@@ -1,3 +1,3 @@
 streamlit
-supabase
+supabase-py
 python-docx
