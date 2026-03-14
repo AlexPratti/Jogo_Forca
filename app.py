@@ -84,8 +84,8 @@ else:
     st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
     # Defina os dois arquivos padrão
-    url_padrao_pratti = "https://raw.githubusercontent.com/seuusuario/seurepositorio/main/perguntas_pratti.docx"
-    url_padrao_outros = "https://raw.githubusercontent.com/seuusuario/seurepositorio/main/perguntas_geral.docx"
+    url_padrao_pratti = "https://github.com/AlexPratti/Jogo_Forca/blob/main/Perguntas%20teste.docx"
+    url_padrao_outros = "https://github.com/AlexPratti/Jogo_Forca/blob/main/Perguntas%20teste.docx"
 
     # Upload só aparece se jogador for Pratti
     if st.session_state.jogador.lower() == "pratti":
