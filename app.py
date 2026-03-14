@@ -1,17 +1,42 @@
 import streamlit as st
 import random
+import requests
 from docx import Document
-from supabase import create_client
+# from supabase import create_client
 
 st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
 
 # Conexão com Supabase
 # O Streamlit busca os valores que você salvou no painel 'Secrets' automaticamente
+# URL_SUPABASE = st.secrets["URL_SUPABASE"]
+# KEY_SUPABASE = st.secrets["KEY_SUPABASE"]
+# supabase = create_client(URL_SUPABASE, KEY_SUPABASE)
+
+
+
 URL_SUPABASE = st.secrets["URL_SUPABASE"]
 KEY_SUPABASE = st.secrets["KEY_SUPABASE"]
 
+headers = {"apikey": KEY_SUPABASE, "Authorization": f"Bearer {KEY_SUPABASE}"}
 
-supabase = create_client(URL_SUPABASE, KEY_SUPABASE)
+def upload_arquivo(arquivo):
+    resp = requests.post(
+        f"{URL_SUPABASE}/storage/v1/object/forca/perguntas.docx",
+        headers=headers,
+        data=arquivo.read()
+    )
+    return resp.status_code
+
+def download_arquivo():
+    resp = requests.get(
+        f"{URL_SUPABASE}/storage/v1/object/public/forca/perguntas.docx",
+        headers=headers
+    )
+    if resp.status_code == 200:
+        return resp.content
+    else:
+        return None
+
 
 # CSS para fundo escuro e título laranja
 st.markdown(
