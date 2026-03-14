@@ -14,10 +14,15 @@ headers = {"apikey": KEY_SUPABASE, "Authorization": f"Bearer {KEY_SUPABASE}"}
 def upload_arquivo(arquivo_binario):
     resp = requests.put(
         f"{URL_SUPABASE}/storage/v1/object/forca/perguntas.docx",
-        headers=headers,
+        headers={
+            "apikey": KEY_SUPABASE,
+            "Authorization": f"Bearer {KEY_SUPABASE}",
+            "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        },
         data=arquivo_binario.read()
     )
     return resp.status_code
+
 
 
 
@@ -119,6 +124,7 @@ else:
             # Extrai perguntas
             pares = extrair_perguntas_respostas("perguntas.docx")
             st.session_state.pares = pares
+
 
         else:
             st.info("Nenhum arquivo carregado ainda.")
