@@ -135,15 +135,15 @@ else:
         exibicao = " ".join([letra if letra in st.session_state.letras_corretas else "_" for letra in st.session_state.palavra])
         st.subheader(exibicao)
 
-        # Teclado de letras
+        # Teclado de letras com colunas mais próximas
         letras = ["A","Á","Â","Ã","Ä","Å","B","C","Ç","D","E","É","Ê","Ë","F","G","H","I","Í","Î","Ï",
                   "J","K","L","M","N","Ñ","O","Ó","Ô","Õ","Ö","P","Q","R","S","T","U","Ú","Û","Ü","V","W","X","Y","Z"]
 
         st.markdown("<h3 style='background-color:blue; color:white; padding:5px;'>ESCOLHER UMA LETRA ABAIXO</h3>", unsafe_allow_html=True)
         cols = st.columns(10, gap="small")  # colunas mais próximas
-            for i, letra in enumerate(letras):
-                with cols[i % 10]:
-                    if st.button(letra, key=f"btn_{letra}"):
+        for i, letra in enumerate(letras):
+            with cols[i % 10]:
+                if st.button(letra, key=f"btn_{letra}"):
                     # Bloqueio se já perdeu
                     if st.session_state.erros >= st.session_state.max_erros:
                         if st.session_state.indice + 1 < len(st.session_state.pares):
