@@ -31,12 +31,15 @@ def extrair_perguntas_respostas(docx_file):
             pares.append((pergunta, resposta))
     return pares
 
-def carregar_arquivo_padrao(url_padrao_github):
-    resposta = requests.get(url_padrao_github)
+# Defina o link direto do OneDrive
+url_onedrive = "https://1drv.ms/w/c/f8b19e7831622ca6/IQDEfr9zKTo9RrBXw7teO8g0AS82zNeeAT4Ubs2n__7DWeM?e=EKzVyG"
+
+def carregar_arquivo_onedrive(url_onedrive):
+    resposta = requests.get(url_onedrive)
     if resposta.status_code == 200:
         return BytesIO(resposta.content)
     else:
-        st.error("Não foi possível carregar o arquivo padrão do GitHub.")
+        st.error("Não foi possível carregar o arquivo do OneDrive.")
         return None
 
 # Inicialização do estado
@@ -83,9 +86,7 @@ if "jogador" not in st.session_state:
 else:
     st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
-# Só entra aqui se já existir "jogador" na sessão
-if "jogador" in st.session_state:
-    # Upload só aparece se jogador for Pratti
+    # Só entra aqui se já existir "jogador" na sessão
     if st.session_state.jogador.lower() == "pratti":
         arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
         if arquivo:
@@ -106,67 +107,6 @@ if "jogador" in st.session_state:
                 pares = extrair_perguntas_respostas(arquivo_padrao)
                 st.session_state.pares = pares
 
-  
-# Defina o link direto do OneDrive
-url_onedrive = "https://1drv.ms/w/c/f8b19e7831622ca6/IQDEfr9zKTo9RrBXw7teO8g0AS82zNeeAT4Ubs2n__7DWeM?e=EKzVyG"
-
-def carregar_arquivo_onedrive(url_onedrive):
-    import requests
-    from io import BytesIO
-    resposta = requests.get(url_onedrive)
-    if resposta.status_code == 200:
-        return BytesIO(resposta.content)
-    else:
-        st.error("Não foi possível carregar o arquivo do OneDrive.")
-        return None
-
-# Upload só aparece se jogador for Pratti
-if st.session_state.jogador.lower() == "pratti":
-    arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
-    if arquivo:
-        # Upload feito por Pratti
-        pares = extrair_perguntas_respostas(arquivo)
-        st.session_state.pares = pares
-    else:
-        # Se Pratti não fizer upload, usa o arquivo do OneDrive
-        arquivo_padrao = carregar_arquivo_onedrive(url_onedrive)
-        if arquivo_padrao:
-            st.write("Arquivo padrão do OneDrive carregado (Pratti)!")
-            pares = extrair_perguntas_respostas(arquivo_padrao)
-            st.session_state.pares = pares
-else:
-    # Se não for Pratti, sempre usa o arquivo do OneDrive
-    if not st.session_state.pares:
-        arquivo_padrao = carregar_arquivo_onedrive(url_onedrive)
-        if arquivo_padrao:
-            st.write("Arquivo padrão do OneDrive carregado (outros jogadores)!")
-            pares = extrair_perguntas_respostas(arquivo_padrao)
-            st.session_state.pares = pares
-
-
-    # Upload só aparece se jogador for Pratti
-    if st.session_state.jogador.lower() == "pratti":
-        arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
-        if arquivo:
-            # Upload feito por Pratti
-            pares = extrair_perguntas_respostas(arquivo)
-            st.session_state.pares = pares
-        else:
-            # Se Pratti não fizer upload, usa o arquivo do OneDrive
-            arquivo_padrao = carregar_arquivo_onedrive(url_onedrive)
-            if arquivo_padrao:
-                st.write("Arquivo padrão do OneDrive carregado (Pratti)!")
-                pares = extrair_perguntas_respostas(arquivo_padrao)
-                st.session_state.pares = pares
-    else:
-        # Se não for Pratti, sempre usa o arquivo do OneDrive
-        if not st.session_state.pares:
-            arquivo_padrao = carregar_arquivo_onedrive(url_onedrive)
-            if arquivo_padrao:
-                st.write("Arquivo padrão do OneDrive carregado (outros jogadores)!")
-                pares = extrair_perguntas_respostas(arquivo_padrao)
-                st.session_state.pares = pares
-    
 
     # Placar fixo no topo
     st.markdown(
