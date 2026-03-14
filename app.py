@@ -1,6 +1,8 @@
 import streamlit as st
 import random
 from docx import Document
+import requests
+from io import BytesIO
 
 st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
 
@@ -28,6 +30,14 @@ def extrair_perguntas_respostas(docx_file):
             resposta = linhas[i+1].upper()
             pares.append((pergunta, resposta))
     return pares
+
+def carregar_arquivo_padrao(url_padrao_github):
+    resposta = requests.get(url_padrao_github)
+    if resposta.status_code == 200:
+        return BytesIO(resposta.content)
+    else:
+        st.error("Não foi possível carregar o arquivo padrão do GitHub.")
+        return None
 
 # Inicialização do estado
 if 'pares' not in st.session_state:
@@ -73,6 +83,10 @@ if "jogador" not in st.session_state:
 else:
     st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
+    # Defina os dois arquivos padrão
+    url_padrao_pratti = "https://raw.githubusercontent.com/seuusuario/seurepositorio/main/perguntas_pratti.docx"
+    url_padrao_outros = "https://raw.githubusercontent.com/seuusuario/seurepositorio/main/perguntas_geral.docx"
+
     # Upload só aparece se jogador for Pratti
     if st.session_state.jogador.lower() == "pratti":
         arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
@@ -80,11 +94,17 @@ else:
             pares = extrair_perguntas_respostas(arquivo)
             st.session_state.pares = pares
         else:
-            st.info("Nenhum arquivo carregado ainda.")
+            arquivo_padrao = carregar_arquivo_padrao(url_padrao_pratti)
+            if arquivo_padrao:
+                pares = extrair_perguntas_respostas(arquivo_padrao)
+                st.session_state.pares = pares
     else:
-        # Se não for Pratti e não há arquivo, fim de jogo
+        # Se não for Pratti, sempre usa o arquivo padrão dos outros
         if not st.session_state.pares:
-            st.session_state.fim_de_jogo = True
+            arquivo_padrao = carregar_arquivo_padrao(url_padrao_outros)
+            if arquivo_padrao:
+                pares = extrair_perguntas_respostas(arquivo_padrao)
+                st.session_state.pares = pares
 
 
     # Placar fixo no topo
