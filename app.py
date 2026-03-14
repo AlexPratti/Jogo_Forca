@@ -33,32 +33,10 @@ def extrair_perguntas_respostas(docx_file):
             pares.append((pergunta, resposta))
     return pares
 
-def converter_link_onedrive(link):
-    # Se for link curto (1drv.ms), segue o redirecionamento
-    if "1drv.ms" in link:
-        resp = requests.head(link, allow_redirects=True)
-        link = resp.url
-    # Extrai parâmetros da URL longa
-    parsed = urlparse(link)
-    params = parse_qs(parsed.query)
-    cid = params.get("cid", [""])[0]
-    resid = params.get("resid", [""])[0]
-    authkey = params.get("authkey", [""])[0]
-    path_parts = parsed.path.split("/")
-    id = path_parts[-1] if path_parts else ""
-    # Monta link direto
-    return f"https://onedrive.live.com/download?cid={cid}&id={id}&resid={resid}&authkey={authkey}"
-
-def carregar_arquivo_onedrive(link_original):
-    url_download = converter_link_onedrive(link_original)
-    resposta = requests.get(url_download)
-
+def carregar_arquivo_onedrive(link_download):
+    resposta = requests.get(link_download)
     if resposta.status_code == 200:
         content_type = resposta.headers.get("Content-Type", "")
-        st.write("Status:", resposta.status_code)
-        st.write("Content-Type:", content_type)
-        st.write("Primeiros bytes:", resposta.content[:200])  # mostra os primeiros bytes
-
         if "application/vnd.openxmlformats-officedocument.wordprocessingml.document" in content_type:
             return BytesIO(resposta.content)
         else:
@@ -67,7 +45,6 @@ def carregar_arquivo_onedrive(link_original):
     else:
         st.error(f"Erro ao baixar: {resposta.status_code}")
         return None
-
 
 # === Inicialização do estado ===
 if 'pares' not in st.session_state:
@@ -112,8 +89,8 @@ if "jogador" not in st.session_state:
 else:
     st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
-    # Link original do OneDrive (pode ser curto ou longo)
-    link_onedrive = "https://1drv.ms/w/c/f8b19e7831622ca6/IQDEfr9zKTo9RrBXw7teO8g0AS82zNeeAT4Ubs2n__7DWeM?e=TRSE9o"
+    # Link direto ajustado para download
+    link_onedrive = "https://onedrive.live.com/download?cid=F8B19E7831622CA6&id=IQDEfr9zKTo9RrBXw7teO8g0AS82zNeeAT4Ubs2n__7DWeM&resid=F8B19E7831622CA6!s73bf7ec43a29463db057c3bb5e3bc834&authkey=ILcHMS"
 
     if st.session_state.jogador.lower() == "pratti":
         arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
@@ -133,7 +110,6 @@ else:
                 st.write("Arquivo padrão do OneDrive carregado (outros jogadores)!")
                 pares = extrair_perguntas_respostas(arquivo_padrao)
                 st.session_state.pares = pares
-
 
 
     # Placar fixo no topo
