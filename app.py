@@ -3,7 +3,6 @@ import random
 from docx import Document
 import requests
 from io import BytesIO
-from urllib.parse import urlparse, parse_qs
 
 st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
 
@@ -90,7 +89,13 @@ else:
     st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
     # Link direto ajustado para download
-    link_onedrive = "https://onedrive.live.com/download?cid=F8B19E7831622CA6&id=IQDEfr9zKTo9RrBXw7teO8g0AS82zNeeAT4Ubs2n__7DWeM&resid=F8B19E7831622CA6!s73bf7ec43a29463db057c3bb5e3bc834&authkey=ILcHMS"
+    link_onedrive = (
+        "https://onedrive.live.com/download?"
+        "cid=F8B19E7831622CA6&"
+        "id=IQDEfr9zKTo9RrBXw7teO8g0AbYJwwKaRBCHdpY4mQxFs8A&"
+        "resid=F8B19E7831622CA6!s73bf7ec43a29463db057c3bb5e3bc834&"
+        "authkey=e3f5Rz"
+    )
 
     if st.session_state.jogador.lower() == "pratti":
         arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
@@ -110,7 +115,6 @@ else:
                 st.write("Arquivo padrão do OneDrive carregado (outros jogadores)!")
                 pares = extrair_perguntas_respostas(arquivo_padrao)
                 st.session_state.pares = pares
-
 
     # Placar fixo no topo
     st.markdown(
