@@ -174,16 +174,20 @@ else:
                                     st.rerun()
 
             # Condições de vitória ou derrota
+            
             if st.session_state.erros >= st.session_state.max_erros:
                 st.error("💀 Você foi enforcado! Game Over!")
                 st.error(f"A resposta era: {st.session_state.palavra}")
                 st.session_state.derrotas += 1
                 st.snow()  # efeito de derrota
-                # Mostrar várias imagens de choro como se estivessem subindo
-                cols_choro = st.columns(5)
-                for i in range(5):
-                    with cols_choro[i]:
-                        st.image("choro.png", use_column_width=True)
+            
+                # Mostrar várias imagens de choro lado a lado
+                for _ in range(3):  # repete 3 linhas
+                    cols_choro = st.columns(5)
+                    for col in cols_choro:
+                        with col:
+                            st.image("choro.png", use_column_width=True)
+
 
             elif all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra):
                 st.balloons()
