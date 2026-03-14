@@ -83,14 +83,43 @@ if "jogador" not in st.session_state:
 else:
     st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
-    # Defina os dois arquivos padrão
-    url_padrao_pratti = "https://raw.githubusercontent.com/AlexPratti/Jogo_Forca/main/Perguntas%20teste.docx"
-    url_padrao_outros = "https://raw.githubusercontent.com/AlexPratti/Jogo_Forca/main/Perguntas%20teste.docx"
-    arquivo_padrao = carregar_arquivo_padrao(url_padrao_pratti)
-    if arquivo_padrao:
-        st.write("Arquivo padrão carregado!")
-        pares = extrair_perguntas_respostas(arquivo_padrao)
+  
+# Defina o link direto do OneDrive
+url_onedrive = "https://1drv.ms/w/c/f8b19e7831622ca6/IQDEfr9zKTo9RrBXw7teO8g0AS82zNeeAT4Ubs2n__7DWeM?e=EKzVyG"
+
+def carregar_arquivo_onedrive(url_onedrive):
+    import requests
+    from io import BytesIO
+    resposta = requests.get(url_onedrive)
+    if resposta.status_code == 200:
+        return BytesIO(resposta.content)
+    else:
+        st.error("Não foi possível carregar o arquivo do OneDrive.")
+        return None
+
+# Upload só aparece se jogador for Pratti
+if st.session_state.jogador.lower() == "pratti":
+    arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
+    if arquivo:
+        # Upload feito por Pratti
+        pares = extrair_perguntas_respostas(arquivo)
         st.session_state.pares = pares
+    else:
+        # Se Pratti não fizer upload, usa o arquivo do OneDrive
+        arquivo_padrao = carregar_arquivo_onedrive(url_onedrive)
+        if arquivo_padrao:
+            st.write("Arquivo padrão do OneDrive carregado (Pratti)!")
+            pares = extrair_perguntas_respostas(arquivo_padrao)
+            st.session_state.pares = pares
+else:
+    # Se não for Pratti, sempre usa o arquivo do OneDrive
+    if not st.session_state.pares:
+        arquivo_padrao = carregar_arquivo_onedrive(url_onedrive)
+        if arquivo_padrao:
+            st.write("Arquivo padrão do OneDrive carregado (outros jogadores)!")
+            pares = extrair_perguntas_respostas(arquivo_padrao)
+            st.session_state.pares = pares
+
 
     # Upload só aparece se jogador for Pratti
     if st.session_state.jogador.lower() == "pratti":
@@ -100,22 +129,21 @@ else:
             pares = extrair_perguntas_respostas(arquivo)
             st.session_state.pares = pares
         else:
-            # Se Pratti não fizer upload, usa o arquivo padrão dele
-            arquivo_padrao = carregar_arquivo_padrao(url_padrao_pratti)
+            # Se Pratti não fizer upload, usa o arquivo do OneDrive
+            arquivo_padrao = carregar_arquivo_onedrive(url_onedrive)
             if arquivo_padrao:
-                st.write("Arquivo padrão do Pratti carregado!")  # debug opcional
+                st.write("Arquivo padrão do OneDrive carregado (Pratti)!")
                 pares = extrair_perguntas_respostas(arquivo_padrao)
                 st.session_state.pares = pares
     else:
-        # Se não for Pratti, sempre usa o arquivo padrão dos outros
+        # Se não for Pratti, sempre usa o arquivo do OneDrive
         if not st.session_state.pares:
-            arquivo_padrao = carregar_arquivo_padrao(url_padrao_outros)
+            arquivo_padrao = carregar_arquivo_onedrive(url_onedrive)
             if arquivo_padrao:
-                st.write("Arquivo padrão dos outros jogadores carregado!")  # debug opcional
+                st.write("Arquivo padrão do OneDrive carregado (outros jogadores)!")
                 pares = extrair_perguntas_respostas(arquivo_padrao)
                 st.session_state.pares = pares
     
-
 
     # Placar fixo no topo
     st.markdown(
