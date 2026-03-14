@@ -32,7 +32,7 @@ def extrair_perguntas_respostas(docx_file):
     return pares
 
 # Defina o link direto do OneDrive
-url_onedrive = "https://1drv.ms/w/c/f8b19e7831622ca6/IQDEfr9zKTo9RrBXw7teO8g0AS82zNeeAT4Ubs2n__7DWeM?e=EKzVyG"
+url_onedrive = "https://onedrive.live.com/download?cid=F8B19E7831622CA6&id=IQDEfr9zKTo9RrBXw7teO8g0AS82zNeeAT4Ubs2n__7DWeM&resid=F8B19E7831622CA6!s73bf7ec43a29463db057c3bb5e3bc834&authkey=ILcHMS"
 
 def carregar_arquivo_onedrive(url_onedrive):
     resposta = requests.get(url_onedrive)
