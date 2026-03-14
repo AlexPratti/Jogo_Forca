@@ -2,18 +2,11 @@ import streamlit as st
 import random
 import requests
 from docx import Document
-# from supabase import create_client
 
 st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
 
-# Conexão com Supabase
+# Conexão com Supabase via requests
 # O Streamlit busca os valores que você salvou no painel 'Secrets' automaticamente
-# URL_SUPABASE = st.secrets["URL_SUPABASE"]
-# KEY_SUPABASE = st.secrets["KEY_SUPABASE"]
-# supabase = create_client(URL_SUPABASE, KEY_SUPABASE)
-
-
-
 URL_SUPABASE = st.secrets["URL_SUPABASE"]
 KEY_SUPABASE = st.secrets["KEY_SUPABASE"]
 
