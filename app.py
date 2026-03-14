@@ -30,6 +30,15 @@ def download_arquivo():
     else:
         return None
 
+# Teste simples de download
+conteudo = download_arquivo()
+if conteudo:
+    with open("teste_perguntas.docx", "wb") as f:
+        f.write(conteudo)
+    st.success("Arquivo baixado com sucesso! Salvo como teste_perguntas.docx")
+else:
+    st.error("Não foi possível baixar o arquivo do Supabase.")
+
 
 # CSS para fundo escuro e título laranja
 st.markdown(
