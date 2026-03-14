@@ -22,11 +22,6 @@ def upload_arquivo(arquivo_binario):
     )
     return resp.status_code, resp.text
 
-
-
-
-
-
 def download_arquivo():
     resp = requests.get(
         f"{URL_SUPABASE}/storage/v1/object/public/forca/perguntas.docx",
@@ -117,6 +112,7 @@ else:
                 st.success("Arquivo enviado com sucesso!")
             else:
                 st.error(f"Erro ao enviar arquivo. Código: {status} - {resposta}")
+
 
         
             # Extrai perguntas
