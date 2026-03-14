@@ -3,6 +3,7 @@ import random
 from docx import Document
 import requests
 from io import BytesIO
+from urllib.parse import urlparse, parse_qs
 
 st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
 
@@ -20,6 +21,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# === Funções utilitárias ===
 def extrair_perguntas_respostas(docx_file):
     doc = Document(docx_file)
     linhas = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
@@ -31,18 +33,32 @@ def extrair_perguntas_respostas(docx_file):
             pares.append((pergunta, resposta))
     return pares
 
-# Defina o link direto do OneDrive
-url_onedrive = "https://onedrive.live.com/download?cid=F8B19E7831622CA6&id=IQDEfr9zKTo9RrBXw7teO8g0AS82zNeeAT4Ubs2n__7DWeM&resid=F8B19E7831622CA6!s73bf7ec43a29463db057c3bb5e3bc834&authkey=ILcHMS"
+def converter_link_onedrive(link):
+    # Se for link curto (1drv.ms), segue o redirecionamento
+    if "1drv.ms" in link:
+        resp = requests.head(link, allow_redirects=True)
+        link = resp.url
+    # Extrai parâmetros da URL longa
+    parsed = urlparse(link)
+    params = parse_qs(parsed.query)
+    cid = params.get("cid", [""])[0]
+    resid = params.get("resid", [""])[0]
+    authkey = params.get("authkey", [""])[0]
+    path_parts = parsed.path.split("/")
+    id = path_parts[-1] if path_parts else ""
+    # Monta link direto
+    return f"https://onedrive.live.com/download?cid={cid}&id={id}&resid={resid}&authkey={authkey}"
 
-def carregar_arquivo_onedrive(url_onedrive):
-    resposta = requests.get(url_onedrive)
+def carregar_arquivo_onedrive(link_original):
+    url_download = converter_link_onedrive(link_original)
+    resposta = requests.get(url_download)
     if resposta.status_code == 200:
         return BytesIO(resposta.content)
     else:
         st.error("Não foi possível carregar o arquivo do OneDrive.")
         return None
 
-# Inicialização do estado
+# === Inicialização do estado ===
 if 'pares' not in st.session_state:
     st.session_state.pares = []
     st.session_state.indice = None
@@ -62,7 +78,6 @@ def iniciar_nova_pergunta():
         st.session_state.indice = 0
     else:
         st.session_state.indice += 1
-
     if st.session_state.indice < len(st.session_state.pares):
         pergunta, resposta = st.session_state.pares[st.session_state.indice]
         st.session_state.pergunta = pergunta
@@ -77,7 +92,7 @@ def iniciar_nova_pergunta():
         st.session_state.palavra = None
         st.session_state.fim_de_jogo = True
 
-# === Fluxo de entrada do nome do jogador ===
+# === Fluxo de entrada do jogador ===
 if "jogador" not in st.session_state:
     nome = st.text_input("Digite seu nome:")
     if st.button("Entrar no jogo") and nome.strip():
@@ -86,26 +101,28 @@ if "jogador" not in st.session_state:
 else:
     st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
-    # Só entra aqui se já existir "jogador" na sessão
+    # Link original do OneDrive (pode ser curto ou longo)
+    link_onedrive = "https://1drv.ms/w/c/f8b19e7831622ca6/IQDEfr9zKTo9RrBXw7teO8g0AS82zNeeAT4Ubs2n__7DWeM?e=TRSE9o"
+
     if st.session_state.jogador.lower() == "pratti":
         arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
         if arquivo:
             pares = extrair_perguntas_respostas(arquivo)
             st.session_state.pares = pares
         else:
-            arquivo_padrao = carregar_arquivo_onedrive(url_onedrive)
+            arquivo_padrao = carregar_arquivo_onedrive(link_onedrive)
             if arquivo_padrao:
                 st.write("Arquivo padrão do OneDrive carregado (Pratti)!")
                 pares = extrair_perguntas_respostas(arquivo_padrao)
                 st.session_state.pares = pares
     else:
-        # Se não for Pratti, sempre usa o arquivo do OneDrive
         if not st.session_state.pares:
-            arquivo_padrao = carregar_arquivo_onedrive(url_onedrive)
+            arquivo_padrao = carregar_arquivo_onedrive(link_onedrive)
             if arquivo_padrao:
                 st.write("Arquivo padrão do OneDrive carregado (outros jogadores)!")
                 pares = extrair_perguntas_respostas(arquivo_padrao)
                 st.session_state.pares = pares
+
 
 
     # Placar fixo no topo
