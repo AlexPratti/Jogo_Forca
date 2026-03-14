@@ -140,9 +140,9 @@ else:
                   "J","K","L","M","N","Ñ","O","Ó","Ô","Õ","Ö","P","Q","R","S","T","U","Ú","Û","Ü","V","W","X","Y","Z"]
 
         st.markdown("<h3 style='background-color:blue; color:white; padding:5px;'>ESCOLHER UMA LETRA ABAIXO</h3>", unsafe_allow_html=True)
-        cols = st.columns(10, gap="small")  # colunas mais próximas
+        cols = st.columns(8, gap="small")  # colunas mais próximas
         for i, letra in enumerate(letras):
-            with cols[i % 10]:
+            with cols[i % 8]:
                 if st.button(letra, key=f"btn_{letra}"):
                     # Bloqueio se já perdeu
                     if st.session_state.erros >= st.session_state.max_erros:
