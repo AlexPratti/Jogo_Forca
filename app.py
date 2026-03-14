@@ -92,6 +92,19 @@ def iniciar_nova_pergunta():
         st.session_state.palavra = None
         st.session_state.fim_de_jogo = True
 
+# === Função de upload corrigida ===
+def upload_arquivo(arquivo_binario):
+    resp = requests.put(
+        f"{URL_SUPABASE}/storage/v1/object/forca/perguntas.docx",
+        headers={
+            "apikey": KEY_SUPABASE,
+            "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        },
+        data=arquivo_binario.read()
+    )
+    return resp.status_code, resp.text
+
+
 # === Fluxo de entrada do nome do jogador ===
 if "jogador" not in st.session_state:
     nome = st.text_input("Digite seu nome:")
