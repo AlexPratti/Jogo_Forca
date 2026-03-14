@@ -88,10 +88,29 @@ else:
         if st.button("JOGAR"):
             iniciar_nova_pergunta()
             st.rerun()
-    with col2: st.button("LIMPAR FORCA")
-    with col3: st.button("RESETAR")
+    with col2:
+        if st.button("LIMPAR FORCA"):
+            st.session_state.erros = 0
+            st.session_state.letras_corretas = []
+            st.session_state.letras_erradas = []
+            st.rerun()
+    with col3:
+        if st.button("RESETAR"):
+            st.session_state.indice = 0
+            pergunta, resposta = st.session_state.pares[0]
+            st.session_state.pergunta = pergunta
+            st.session_state.palavra = resposta
+            st.session_state.letras_corretas = []
+            st.session_state.letras_erradas = []
+            st.session_state.erros = 0
+            st.session_state.acertos = 0
+            st.session_state.derrotas = 0
+            st.rerun()
     with col4: st.button("CORES LETRAS")
-    with col5: st.button("SAIR DO JOGO")
+    with col5:
+        if st.button("SAIR DO JOGO"):
+            del st.session_state["jogador"]
+            st.rerun()
 
     # Status do jogador
     st.write(f"Jogador: {st.session_state.jogador}")
@@ -125,19 +144,25 @@ else:
         for i, letra in enumerate(letras):
             with cols[i % 10]:
                 if st.button(letra, key=f"btn_{letra}"):
-                    if letra in st.session_state.palavra:
-                        if letra not in st.session_state.letras_corretas:
-                            st.session_state.letras_corretas.append(letra)
-                            st.success(f"Acertou a letra {letra}!")
-                            # Atualiza imediatamente para mostrar a letra na palavra
-                            st.rerun()
+                    # Bloqueio se já perdeu
+                    if st.session_state.erros >= st.session_state.max_erros:
+                        if st.session_state.indice + 1 < len(st.session_state.pares):
+                            st.warning("Por favor vá para a próxima questão!")
+                        else:
+                            st.error("Fim de Jogo!")
                     else:
-                        if letra not in st.session_state.letras_erradas:
-                            st.session_state.letras_erradas.append(letra)
-                            st.session_state.erros += 1
-                            st.error(f"A letra {letra} não está na palavra.")
-                            # Atualiza imediatamente para mostrar a imagem do erro
-                            st.rerun()
+                        # Jogada normal
+                        if letra in st.session_state.palavra:
+                            if letra not in st.session_state.letras_corretas:
+                                st.session_state.letras_corretas.append(letra)
+                                st.success(f"Acertou a letra {letra}!")
+                                st.rerun()
+                        else:
+                            if letra not in st.session_state.letras_erradas:
+                                st.session_state.letras_erradas.append(letra)
+                                st.session_state.erros += 1
+                                st.error(f"A letra {letra} não está na palavra.")
+                                st.rerun()
 
         # Condições de vitória ou derrota
         if st.session_state.erros >= st.session_state.max_erros:
