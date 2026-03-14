@@ -52,11 +52,22 @@ def converter_link_onedrive(link):
 def carregar_arquivo_onedrive(link_original):
     url_download = converter_link_onedrive(link_original)
     resposta = requests.get(url_download)
+
     if resposta.status_code == 200:
-        return BytesIO(resposta.content)
+        content_type = resposta.headers.get("Content-Type", "")
+        st.write("Status:", resposta.status_code)
+        st.write("Content-Type:", content_type)
+        st.write("Primeiros bytes:", resposta.content[:200])  # mostra os primeiros bytes
+
+        if "application/vnd.openxmlformats-officedocument.wordprocessingml.document" in content_type:
+            return BytesIO(resposta.content)
+        else:
+            st.error("O link não está entregando um arquivo .docx, mas sim HTML ou outro formato.")
+            return None
     else:
-        st.error("Não foi possível carregar o arquivo do OneDrive.")
+        st.error(f"Erro ao baixar: {resposta.status_code}")
         return None
+
 
 # === Inicialização do estado ===
 if 'pares' not in st.session_state:
