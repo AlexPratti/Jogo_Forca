@@ -110,7 +110,7 @@ else:
             # Faz upload para Supabase
             with open("perguntas.docx", "rb") as f:
                 status = upload_arquivo(f)
-                if status == 200:
+            if status == 200:
                 st.success("Arquivo enviado com sucesso!")
             else:
                 st.error(f"Erro ao enviar arquivo. Código: {status}")
