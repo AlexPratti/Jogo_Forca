@@ -113,7 +113,15 @@ else:
         arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
         if arquivo:
             # Salva no Supabase
-            supabase.storage.from_("forca").upload("perguntas.docx", arquivo.read(), {"upsert": True})
+
+            
+            status = upload_arquivo(arquivo)
+            if status == 200:
+                st.success("Arquivo enviado com sucesso!")
+            else:
+                st.error("Erro ao enviar arquivo.")
+
+            
             pares = extrair_perguntas_respostas(arquivo)
             st.session_state.pares = pares
         else:
