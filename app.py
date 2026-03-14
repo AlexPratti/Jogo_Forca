@@ -6,7 +6,6 @@ from docx import Document
 st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
 
 # Conexão com Supabase via requests
-# O Streamlit busca os valores que você salvou no painel 'Secrets' automaticamente
 URL_SUPABASE = st.secrets["URL_SUPABASE"]
 KEY_SUPABASE = st.secrets["KEY_SUPABASE"]
 
@@ -29,16 +28,6 @@ def download_arquivo():
         return resp.content
     else:
         return None
-
-# Teste simples de download
-conteudo = download_arquivo()
-if conteudo:
-    with open("teste_perguntas.docx", "wb") as f:
-        f.write(conteudo)
-    st.success("Arquivo baixado com sucesso! Salvo como teste_perguntas.docx")
-else:
-    st.error("Não foi possível baixar o arquivo do Supabase.")
-
 
 # CSS para fundo escuro e título laranja
 st.markdown(
@@ -99,6 +88,7 @@ def iniciar_nova_pergunta():
         st.session_state.pergunta = None
         st.session_state.palavra = None
         st.session_state.fim_de_jogo = True
+
 # === Fluxo de entrada do nome do jogador ===
 if "jogador" not in st.session_state:
     nome = st.text_input("Digite seu nome:")
@@ -112,45 +102,36 @@ else:
     if st.session_state.jogador.lower() == "pratti":
         arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
         if arquivo:
-            # Salva no Supabase
+            # Salva localmente
+            with open("perguntas.docx", "wb") as f:
+                f.write(arquivo.getbuffer())
 
-            
-            status = upload_arquivo(arquivo)
+            # Faz upload para Supabase
+            with open("perguntas.docx", "rb") as f:
+                status = upload_arquivo(f)
             if status == 200:
                 st.success("Arquivo enviado com sucesso!")
             else:
                 st.error("Erro ao enviar arquivo.")
 
-            
-            pares = extrair_perguntas_respostas(arquivo)
+            # Extrai perguntas
+            pares = extrair_perguntas_respostas("perguntas.docx")
             st.session_state.pares = pares
         else:
             st.info("Nenhum arquivo carregado ainda.")
     else:
         # Se não for Pratti, tenta baixar do Supabase
-        try:
-
-            conteudo = download_arquivo()
-            if conteudo:
-                with open("perguntas.docx", "wb") as f:
-                    f.write(conteudo)
-                pares = extrair_perguntas_respostas("perguntas.docx")
-            else:
-                st.error("Não foi possível baixar o arquivo do Supabase.")
-
-
-
-            
-            if dados:
-                with open("temp.docx", "wb") as f:
-                    f.write(dados)
-                pares = extrair_perguntas_respostas("temp.docx")
-                st.session_state.pares = pares
-            else:
-                st.session_state.fim_de_jogo = True
-        except:
+        conteudo = download_arquivo()
+        if conteudo:
+            with open("perguntas.docx", "wb") as f:
+                f.write(conteudo)
+            pares = extrair_perguntas_respostas("perguntas.docx")
+            st.session_state.pares = pares
+        else:
+            st.error("Não foi possível baixar o arquivo do Supabase.")
             st.session_state.fim_de_jogo = True
     # Placar fixo no topo
+
     st.markdown(
         f"""
         <div style='background-color:#222; color:white; padding:10px; border-radius:5px;'>
