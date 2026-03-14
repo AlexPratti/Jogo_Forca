@@ -173,20 +173,12 @@ else:
                                     st.error(f"A letra {letra} não está na palavra.")
                                     st.rerun()
 
-          
             # Condições de vitória ou derrota
             if st.session_state.erros >= st.session_state.max_erros:
                 st.error("💀 Você foi enforcado! Game Over!")
                 st.error(f"A resposta era: {st.session_state.palavra}")
                 st.session_state.derrotas += 1
                 st.snow()  # animação de derrota
-            
-            elif all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra):
-                st.balloons()
-                st.success("Parabéns! Você acertou a resposta!")
-                st.session_state.acertos += 1
-
-            
 
             elif all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra):
                 st.balloons()
