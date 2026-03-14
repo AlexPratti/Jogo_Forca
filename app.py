@@ -99,26 +99,27 @@ else:
     st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
     # Upload só aparece se jogador for Pratti
-    if st.session_state.jogador.lower() == "pratti":
+     if st.session_state.jogador.lower() == "pratti":
         arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
         if arquivo:
             # Salva localmente
             with open("perguntas.docx", "wb") as f:
                 f.write(arquivo.getbuffer())
-
+    
             # Faz upload para Supabase
             with open("perguntas.docx", "rb") as f:
                 status = upload_arquivo(f)
             if status == 200:
                 st.success("Arquivo enviado com sucesso!")
             else:
-                st.error("Erro ao enviar arquivo.")
-
+                st.error(f"Erro ao enviar arquivo. Código: {status}")
+    
             # Extrai perguntas
             pares = extrair_perguntas_respostas("perguntas.docx")
             st.session_state.pares = pares
         else:
             st.info("Nenhum arquivo carregado ainda.")
+
     else:
         # Se não for Pratti, tenta baixar do Supabase
         conteudo = download_arquivo()
