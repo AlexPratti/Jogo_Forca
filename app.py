@@ -84,27 +84,37 @@ else:
     st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
     # Defina os dois arquivos padrão
-    url_padrao_pratti = "https://github.com/AlexPratti/Jogo_Forca/blob/main/Perguntas%20teste.docx"
-    url_padrao_outros = "https://github.com/AlexPratti/Jogo_Forca/blob/main/Perguntas%20teste.docx"
+    url_padrao_pratti = "https://raw.githubusercontent.com/AlexPratti/Jogo_Forca/main/Perguntas%20teste.docx"
+    url_padrao_outros = "https://raw.githubusercontent.com/AlexPratti/Jogo_Forca/main/Perguntas%20teste.docx"
+    arquivo_padrao = carregar_arquivo_padrao(url_padrao_pratti)
+    if arquivo_padrao:
+        st.write("Arquivo padrão carregado!")
+        pares = extrair_perguntas_respostas(arquivo_padrao)
+        st.session_state.pares = pares
 
-    # Upload só aparece se jogador for Pratti
-    if st.session_state.jogador.lower() == "pratti":
-        arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
-        if arquivo:
-            pares = extrair_perguntas_respostas(arquivo)
-            st.session_state.pares = pares
-        else:
-            arquivo_padrao = carregar_arquivo_padrao(url_padrao_pratti)
-            if arquivo_padrao:
-                pares = extrair_perguntas_respostas(arquivo_padrao)
-                st.session_state.pares = pares
+# Upload só aparece se jogador for Pratti
+if st.session_state.jogador.lower() == "pratti":
+    arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
+    if arquivo:
+        # Upload feito por Pratti
+        pares = extrair_perguntas_respostas(arquivo)
+        st.session_state.pares = pares
     else:
-        # Se não for Pratti, sempre usa o arquivo padrão dos outros
-        if not st.session_state.pares:
-            arquivo_padrao = carregar_arquivo_padrao(url_padrao_outros)
-            if arquivo_padrao:
-                pares = extrair_perguntas_respostas(arquivo_padrao)
-                st.session_state.pares = pares
+        # Se Pratti não fizer upload, usa o arquivo padrão dele
+        arquivo_padrao = carregar_arquivo_padrao(url_padrao_pratti)
+        if arquivo_padrao:
+            st.write("Arquivo padrão do Pratti carregado!")  # debug opcional
+            pares = extrair_perguntas_respostas(arquivo_padrao)
+            st.session_state.pares = pares
+else:
+    # Se não for Pratti, sempre usa o arquivo padrão dos outros
+    if not st.session_state.pares:
+        arquivo_padrao = carregar_arquivo_padrao(url_padrao_outros)
+        if arquivo_padrao:
+            st.write("Arquivo padrão dos outros jogadores carregado!")  # debug opcional
+            pares = extrair_perguntas_respostas(arquivo_padrao)
+            st.session_state.pares = pares
+
 
 
     # Placar fixo no topo
