@@ -97,43 +97,40 @@ else:
         except:
             st.warning(f"Imagem {nome_imagem} não encontrada.")
 
-with col_controles:
-    st.markdown("### Controles")
+    with col_controles:
+        st.markdown("### Controles")
 
-    # Botão JOGAR no topo
-    if st.button("JOGAR"):
-        iniciar_nova_pergunta()
-        st.rerun()
+        if st.button("JOGAR"):
+            iniciar_nova_pergunta()
+            st.rerun()
 
-    # Demais botões abaixo
-    if st.button("LIMPAR FORCA"):
-        st.session_state.erros = 0
-        st.session_state.letras_corretas = []
-        st.session_state.letras_erradas = []
-        st.rerun()
+        if st.button("LIMPAR FORCA"):
+            st.session_state.erros = 0
+            st.session_state.letras_corretas = []
+            st.session_state.letras_erradas = []
+            st.rerun()
 
-    if st.button("RESETAR"):
-        st.session_state.indice = 0
-        pergunta, resposta = st.session_state.pares[0]
-        st.session_state.pergunta = pergunta
-        st.session_state.palavra = resposta
-        st.session_state.letras_corretas = []
-        st.session_state.letras_erradas = []
-        st.session_state.erros = 0
-        st.session_state.acertos = 0
-        st.session_state.derrotas = 0
-        st.rerun()
+        if st.button("RESETAR"):
+            st.session_state.indice = 0
+            pergunta, resposta = st.session_state.pares[0]
+            st.session_state.pergunta = pergunta
+            st.session_state.palavra = resposta
+            st.session_state.letras_corretas = []
+            st.session_state.letras_erradas = []
+            st.session_state.erros = 0
+            st.session_state.acertos = 0
+            st.session_state.derrotas = 0
+            st.rerun()
 
-    st.button("CORES LETRAS")
+        st.button("CORES LETRAS")
 
-    if st.button("SAIR DO JOGO"):
-        del st.session_state["jogador"]
-        st.rerun()
+        if st.button("SAIR DO JOGO"):
+            del st.session_state["jogador"]
+            st.rerun()
 
-    if st.button("PRÓXIMO"):
-        iniciar_nova_pergunta()
-        st.rerun()
-
+        if st.button("PRÓXIMO"):
+            iniciar_nova_pergunta()
+            st.rerun()
 
     with col_jogo:
         if st.session_state.pergunta:
@@ -150,15 +147,19 @@ with col_controles:
                       "J","K","L","M","N","Ñ","O","Ó","Ô","Õ","Ö","P","Q","R","S","T","U","Ú","Û","Ü","V","W","X","Y","Z"]
 
             st.markdown("<h3 style='background-color:blue; color:white; padding:5px;'>ESCOLHER UMA LETRA ABAIXO</h3>", unsafe_allow_html=True)
+
+            # Verifica se o jogo ainda está ativo
+            jogo_ativo = (
+                st.session_state.erros < st.session_state.max_erros and
+                not all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra)
+            )
+
             cols = st.columns(8, gap="small")
             for i, letra in enumerate(letras):
                 with cols[i % 8]:
                     if st.button(letra, key=f"btn_{letra}"):
-                        if st.session_state.erros >= st.session_state.max_erros:
-                            if st.session_state.indice + 1 < len(st.session_state.pares):
-                                st.warning("Por favor vá para a próxima questão!")
-                            else:
-                                st.error("Fim de Jogo!")
+                        if not jogo_ativo:
+                            st.warning("A rodada terminou! Clique em PRÓXIMO para continuar.")
                         else:
                             if letra in st.session_state.palavra:
                                 if letra not in st.session_state.letras_corretas:
@@ -172,10 +173,18 @@ with col_controles:
                                     st.error(f"A letra {letra} não está na palavra.")
                                     st.rerun()
 
+            # Condições de vitória ou derrota
             if st.session_state.erros >= st.session_state.max_erros:
                 st.error("💀 Você foi enforcado! Game Over!")
                 st.error(f"A resposta era: {st.session_state.palavra}")
                 st.session_state.derrotas += 1
+                st.snow()  # efeito de derrota
+                # Mostrar várias imagens de choro como se estivessem subindo
+                cols_choro = st.columns(5)
+                for i in range(5):
+                    with cols_choro[i]:
+                        st.image("choro.png", use_column_width=True)
+
             elif all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra):
                 st.balloons()
                 st.success("Parabéns! Você acertou a resposta!")
