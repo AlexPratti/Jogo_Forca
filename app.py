@@ -134,6 +134,8 @@ else:
                             st.session_state.letras_erradas.append(letra)
                             st.session_state.erros += 1
                             st.error(f"A letra {letra} não está na palavra.")
+                            # Força atualização imediata para mostrar a imagem do erro
+                            st.rerun()
 
         # Condições de vitória ou derrota
         if st.session_state.erros >= st.session_state.max_erros:
