@@ -15,13 +15,12 @@ def upload_arquivo(arquivo_binario):
     resp = requests.put(
         f"{URL_SUPABASE}/storage/v1/object/forca/perguntas.docx",
         headers={
-            "apikey": KEY_SUPABASE,
             "Authorization": f"Bearer {KEY_SUPABASE}",
             "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         },
         data=arquivo_binario.read()
     )
-    return resp.status_code, resp.text  # retorna também o texto da resposta
+    return resp.status_code, resp.text
 
 
 
