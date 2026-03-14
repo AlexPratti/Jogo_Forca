@@ -137,10 +137,24 @@ else:
         st.button("CORES LETRAS")
 
         if st.button("SAIR DO JOGO"):
+            # Remove jogador
             del st.session_state["jogador"]
+            # Resetar todo o estado
             st.session_state.indice = None
+            st.session_state.acertos = 0
+            st.session_state.derrotas = 0
+            st.session_state.pergunta = None
+            st.session_state.palavra = None
+            st.session_state.letras_corretas = []
+            st.session_state.letras_erradas = []
+            st.session_state.erros = 0
             st.session_state.fim_de_jogo = False
             st.rerun()
+
+
+
+
+    
     with col_jogo:
         if st.session_state.pergunta:
             st.markdown(
