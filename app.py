@@ -97,12 +97,16 @@ else:
     st.write(f"Jogador: {st.session_state.jogador}")
     st.write(f"ERROS: {st.session_state.erros}")
 
-    # Mostrar imagem da forca conforme erros (erro0 até erro6)
-    nome_imagem = f"erro{st.session_state.erros}.png"
-    try:
-        st.image(nome_imagem, caption=f"Erros: {st.session_state.erros}/{st.session_state.max_erros}")
-    except:
-        st.warning(f"Imagem {nome_imagem} não encontrada.")
+    # Mostrar sempre a forca vazia
+    st.image("erro0.png", caption="Forca")
+
+    # Mostrar imagens adicionais conforme erros
+    for n in range(1, st.session_state.erros + 1):
+        nome_imagem = f"erro{n}.png"
+        try:
+            st.image(nome_imagem, caption=f"Erro {n}")
+        except:
+            st.warning(f"Imagem {nome_imagem} não encontrada.")
 
     # Caixa cinza com pergunta
     if st.session_state.pergunta:
