@@ -51,7 +51,7 @@ def iniciar_nova_pergunta():
         st.session_state.letras_corretas = []
         st.session_state.letras_erradas = []
         st.session_state.erros = 0
-        st.session_state.max_erros = 6
+        st.session_state.max_erros = 6  # agora são 6 erros possíveis
     else:
         st.session_state.pergunta = None
         st.session_state.palavra = None
@@ -73,7 +73,7 @@ if st.session_state.get("pergunta"):
     # Exibição da imagem baseada no número de erros
     nome_imagem = f"erro{st.session_state.erros}.png"
     try:
-        st.image(nome_imagem, caption=f"Tentativas gastas: {st.session_state.erros}")
+        st.image(nome_imagem, caption=f"Erros: {st.session_state.erros}/{st.session_state.max_erros}")
     except:
         st.warning(f"Imagem {nome_imagem} não encontrada.")
 
@@ -111,7 +111,8 @@ if st.session_state.get("pergunta"):
 
     # Condições de vitória ou derrota
     if st.session_state.erros >= st.session_state.max_erros:
-        st.error(f"Game Over! A resposta era: {st.session_state.palavra}")
+        st.error("💀 Você foi enforcado! Game Over!")
+        st.error(f"A resposta era: {st.session_state.palavra}")
         st.session_state.derrotas += 1
     elif all(letra in st.session_state.letras_corretas for letra in st.session_state.palavra):
         st.balloons()
