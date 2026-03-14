@@ -11,13 +11,14 @@ KEY_SUPABASE = st.secrets["KEY_SUPABASE"]
 
 headers = {"apikey": KEY_SUPABASE, "Authorization": f"Bearer {KEY_SUPABASE}"}
 
-def upload_arquivo(arquivo):
-    resp = requests.post(
+def upload_arquivo(arquivo_binario):
+    resp = requests.put(  # usar PUT em vez de POST
         f"{URL_SUPABASE}/storage/v1/object/forca/perguntas.docx",
         headers=headers,
-        data=arquivo.read()
+        data=arquivo_binario.read()
     )
     return resp.status_code
+
 
 def download_arquivo():
     resp = requests.get(
