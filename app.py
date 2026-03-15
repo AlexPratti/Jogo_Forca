@@ -80,7 +80,7 @@ if "jogador" not in st.session_state:
         st.session_state.jogador = nome.strip().upper()
         st.rerun()
 else:
-    st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color:black;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
     if st.session_state.jogador.lower() == "pratti":
         arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
@@ -129,7 +129,7 @@ else:
             """
             <style>
             div.stButton > button {
-                font-size: 40px !important;
+                font-size: 80px !important;
                 font-weight: bold;
                 height: 50px !important;
                 width: 160px !important;
@@ -181,7 +181,7 @@ else:
                 div[data-testid="stHorizontalBlock"] div.stButton > button {
                     background-color: #111 !important;
                     color: white !important;
-                    font-size: 84px !important;
+                    font-size: 100px !important;
                     font-weight: bold;
                     height: 80px !important;
                     width: 80px !important;
