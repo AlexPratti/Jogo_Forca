@@ -204,13 +204,23 @@ else:
                 unsafe_allow_html=True
             )
 
+              # teclado de letras em português
             letras = [
                 "A","Á","Ã","Â","B","C","Ç","D","E","É","Ê","F","G","H","I","J","K","L","M",
                 "N","O","Ó","Õ","Ô","P","Q","R","S","T","U","Ú","V","W","X","Y","Z"
             ]
+            
+            # condição de bloqueio: se perdeu ou ganhou
+            bloqueado = (
+                st.session_state.erros >= st.session_state.max_erros or
+                (st.session_state.palavra and all(
+                    l in st.session_state.letras_corretas for l in st.session_state.palavra
+                ))
+            )
+            
             cols = st.columns(10)
             for i, l in enumerate(letras):
-                disabled = l in st.session_state.letras_corretas or l in st.session_state.letras_erradas
+                disabled = bloqueado or l in st.session_state.letras_corretas or l in st.session_state.letras_erradas
                 if cols[i % 10].button(l, key=f"btn_{l}", disabled=disabled):
                     if l in st.session_state.palavra:
                         st.session_state.letras_corretas.append(l)
@@ -218,6 +228,7 @@ else:
                         st.session_state.letras_erradas.append(l)
                         st.session_state.erros += 1
                     st.rerun()
+
 
                # condição de derrota
             if st.session_state.erros >= st.session_state.max_erros:
