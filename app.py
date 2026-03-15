@@ -1,5 +1,8 @@
 import streamlit as st
 import random
+import tempfile
+import tempfile
+import os
 from docx import Document
 from io import BytesIO
 from supabase import create_client
@@ -37,15 +40,24 @@ def extrair_perguntas_respostas(docx_file):
             pares.append((pergunta, resposta))
     return pares
 
-import tempfile
 
 def salvar_no_supabase(arquivo):
-    file_bytes = arquivo.read()
-    supabase.storage.from_("forca").upload(
-        "arquivo_compartilhado.docx",
-        file_bytes,
-        {"content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
-    )
+    # cria arquivo temporário
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
+        tmp.write(arquivo.read())
+        tmp_path = tmp.name
+
+    try:
+        # upload usando caminho do arquivo
+        resp = supabase.storage.from_("forca").upload(
+            "arquivo_compartilhado.docx",
+            tmp_path
+        )
+        print(resp)
+    finally:
+        # remove o arquivo temporário
+        os.remove(tmp_path)
+
 
 
 
