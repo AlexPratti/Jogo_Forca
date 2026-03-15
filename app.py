@@ -125,8 +125,8 @@ else:
         else:
             st.warning(f"Imagem {nome_imagem} não encontrada.")
 
-    with col_controles:
-        # CSS para os botões de ação (mantém tamanho, muda fundo após iniciar jogo)
+     with col_controles:
+        # estilo base para manter tamanho retangular
         st.markdown(
             """
             <style>
@@ -179,17 +179,17 @@ else:
             )
             st.markdown(f"## {exibicao}")
 
-            # CSS para o teclado de letras (caixas grandes e fonte maior)
+            # estilo para teclado de letras
             st.markdown(
                 """
                 <style>
                 div[data-testid="stHorizontalBlock"] div.stButton > button {
                     background-color: #111 !important;
                     color: white !important;
-                    font-size: 80px !important; /* ainda maior */
+                    font-size: 44px !important; /* letras bem maiores */
                     font-weight: bold;
-                    height: 90px !important;
-                    width: 90px !important;
+                    height: 100px !important;
+                    width: 100px !important;
                     margin: 4px;
                     border-radius: 8px;
                 }
