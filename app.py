@@ -196,7 +196,7 @@ else:
                     border-radius: 8px;
                 }
                 div[data-testid="stHorizontalBlock"] div.stButton > button:disabled {
-                    background-color: #444 !important;
+                    background-color: #888 !important;
                     color: #aaa !important;
                 }
                 </style>
