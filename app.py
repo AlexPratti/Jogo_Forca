@@ -115,17 +115,19 @@ else:
         unsafe_allow_html=True
     )
 
+    # cria as colunas
     col_forca, col_controles, col_jogo = st.columns([1,0.8,2])
-
+    
+    # coluna da forca
     with col_forca:
         nome_imagem = f"erro{st.session_state.erros}.png"
         if os.path.exists(nome_imagem):
             st.image(nome_imagem)
         else:
             st.warning(f"Imagem {nome_imagem} não encontrada.")
-
-     with col_controles:
-        # estilo fixo para os botões de ação
+    
+    # coluna dos controles
+    with col_controles:
         st.markdown(
             """
             <style>
@@ -137,7 +139,7 @@ else:
                 margin: 6px 0;
                 border-radius: 6px;
                 white-space: nowrap;          /* impede quebra de linha */
-                text-align: center;           /* centraliza texto */
+                text-align: center;
                 justify-content: center;
             }
             </style>
@@ -145,9 +147,7 @@ else:
             unsafe_allow_html=True
         )
     
-        # cor laranja antes de jogar, fundo escuro depois
         cor_fundo = "#f97316" if st.session_state.indice is None else "#111"
-    
         st.markdown(
             f"""
             <style>
@@ -160,7 +160,6 @@ else:
             unsafe_allow_html=True
         )
     
-        # botões de ação
         label_btn = "JOGAR" if st.session_state.indice is None else "PRÓXIMO"
         if st.button(label_btn, key="btn_jogar"):
             iniciar_nova_pergunta()
@@ -172,8 +171,7 @@ else:
             st.session_state.clear()
             st.rerun()
 
-    
-
+# coluna do jogo
     with col_jogo:
         if st.session_state.pergunta:
             st.subheader(st.session_state.pergunta)
