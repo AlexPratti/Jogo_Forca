@@ -118,7 +118,6 @@ else:
     # cria as colunas
     col_forca, col_controles, col_jogo = st.columns([1,0.8,2])
     
-    # coluna da forca
     with col_forca:
         nome_imagem = f"erro{st.session_state.erros}.png"
         if os.path.exists(nome_imagem):
@@ -126,43 +125,28 @@ else:
         else:
             st.warning(f"Imagem {nome_imagem} não encontrada.")
     
-    # coluna dos controles
     with col_controles:
-         st.markdown(
+        st.markdown(
             """
             <style>
-            /* estilo base do teclado */
-            div[data-testid="stHorizontalBlock"] div.stButton > button {
-                background-color: #111 !important;
-                color: white !important;
-                font-size: 44px !important;
+            div.stButton > button {
+                font-size: 20px !important;
                 font-weight: bold;
-                height: 100px !important;
-                width: 100px !important;
-                margin: 4px;
-                border-radius: 8px;
-            }
-            div[data-testid="stHorizontalBlock"] div.stButton > button:disabled {
-                background-color: #444 !important;
-                color: #aaa !important;
-            }
-        
-            /* ajuste automático em telas menores */
-            @media (max-width: 600px) {
-                div[data-testid="stHorizontalBlock"] div.stButton > button {
-                    width: 18% !important;   /* ocupa ~5 botões por linha */
-                    height: 60px !important; /* reduz altura */
-                    font-size: 24px !important; /* fonte menor para caber */
-                }
+                height: 55px !important;
+                width: 220px !important;
+                margin: 6px 0;
+                border-radius: 6px;
+                white-space: nowrap;
+                text-align: center;
+                justify-content: center;
             }
             </style>
             """,
             unsafe_allow_html=True
         )
-
-
     
         cor_fundo = "#f97316" if st.session_state.indice is None else "#111"
+    
         st.markdown(
             f"""
             <style>
@@ -182,10 +166,9 @@ else:
         if st.button("RESETAR", key="btn_resetar"):
             st.session_state.clear()
             st.rerun()
-        if st.button("SAIR", key="btn_sair"):
+        if st.button("SAIR DO JOGO", key="btn_sair"):
             st.session_state.clear()
             st.rerun()
-
 # coluna do jogo
     with col_jogo:
         if st.session_state.pergunta:
