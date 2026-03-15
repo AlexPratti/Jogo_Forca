@@ -105,7 +105,7 @@ else:
             else:
                 st.error("Nenhum arquivo disponível no Supabase.")
 
-     st.markdown(
+    st.markdown(
         f"""
         <div style='background-color:#222; color:white; padding:10px; border-radius:5px;'>
         Jogador: {st.session_state.jogador}<br>
@@ -115,74 +115,58 @@ else:
         """,
         unsafe_allow_html=True
     )
-    
-    # aqui você cria as colunas
+
     col_forca, col_controles, col_jogo = st.columns([1,0.8,2])
 
-# ================================
-# IMAGEM DA FORCA
-# ================================
-with col_forca:
-    nome_imagem = f"erro{st.session_state.erros}.png"
-    if os.path.exists(nome_imagem):
-        st.image(nome_imagem)
-    else:
-        st.warning(f"Imagem {nome_imagem} não encontrada.")
+    with col_forca:
+        nome_imagem = f"erro{st.session_state.erros}.png"
+        if os.path.exists(nome_imagem):
+            st.image(nome_imagem)
+        else:
+            st.warning(f"Imagem {nome_imagem} não encontrada.")
 
-# ================================
-# CONTROLES
-# ================================
+    with col_controles:
+        # estilo base para botões de ação
+        st.markdown(
+            """
+            <style>
+            div.stButton > button {
+                font-size: 20px !important;
+                font-weight: bold;
+                height: 50px !important;
+                width: 160px !important;
+                margin: 6px 0;
+                border-radius: 6px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
-# ================================
-# CONTROLES
-# ================================
-with col_controles:
-    # estilo base para manter tamanho retangular
-    st.markdown(
-        """
-        <style>
-        div.stButton > button {
-            font-size: 20px !important;
-            font-weight: bold;
-            height: 50px !important;
-            width: 160px !important;
-            margin: 6px 0;
-            border-radius: 6px;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+        cor_fundo = "#f97316" if st.session_state.indice is None else "#111"
+        st.markdown(
+            f"""
+            <style>
+            div.stButton > button {{
+                background-color: {cor_fundo} !important;
+                color: white !important;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
-    # cor laranja antes de jogar, fundo escuro depois
-    cor_fundo = "#f97316" if st.session_state.indice is None else "#111"
-    st.markdown(
-        f"""
-        <style>
-        div.stButton > button {{
-            background-color: {cor_fundo} !important;
-            color: white !important;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+        label_btn = "JOGAR" if st.session_state.indice is None else "PRÓXIMO"
+        if st.button(label_btn, key="btn_jogar"):
+            iniciar_nova_pergunta()
+            st.rerun()
+        if st.button("RESETAR", key="btn_resetar"):
+            st.session_state.clear()
+            st.rerun()
+        if st.button("SAIR DO JOGO", key="btn_sair"):
+            st.session_state.clear()
+            st.rerun()
 
-    label_btn = "JOGAR" if st.session_state.indice is None else "PRÓXIMO"
-    if st.button(label_btn, key="btn_jogar"):
-        iniciar_nova_pergunta()
-        st.rerun()
-    if st.button("RESETAR", key="btn_resetar"):
-        st.session_state.clear()
-        st.rerun()
-    if st.button("SAIR DO JOGO", key="btn_sair"):
-        st.session_state.clear()
-        st.rerun()
-
-
-# ================================
-# JOGO
-# ================================
 with col_jogo:
     if st.session_state.pergunta:
         st.subheader(st.session_state.pergunta)
