@@ -105,25 +105,33 @@ else:
             else:
                 st.error("Nenhum arquivo disponível no Supabase.")
 
-    st.markdown(
-        f"""
-        <div style='background-color:#222; color:white; padding:10px; border-radius:5px;'>
-        Jogador: {st.session_state.jogador}<br>
-        Acertos: {st.session_state.acertos} | Derrotas: {st.session_state.derrotas}<br>
-        Erros atuais: {st.session_state.erros}/{st.session_state.max_erros}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+ st.markdown(
+    f"""
+    <div style='background-color:#222; color:white; padding:10px; border-radius:5px;'>
+    Jogador: {st.session_state.jogador}<br>
+    Acertos: {st.session_state.acertos} | Derrotas: {st.session_state.derrotas}<br>
+    Erros atuais: {st.session_state.erros}/{st.session_state.max_erros}
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-    col_forca, col_controles, col_jogo = st.columns([1,0.8,2])
+# aqui você cria as colunas
+col_forca, col_controles, col_jogo = st.columns([1,0.8,2])
 
-    with col_forca:
-        nome_imagem = f"erro{st.session_state.erros}.png"
-        if os.path.exists(nome_imagem):
-            st.image(nome_imagem)
-        else:
-            st.warning(f"Imagem {nome_imagem} não encontrada.")
+# ================================
+# IMAGEM DA FORCA
+# ================================
+with col_forca:
+    nome_imagem = f"erro{st.session_state.erros}.png"
+    if os.path.exists(nome_imagem):
+        st.image(nome_imagem)
+    else:
+        st.warning(f"Imagem {nome_imagem} não encontrada.")
+
+# ================================
+# CONTROLES
+# ================================
 
 # ================================
 # CONTROLES
