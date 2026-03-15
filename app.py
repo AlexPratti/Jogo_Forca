@@ -126,16 +126,36 @@ else:
             st.warning(f"Imagem {nome_imagem} não encontrada.")
 
     with col_controles:
+        # CSS para os botões de ação (retangulares)
+        st.markdown(
+            """
+            <style>
+            div.stButton > button[kind="secondary"] {
+                background-color: #f97316 !important; /* laranja */
+                color: white !important;
+                font-size: 20px !important;
+                font-weight: bold;
+                height: 50px !important;
+                width: 160px !important; /* largura suficiente para texto */
+                margin: 6px 0;
+                border-radius: 6px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
         label_btn = "JOGAR" if st.session_state.indice is None else "PRÓXIMO"
-        if st.button(label_btn):
+        if st.button(label_btn, key="btn_jogar"):
             iniciar_nova_pergunta()
             st.rerun()
-        if st.button("RESETAR"):
+        if st.button("RESETAR", key="btn_resetar"):
             st.session_state.clear()
             st.rerun()
-        if st.button("SAIR DO JOGO"):
+        if st.button("SAIR DO JOGO", key="btn_sair"):
             st.session_state.clear()
             st.rerun()
+
 
     with col_jogo:
         if st.session_state.pergunta:
@@ -147,18 +167,17 @@ else:
             )
             st.markdown(f"## {exibicao}")
 
-            # CSS aplicado apenas ao teclado
+            # CSS para o teclado de letras (caixas grandes)
             st.markdown(
                 """
                 <style>
-                /* estiliza apenas os botões do teclado */
                 div[data-testid="stHorizontalBlock"] div.stButton > button {
-                    background-color: #111 !important;   /* fundo escuro */
-                    color: white !important;             /* letras brancas */
-                    font-size: 32px !important;          /* fonte maior */
+                    background-color: #111 !important;
+                    color: white !important;
+                    font-size: 36px !important; /* fonte maior */
                     font-weight: bold;
-                    height: 80px !important;             /* altura da caixa */
-                    width: 80px !important;              /* largura da caixa */
+                    height: 80px !important;
+                    width: 80px !important;
                     margin: 4px;
                     border-radius: 8px;
                 }
