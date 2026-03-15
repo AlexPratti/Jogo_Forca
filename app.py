@@ -132,11 +132,13 @@ else:
             div.stButton > button {
                 font-size: 20px !important;   /* tamanho da fonte */
                 font-weight: bold;
-                height: 50px !important;      /* altura fixa */
-                width: 180px !important;      /* largura fixa para caber o texto */
+                height: 55px !important;      /* altura fixa */
+                width: 220px !important;      /* largura maior para caber "SAIR DO JOGO" */
                 margin: 6px 0;
                 border-radius: 6px;
                 white-space: nowrap;          /* impede quebra de linha no texto */
+                text-align: center;           /* centraliza o texto */
+                justify-content: center;      /* garante alinhamento central */
             }
             </style>
             """,
