@@ -23,12 +23,14 @@ def extrair_perguntas_respostas(docx_file):
     return pares
 
 def salvar_no_supabase(arquivo):
-    # salva no bucket "forca"
+    # pega os bytes do arquivo enviado
+    file_bytes = arquivo.read()
     supabase.storage.from_("forca").upload(
         "arquivo_compartilhado.docx",
-        arquivo.getbuffer(),
+        file_bytes,
         {"content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
     )
+
 
 def carregar_do_supabase():
     # baixa do bucket "forca"
