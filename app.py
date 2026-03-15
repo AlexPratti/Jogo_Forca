@@ -124,12 +124,12 @@ else:
         else:
             st.warning(f"Imagem {nome_imagem} não encontrada.")
 
-    with col_controles:
+     with col_controles:
         # estilo fixo para os botões de ação
         st.markdown(
             """
             <style>
-            div.stButton > button.control-btn {
+            div.stButton > button {
                 font-size: 20px !important;
                 font-weight: bold;
                 height: 55px !important;      /* altura fixa */
@@ -148,11 +148,10 @@ else:
         # cor laranja antes de jogar, fundo escuro depois
         cor_fundo = "#f97316" if st.session_state.indice is None else "#111"
     
-        # aplicar cor dinamicamente sem alterar dimensões
         st.markdown(
             f"""
             <style>
-            div.stButton > button.control-btn {{
+            div.stButton > button {{
                 background-color: {cor_fundo} !important;
                 color: white !important;
             }}
@@ -161,18 +160,18 @@ else:
             unsafe_allow_html=True
         )
     
-        # botões de ação usando a classe "control-btn"
+        # botões de ação
         label_btn = "JOGAR" if st.session_state.indice is None else "PRÓXIMO"
-        if st.button(label_btn, key="btn_jogar", help="", type="secondary"):
+        if st.button(label_btn, key="btn_jogar"):
             iniciar_nova_pergunta()
             st.rerun()
-        if st.button("RESETAR", key="btn_resetar", help="", type="secondary"):
+        if st.button("RESETAR", key="btn_resetar"):
             st.session_state.clear()
             st.rerun()
-        if st.button("SAIR DO JOGO", key="btn_sair", help="", type="secondary"):
+        if st.button("SAIR DO JOGO", key="btn_sair"):
             st.session_state.clear()
             st.rerun()
-    
+
     
 
     with col_jogo:
