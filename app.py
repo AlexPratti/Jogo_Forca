@@ -103,18 +103,16 @@ else:
             pares = extrair_perguntas_respostas(arquivo)
             st.session_state.pares = pares
         else:
-            arquivo_padrao = carregar_arquivo_onedrive(link_onedrive)
-            if arquivo_padrao:
-                st.write("Arquivo padrão do OneDrive carregado (Pratti)!")
-                pares = extrair_perguntas_respostas(arquivo_padrao)
-                st.session_state.pares = pares
+            # usa arquivo local como fallback
+            arquivo_padrao = "perguntas.docx"
+            pares = extrair_perguntas_respostas(arquivo_padrao)
+            st.session_state.pares = pares
     else:
         if not st.session_state.pares:
-            arquivo_padrao = carregar_arquivo_onedrive(link_onedrive)
-            if arquivo_padrao:
-                st.write("Arquivo padrão do OneDrive carregado (outros jogadores)!")
-                pares = extrair_perguntas_respostas(arquivo_padrao)
-                st.session_state.pares = pares
+            # usa arquivo local como fallback
+            arquivo_padrao = "perguntas.docx"
+            pares = extrair_perguntas_respostas(arquivo_padrao)
+            st.session_state.pares = pares
 
     # Placar fixo no topo
     st.markdown(
