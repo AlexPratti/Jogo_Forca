@@ -128,34 +128,38 @@ else:
     
     # coluna dos controles
     with col_controles:
-        st.markdown(
+         st.markdown(
             """
             <style>
-            /* estilo base para botões de controle */
-            div.stButton > button {
-                font-size: 20px !important;
+            /* estilo base do teclado */
+            div[data-testid="stHorizontalBlock"] div.stButton > button {
+                background-color: #111 !important;
+                color: white !important;
+                font-size: 44px !important;
                 font-weight: bold;
-                height: 55px !important;
-                width: 220px !important;
-                margin: 6px 0;
-                border-radius: 6px;
-                white-space: nowrap;
-                text-align: center;
-                justify-content: center;
+                height: 100px !important;
+                width: 100px !important;
+                margin: 4px;
+                border-radius: 8px;
+            }
+            div[data-testid="stHorizontalBlock"] div.stButton > button:disabled {
+                background-color: #444 !important;
+                color: #aaa !important;
             }
         
             /* ajuste automático em telas menores */
             @media (max-width: 600px) {
-                div.stButton > button {
-                    width: 90% !important;   /* ocupa quase toda a largura da tela */
-                    height: 50px !important; /* mantém altura proporcional */
-                    font-size: 18px !important; /* reduz fonte para caber */
+                div[data-testid="stHorizontalBlock"] div.stButton > button {
+                    width: 18% !important;   /* ocupa ~5 botões por linha */
+                    height: 60px !important; /* reduz altura */
+                    font-size: 24px !important; /* fonte menor para caber */
                 }
             }
             </style>
             """,
             unsafe_allow_html=True
         )
+
 
     
         cor_fundo = "#f97316" if st.session_state.indice is None else "#111"
