@@ -126,20 +126,32 @@ else:
             st.warning(f"Imagem {nome_imagem} não encontrada.")
 
     with col_controles:
-        # CSS para os botões de ação (retangulares)
+        # CSS para os botões de ação (mantém tamanho, muda fundo após iniciar jogo)
         st.markdown(
             """
             <style>
-            div.stButton > button[kind="secondary"] {
-                background-color: #f97316 !important; /* laranja */
-                color: white !important;
+            div.stButton > button {
                 font-size: 20px !important;
                 font-weight: bold;
                 height: 50px !important;
-                width: 160px !important; /* largura suficiente para texto */
+                width: 160px !important;
                 margin: 6px 0;
                 border-radius: 6px;
             }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # cor laranja antes de jogar, fundo escuro depois
+        cor_fundo = "#f97316" if st.session_state.indice is None else "#111"
+        st.markdown(
+            f"""
+            <style>
+            div.stButton > button {{
+                background-color: {cor_fundo} !important;
+                color: white !important;
+            }}
             </style>
             """,
             unsafe_allow_html=True
@@ -167,17 +179,17 @@ else:
             )
             st.markdown(f"## {exibicao}")
 
-            # CSS para o teclado de letras (caixas grandes)
+            # CSS para o teclado de letras (caixas grandes e fonte maior)
             st.markdown(
                 """
                 <style>
                 div[data-testid="stHorizontalBlock"] div.stButton > button {
                     background-color: #111 !important;
                     color: white !important;
-                    font-size: 36px !important; /* fonte maior */
+                    font-size: 40px !important; /* ainda maior */
                     font-weight: bold;
-                    height: 80px !important;
-                    width: 80px !important;
+                    height: 90px !important;
+                    width: 90px !important;
                     margin: 4px;
                     border-radius: 8px;
                 }
