@@ -147,21 +147,22 @@ else:
             )
             st.markdown(f"## {exibicao}")
 
-            # CSS para estilizar os botões como caixas grandes
+            # CSS aplicado apenas ao teclado
             st.markdown(
                 """
                 <style>
-                div.stButton > button {
+                /* estiliza apenas os botões do teclado */
+                div[data-testid="stHorizontalBlock"] div.stButton > button {
                     background-color: #111 !important;   /* fundo escuro */
                     color: white !important;             /* letras brancas */
-                    font-size: 32px !important;          /* fonte bem maior */
+                    font-size: 32px !important;          /* fonte maior */
                     font-weight: bold;
-                    height: 70px !important;             /* altura da caixa */
-                    width: 70px !important;              /* largura da caixa */
+                    height: 80px !important;             /* altura da caixa */
+                    width: 80px !important;              /* largura da caixa */
                     margin: 4px;
                     border-radius: 8px;
                 }
-                div.stButton > button:disabled {
+                div[data-testid="stHorizontalBlock"] div.stButton > button:disabled {
                     background-color: #444 !important;
                     color: #aaa !important;
                 }
@@ -186,13 +187,13 @@ else:
                         st.session_state.erros += 1
                     st.rerun()
 
-            # condição de derrota
+            # derrota
             if st.session_state.erros >= st.session_state.max_erros:
                 st.error("💀 Você perdeu!")
                 st.write(f"A palavra era: {st.session_state.palavra}")
                 st.session_state.derrotas += 1
 
-            # condição de vitória
+            # vitória
             elif st.session_state.palavra and all(
                 l in st.session_state.letras_corretas for l in st.session_state.palavra
             ):
