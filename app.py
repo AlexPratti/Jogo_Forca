@@ -147,19 +147,22 @@ else:
             )
             st.markdown(f"## {exibicao}")
 
-            # CSS para estilizar os botões
+            # CSS para estilizar os botões como caixas grandes
             st.markdown(
                 """
                 <style>
                 div.stButton > button {
-                    background-color: #222 !important;
-                    color: white !important;
-                    font-size: 24px !important; /* dobro do tamanho padrão */
-                    border-radius: 6px;
-                    margin: 2px;
+                    background-color: #111 !important;   /* fundo escuro */
+                    color: white !important;             /* letras brancas */
+                    font-size: 32px !important;          /* fonte bem maior */
+                    font-weight: bold;
+                    height: 70px !important;             /* altura da caixa */
+                    width: 70px !important;              /* largura da caixa */
+                    margin: 4px;
+                    border-radius: 8px;
                 }
                 div.stButton > button:disabled {
-                    background-color: #555 !important;
+                    background-color: #444 !important;
                     color: #aaa !important;
                 }
                 </style>
