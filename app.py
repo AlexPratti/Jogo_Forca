@@ -183,8 +183,8 @@ else:
                     color: white !important;
                     font-size: 44px !important;
                     font-weight: bold;
-                    height: 100px !important;
-                    width: 100px !important;
+                    height: 40px !important;
+                    width: 40px !important;
                     margin: 4px;
                     border-radius: 8px;
                 }
