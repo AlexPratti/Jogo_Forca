@@ -125,111 +125,117 @@ else:
         else:
             st.warning(f"Imagem {nome_imagem} não encontrada.")
 
-     with col_controles:
-        # estilo base para manter tamanho retangular
+# ================================
+# CONTROLES
+# ================================
+with col_controles:
+    # estilo base para manter tamanho retangular
+    st.markdown(
+        """
+        <style>
+        div.stButton > button {
+            font-size: 20px !important;
+            font-weight: bold;
+            height: 50px !important;
+            width: 160px !important;
+            margin: 6px 0;
+            border-radius: 6px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # cor laranja antes de jogar, fundo escuro depois
+    cor_fundo = "#f97316" if st.session_state.indice is None else "#111"
+    st.markdown(
+        f"""
+        <style>
+        div.stButton > button {{
+            background-color: {cor_fundo} !important;
+            color: white !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    label_btn = "JOGAR" if st.session_state.indice is None else "PRÓXIMO"
+    if st.button(label_btn, key="btn_jogar"):
+        iniciar_nova_pergunta()
+        st.rerun()
+    if st.button("RESETAR", key="btn_resetar"):
+        st.session_state.clear()
+        st.rerun()
+    if st.button("SAIR DO JOGO", key="btn_sair"):
+        st.session_state.clear()
+        st.rerun()
+
+
+# ================================
+# JOGO
+# ================================
+with col_jogo:
+    if st.session_state.pergunta:
+        st.subheader(st.session_state.pergunta)
+
+        exibicao = " ".join(
+            letra if letra in st.session_state.letras_corretas else "_"
+            for letra in st.session_state.palavra
+        )
+        st.markdown(f"## {exibicao}")
+
+        # estilo para teclado de letras
         st.markdown(
             """
             <style>
-            div.stButton > button {
-                font-size: 20px !important;
+            div[data-testid="stHorizontalBlock"] div.stButton > button {
+                background-color: #111 !important;
+                color: white !important;
+                font-size: 44px !important; /* letras bem maiores */
                 font-weight: bold;
-                height: 50px !important;
-                width: 160px !important;
-                margin: 6px 0;
-                border-radius: 6px;
+                height: 100px !important;
+                width: 100px !important;
+                margin: 4px;
+                border-radius: 8px;
+            }
+            div[data-testid="stHorizontalBlock"] div.stButton > button:disabled {
+                background-color: #444 !important;
+                color: #aaa !important;
             }
             </style>
             """,
             unsafe_allow_html=True
         )
 
-        # cor laranja antes de jogar, fundo escuro depois
-        cor_fundo = "#f97316" if st.session_state.indice is None else "#111"
-        st.markdown(
-            f"""
-            <style>
-            div.stButton > button {{
-                background-color: {cor_fundo} !important;
-                color: white !important;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
+        # teclado de letras em português
+        letras = [
+            "A","Á","Ã","Â","B","C","Ç","D","E","É","Ê","F","G","H","I","J","K","L","M",
+            "N","O","Ó","Õ","Ô","P","Q","R","S","T","U","Ú","V","W","X","Y","Z"
+        ]
+        cols = st.columns(10)
+        for i, l in enumerate(letras):
+            disabled = l in st.session_state.letras_corretas or l in st.session_state.letras_erradas
+            if cols[i % 10].button(l, key=f"btn_{l}", disabled=disabled):
+                if l in st.session_state.palavra:
+                    st.session_state.letras_corretas.append(l)
+                else:
+                    st.session_state.letras_erradas.append(l)
+                    st.session_state.erros += 1
+                st.rerun()
 
-        label_btn = "JOGAR" if st.session_state.indice is None else "PRÓXIMO"
-        if st.button(label_btn, key="btn_jogar"):
-            iniciar_nova_pergunta()
-            st.rerun()
-        if st.button("RESETAR", key="btn_resetar"):
-            st.session_state.clear()
-            st.rerun()
-        if st.button("SAIR DO JOGO", key="btn_sair"):
-            st.session_state.clear()
-            st.rerun()
+        # derrota
+        if st.session_state.erros >= st.session_state.max_erros:
+            st.error("💀 Você perdeu!")
+            st.write(f"A palavra era: {st.session_state.palavra}")
+            st.session_state.derrotas += 1
 
+        # vitória
+        elif st.session_state.palavra and all(
+            l in st.session_state.letras_corretas for l in st.session_state.palavra
+        ):
+            st.success("🎉 Você venceu!")
+            st.session_state.acertos += 1
 
-    with col_jogo:
-        if st.session_state.pergunta:
-            st.subheader(st.session_state.pergunta)
-
-            exibicao = " ".join(
-                letra if letra in st.session_state.letras_corretas else "_"
-                for letra in st.session_state.palavra
-            )
-            st.markdown(f"## {exibicao}")
-
-            # estilo para teclado de letras
-            st.markdown(
-                """
-                <style>
-                div[data-testid="stHorizontalBlock"] div.stButton > button {
-                    background-color: #111 !important;
-                    color: white !important;
-                    font-size: 44px !important; /* letras bem maiores */
-                    font-weight: bold;
-                    height: 100px !important;
-                    width: 100px !important;
-                    margin: 4px;
-                    border-radius: 8px;
-                }
-                div[data-testid="stHorizontalBlock"] div.stButton > button:disabled {
-                    background-color: #444 !important;
-                    color: #aaa !important;
-                }
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
-
-            # teclado de letras em português
-            letras = [
-                "A","Á","Ã","Â","B","C","Ç","D","E","É","Ê","F","G","H","I","J","K","L","M",
-                "N","O","Ó","Õ","Ô","P","Q","R","S","T","U","Ú","V","W","X","Y","Z"
-            ]
-            cols = st.columns(10)
-            for i, l in enumerate(letras):
-                disabled = l in st.session_state.letras_corretas or l in st.session_state.letras_erradas
-                if cols[i % 10].button(l, key=f"btn_{l}", disabled=disabled):
-                    if l in st.session_state.palavra:
-                        st.session_state.letras_corretas.append(l)
-                    else:
-                        st.session_state.letras_erradas.append(l)
-                        st.session_state.erros += 1
-                    st.rerun()
-
-            # derrota
-            if st.session_state.erros >= st.session_state.max_erros:
-                st.error("💀 Você perdeu!")
-                st.write(f"A palavra era: {st.session_state.palavra}")
-                st.session_state.derrotas += 1
-
-            # vitória
-            elif st.session_state.palavra and all(
-                l in st.session_state.letras_corretas for l in st.session_state.palavra
-            ):
-                st.success("🎉 Você venceu!")
-                st.session_state.acertos += 1
-
-        else:
-            st.info("Clique em JOGAR para começar.")
+    else:
+        st.info("Clique em JOGAR para começar.")
