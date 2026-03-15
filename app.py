@@ -40,17 +40,13 @@ def extrair_perguntas_respostas(docx_file):
 import tempfile
 
 def salvar_no_supabase(arquivo):
-    # cria um arquivo temporário
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        tmp.write(arquivo.read())
-        tmp_path = tmp.name
-
-    # envia para o bucket usando o caminho do arquivo
+    file_bytes = arquivo.read()
     supabase.storage.from_("forca").upload(
         "arquivo_compartilhado.docx",
-        tmp_path,
+        file_bytes,
         {"content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
     )
+
 
 
 def carregar_do_supabase():
