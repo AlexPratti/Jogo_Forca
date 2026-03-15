@@ -54,32 +54,38 @@ def extrair_perguntas_respostas(caminho):
 
 st.title("🎮 Jogo da Forca")
 
+# Entrada de nome
 if "jogador" not in st.session_state:
     st.session_state.jogador = ""
 
 st.session_state.jogador = st.text_input("Digite seu nome:")
 
-if st.session_state.jogador.lower() == "pratti":
-    arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
-    if arquivo:
-        salvar_no_supabase(arquivo)
-        pares = extrair_perguntas_respostas(arquivo)
-        st.session_state.pares = pares
+# Só continua se o nome foi digitado
+if st.session_state.jogador.strip() != "":
+    if st.session_state.jogador.lower() == "pratti":
+        arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
+        if arquivo:
+            salvar_no_supabase(arquivo)
+            pares = extrair_perguntas_respostas(arquivo)
+            st.session_state.pares = pares
+        else:
+            arquivo_padrao = carregar_do_supabase()
+            if arquivo_padrao:
+                pares = extrair_perguntas_respostas(arquivo_padrao)
+                st.session_state.pares = pares
+            else:
+                st.warning("Nenhum arquivo no Supabase ainda.")
     else:
-        arquivo_padrao = carregar_do_supabase()
-        if arquivo_padrao:
-            pares = extrair_perguntas_respostas(arquivo_padrao)
-            st.session_state.pares = pares
-        else:
-            st.warning("Nenhum arquivo no Supabase ainda.")
+        if not st.session_state.pares:
+            arquivo_padrao = carregar_do_supabase()
+            if arquivo_padrao:
+                pares = extrair_perguntas_respostas(arquivo_padrao)
+                st.session_state.pares = pares
+            else:
+                st.error("Nenhum arquivo disponível no Supabase.")
 else:
-    if not st.session_state.pares:
-        arquivo_padrao = carregar_do_supabase()
-        if arquivo_padrao:
-            pares = extrair_perguntas_respostas(arquivo_padrao)
-            st.session_state.pares = pares
-        else:
-            st.error("Nenhum arquivo disponível no Supabase.")
+    st.info("Digite seu nome para começar o jogo.")
+
 def iniciar_nova_pergunta():
     if st.session_state.pares:
         import random
