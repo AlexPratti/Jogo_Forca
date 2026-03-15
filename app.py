@@ -40,11 +40,13 @@ def extrair_perguntas_respostas(docx_file):
 def salvar_no_supabase(arquivo):
     # lê os bytes do arquivo enviado
     file_bytes = arquivo.read()
+    # envia como BytesIO para evitar interpretação como caminho
     supabase.storage.from_("forca").upload(
         "arquivo_compartilhado.docx",
-        file_bytes,
+        BytesIO(file_bytes),
         {"content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
     )
+
 
 def carregar_do_supabase():
     response = supabase.storage.from_("forca").download("arquivo_compartilhado.docx")
