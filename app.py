@@ -140,37 +140,41 @@ else:
     with col_jogo:
         if st.session_state.pergunta:
             st.subheader(st.session_state.pergunta)
+
             exibicao = " ".join(
                 letra if letra in st.session_state.letras_corretas else "_"
                 for letra in st.session_state.palavra
             )
             st.markdown(f"## {exibicao}")
 
-       # teclado de letras em português
-        letras = [
-            "A","Á","Ã","Â","B","C","Ç","D","E","É","Ê","F","G","H","I","J","K","L","M",
-            "N","O","Ó","Õ","Ô","P","Q","R","S","T","U","Ú","V","W","X","Y","Z"
-        ]
-        
-        cols = st.columns(10)  # distribui em 10 colunas para ficar organizado
-        
-        for i, l in enumerate(letras):
-            disabled = l in st.session_state.letras_corretas or l in st.session_state.letras_erradas
-            if cols[i % 10].button(l, key=f"btn_{l}", disabled=disabled):
-                if l in st.session_state.palavra:
-                    st.session_state.letras_corretas.append(l)
-                else:
-                    st.session_state.letras_erradas.append(l)
-                    st.session_state.erros += 1
-                st.rerun()
+            # teclado de letras em português
+            letras = [
+                "A","Á","Ã","Â","B","C","Ç","D","E","É","Ê","F","G","H","I","J","K","L","M",
+                "N","O","Ó","Õ","Ô","P","Q","R","S","T","U","Ú","V","W","X","Y","Z"
+            ]
+            cols = st.columns(10)
+            for i, l in enumerate(letras):
+                disabled = l in st.session_state.letras_corretas or l in st.session_state.letras_erradas
+                if cols[i % 10].button(l, key=f"btn_{l}", disabled=disabled):
+                    if l in st.session_state.palavra:
+                        st.session_state.letras_corretas.append(l)
+                    else:
+                        st.session_state.letras_erradas.append(l)
+                        st.session_state.erros += 1
+                    st.rerun()
 
-
+            # condição de derrota
             if st.session_state.erros >= st.session_state.max_erros:
                 st.error("💀 Você perdeu!")
                 st.write(f"A palavra era: {st.session_state.palavra}")
                 st.session_state.derrotas += 1
-            elif all(l in st.session_state.letras_corretas for l in st.session_state.palavra):
+
+            # condição de vitória (com verificação de None)
+            elif st.session_state.palavra and all(
+                l in st.session_state.letras_corretas for l in st.session_state.palavra
+            ):
                 st.success("🎉 Você venceu!")
                 st.session_state.acertos += 1
+
         else:
             st.info("Clique em JOGAR para começar.")
