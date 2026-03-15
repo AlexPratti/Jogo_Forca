@@ -1,26 +1,16 @@
 import streamlit as st
 import random
 from docx import Document
-import requests
 from io import BytesIO
+from supabase import create_client
+
+# Configuração do Supabase usando secrets
+URL_SUPABASE = st.secrets["URL_SUPABASE"]
+KEY_SUPABASE = st.secrets["KEY_SUPABASE"]
+supabase = create_client(URL_SUPABASE, KEY_SUPABASE)
 
 st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
 
-# CSS para fundo escuro e título laranja
-st.markdown(
-    """
-    <style>
-    body { background-color: #111; color: white; }
-    .stButton>button {
-        background-color: #333; color: white; border-radius: 5px; padding: 8px 16px;
-    }
-    .stButton>button:hover { background-color: #555; color: orange; }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# === Funções utilitárias ===
 def extrair_perguntas_respostas(docx_file):
     doc = Document(docx_file)
     linhas = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
@@ -32,52 +22,18 @@ def extrair_perguntas_respostas(docx_file):
             pares.append((pergunta, resposta))
     return pares
 
-def carregar_arquivo_onedrive(link_download):
-    resposta = requests.get(link_download)
-    if resposta.status_code == 200:
-        content_type = resposta.headers.get("Content-Type", "")
-        if "application/vnd.openxmlformats-officedocument.wordprocessingml.document" in content_type:
-            return BytesIO(resposta.content)
-        else:
-            st.error("O link não está entregando um arquivo .docx, mas sim HTML ou outro formato.")
-            return None
-    else:
-        st.error(f"Erro ao baixar: {resposta.status_code}")
-        return None
+def salvar_no_supabase(arquivo):
+    # salva no bucket "forca"
+    supabase.storage.from_("forca").upload(
+        "arquivo_compartilhado.docx",
+        arquivo.getbuffer(),
+        {"content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+    )
 
-# === Inicialização do estado ===
-if 'pares' not in st.session_state:
-    st.session_state.pares = []
-    st.session_state.indice = None
-    st.session_state.acertos = 0
-    st.session_state.derrotas = 0
-    st.session_state.pergunta = None
-    st.session_state.palavra = None
-    st.session_state.letras_corretas = []
-    st.session_state.letras_erradas = []
-    st.session_state.erros = 0
-    st.session_state.max_erros = 6
-    st.session_state.fim_de_jogo = False
-    st.session_state.rodada_encerrada = False
-
-def iniciar_nova_pergunta():
-    if st.session_state.indice is None:
-        st.session_state.indice = 0
-    else:
-        st.session_state.indice += 1
-    if st.session_state.indice < len(st.session_state.pares):
-        pergunta, resposta = st.session_state.pares[st.session_state.indice]
-        st.session_state.pergunta = pergunta
-        st.session_state.palavra = resposta
-        st.session_state.letras_corretas = []
-        st.session_state.letras_erradas = []
-        st.session_state.erros = 0
-        st.session_state.fim_de_jogo = False
-        st.session_state.rodada_encerrada = False
-    else:
-        st.session_state.pergunta = None
-        st.session_state.palavra = None
-        st.session_state.fim_de_jogo = True
+def carregar_do_supabase():
+    # baixa do bucket "forca"
+    response = supabase.storage.from_("forca").download("arquivo_compartilhado.docx")
+    return BytesIO(response)
 
 # === Fluxo de entrada do jogador ===
 if "jogador" not in st.session_state:
@@ -88,31 +44,27 @@ if "jogador" not in st.session_state:
 else:
     st.markdown("<h1 style='color:orange;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
-    # Link direto ajustado para download
-    link_onedrive = (
-        "https://onedrive.live.com/download?"
-        "cid=F8B19E7831622CA6&"
-        "id=IQDEfr9zKTo9RrBXw7teO8g0AbYJwwKaRBCHdpY4mQxFs8A&"
-        "resid=F8B19E7831622CA6!s73bf7ec43a29463db057c3bb5e3bc834&"
-        "authkey=e3f5Rz"
-    )
-
     if st.session_state.jogador.lower() == "pratti":
         arquivo = st.file_uploader("Carregue um arquivo Word (.docx)", type=["docx"])
         if arquivo:
+            salvar_no_supabase(arquivo)
             pares = extrair_perguntas_respostas(arquivo)
             st.session_state.pares = pares
         else:
-            # usa arquivo local como fallback
-            arquivo_padrao = "perguntas.docx"
-            pares = extrair_perguntas_respostas(arquivo_padrao)
-            st.session_state.pares = pares
+            try:
+                arquivo_padrao = carregar_do_supabase()
+                pares = extrair_perguntas_respostas(arquivo_padrao)
+                st.session_state.pares = pares
+            except Exception:
+                st.error("Nenhum arquivo disponível no Supabase ainda.")
     else:
         if not st.session_state.pares:
-            # usa arquivo local como fallback
-            arquivo_padrao = "perguntas.docx"
-            pares = extrair_perguntas_respostas(arquivo_padrao)
-            st.session_state.pares = pares
+            try:
+                arquivo_padrao = carregar_do_supabase()
+                pares = extrair_perguntas_respostas(arquivo_padrao)
+                st.session_state.pares = pares
+            except Exception:
+                st.error("Nenhum arquivo disponível no Supabase ainda.")
 
     # Placar fixo no topo
     st.markdown(
