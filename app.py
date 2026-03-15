@@ -6,10 +6,25 @@ from supabase import create_client
 
 # Configuração do Supabase usando secrets
 URL_SUPABASE = st.secrets["URL_SUPABASE"]
-KEY_SUPABASE = st.secrets["KEY_SUPABASE"]
+KEY_SUPABASE = st.secrets["KEY_SUPABASE"]  # aqui está a sb_secret_...
 supabase = create_client(URL_SUPABASE, KEY_SUPABASE)
 
 st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
+
+# === Inicialização do estado ===
+if 'pares' not in st.session_state:
+    st.session_state.pares = []
+    st.session_state.indice = None
+    st.session_state.acertos = 0
+    st.session_state.derrotas = 0
+    st.session_state.pergunta = None
+    st.session_state.palavra = None
+    st.session_state.letras_corretas = []
+    st.session_state.letras_erradas = []
+    st.session_state.erros = 0
+    st.session_state.max_erros = 6
+    st.session_state.fim_de_jogo = False
+    st.session_state.rodada_encerrada = False
 
 def extrair_perguntas_respostas(docx_file):
     doc = Document(docx_file)
@@ -23,7 +38,7 @@ def extrair_perguntas_respostas(docx_file):
     return pares
 
 def salvar_no_supabase(arquivo):
-    # pega os bytes do arquivo enviado
+    # lê os bytes do arquivo enviado
     file_bytes = arquivo.read()
     supabase.storage.from_("forca").upload(
         "arquivo_compartilhado.docx",
@@ -31,11 +46,28 @@ def salvar_no_supabase(arquivo):
         {"content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
     )
 
-
 def carregar_do_supabase():
-    # baixa do bucket "forca"
     response = supabase.storage.from_("forca").download("arquivo_compartilhado.docx")
     return BytesIO(response)
+
+def iniciar_nova_pergunta():
+    if st.session_state.indice is None:
+        st.session_state.indice = 0
+    else:
+        st.session_state.indice += 1
+    if st.session_state.indice < len(st.session_state.pares):
+        pergunta, resposta = st.session_state.pares[st.session_state.indice]
+        st.session_state.pergunta = pergunta
+        st.session_state.palavra = resposta
+        st.session_state.letras_corretas = []
+        st.session_state.letras_erradas = []
+        st.session_state.erros = 0
+        st.session_state.fim_de_jogo = False
+        st.session_state.rodada_encerrada = False
+    else:
+        st.session_state.pergunta = None
+        st.session_state.palavra = None
+        st.session_state.fim_de_jogo = True
 
 # === Fluxo de entrada do jogador ===
 if "jogador" not in st.session_state:
