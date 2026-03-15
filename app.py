@@ -6,7 +6,7 @@ from supabase import create_client
 
 # Configuração do Supabase usando secrets
 URL_SUPABASE = st.secrets["URL_SUPABASE"]
-KEY_SUPABASE = st.secrets["KEY_SUPABASE"]  # aqui está a sb_secret_...
+KEY_SUPABASE = st.secrets["KEY_SUPABASE"]  # sb_secret_...
 supabase = create_client(URL_SUPABASE, KEY_SUPABASE)
 
 st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
@@ -46,7 +46,6 @@ def salvar_no_supabase(arquivo):
         BytesIO(file_bytes),
         {"content-type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
     )
-
 
 def carregar_do_supabase():
     response = supabase.storage.from_("forca").download("arquivo_compartilhado.docx")
@@ -101,6 +100,7 @@ else:
                 st.session_state.pares = pares
             except Exception:
                 st.error("Nenhum arquivo disponível no Supabase ainda.")
+
 
     # Placar fixo no topo
     st.markdown(
