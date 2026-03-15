@@ -133,7 +133,7 @@ else:
                 font-size: 20px !important;   /* tamanho da fonte */
                 font-weight: bold;
                 height: 55px !important;      /* altura fixa */
-                width: 800px !important;      /* largura maior para caber "SAIR DO JOGO" */
+                width: 220px !important;      /* largura maior para caber "SAIR DO JOGO" */
                 margin: 6px 0;
                 border-radius: 6px;
                 white-space: nowrap;          /* impede quebra de linha no texto */
