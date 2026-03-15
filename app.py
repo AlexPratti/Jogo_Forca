@@ -105,19 +105,19 @@ else:
             else:
                 st.error("Nenhum arquivo disponível no Supabase.")
 
- st.markdown(
-    f"""
-    <div style='background-color:#222; color:white; padding:10px; border-radius:5px;'>
-    Jogador: {st.session_state.jogador}<br>
-    Acertos: {st.session_state.acertos} | Derrotas: {st.session_state.derrotas}<br>
-    Erros atuais: {st.session_state.erros}/{st.session_state.max_erros}
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-# aqui você cria as colunas
-col_forca, col_controles, col_jogo = st.columns([1,0.8,2])
+     st.markdown(
+        f"""
+        <div style='background-color:#222; color:white; padding:10px; border-radius:5px;'>
+        Jogador: {st.session_state.jogador}<br>
+        Acertos: {st.session_state.acertos} | Derrotas: {st.session_state.derrotas}<br>
+        Erros atuais: {st.session_state.erros}/{st.session_state.max_erros}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    # aqui você cria as colunas
+    col_forca, col_controles, col_jogo = st.columns([1,0.8,2])
 
 # ================================
 # IMAGEM DA FORCA
