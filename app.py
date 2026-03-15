@@ -125,27 +125,42 @@ else:
             st.warning(f"Imagem {nome_imagem} não encontrada.")
 
     with col_controles:
+        # estilo fixo para os botões de ação
         st.markdown(
             """
             <style>
-            /* estilo para os botões de ação */
-            div.stButton > button {
-                font-size: 20px !important;   /* tamanho da fonte */
+            div.stButton > button.action-btn {
+                font-size: 20px !important;
                 font-weight: bold;
                 height: 55px !important;      /* altura fixa */
-                width: 220px !important;      /* largura maior para caber "SAIR DO JOGO" */
+                width: 220px !important;      /* largura fixa */
                 margin: 6px 0;
                 border-radius: 6px;
-                white-space: nowrap;          /* impede quebra de linha no texto */
-                text-align: center;           /* centraliza o texto */
-                justify-content: center;      /* garante alinhamento central */
+                white-space: nowrap;          /* impede quebra de linha */
+                text-align: center;           /* centraliza texto */
+                justify-content: center;
             }
             </style>
             """,
             unsafe_allow_html=True
         )
     
+        # cor laranja antes de jogar, fundo escuro depois
         cor_fundo = "#f97316" if st.session_state.indice is None else "#111"
+    
+        # aplicar classe "action-btn" para manter estilo fixo
+        label_btn = "JOGAR" if st.session_state.indice is None else "PRÓXIMO"
+        if st.button(label_btn, key="btn_jogar", help="", type="secondary"):
+            iniciar_nova_pergunta()
+            st.rerun()
+        if st.button("RESETAR", key="btn_resetar", help="", type="secondary"):
+            st.session_state.clear()
+            st.rerun()
+        if st.button("SAIR DO JOGO", key="btn_sair", help="", type="secondary"):
+            st.session_state.clear()
+            st.rerun()
+    
+        # aplicar cor dinamicamente
         st.markdown(
             f"""
             <style>
@@ -157,17 +172,6 @@ else:
             """,
             unsafe_allow_html=True
         )
-    
-        label_btn = "JOGAR" if st.session_state.indice is None else "PRÓXIMO"
-        if st.button(label_btn, key="btn_jogar"):
-            iniciar_nova_pergunta()
-            st.rerun()
-        if st.button("RESETAR", key="btn_resetar"):
-            st.session_state.clear()
-            st.rerun()
-        if st.button("SAIR DO JOGO", key="btn_sair"):
-            st.session_state.clear()
-            st.rerun()
 
 
     with col_jogo:
