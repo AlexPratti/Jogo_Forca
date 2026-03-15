@@ -129,7 +129,7 @@ else:
         st.markdown(
             """
             <style>
-            div.stButton > button.action-btn {
+            div.stButton > button.control-btn {
                 font-size: 20px !important;
                 font-weight: bold;
                 height: 55px !important;      /* altura fixa */
@@ -148,7 +148,20 @@ else:
         # cor laranja antes de jogar, fundo escuro depois
         cor_fundo = "#f97316" if st.session_state.indice is None else "#111"
     
-        # aplicar classe "action-btn" para manter estilo fixo
+        # aplicar cor dinamicamente sem alterar dimensões
+        st.markdown(
+            f"""
+            <style>
+            div.stButton > button.control-btn {{
+                background-color: {cor_fundo} !important;
+                color: white !important;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+    
+        # botões de ação usando a classe "control-btn"
         label_btn = "JOGAR" if st.session_state.indice is None else "PRÓXIMO"
         if st.button(label_btn, key="btn_jogar", help="", type="secondary"):
             iniciar_nova_pergunta()
@@ -160,19 +173,7 @@ else:
             st.session_state.clear()
             st.rerun()
     
-        # aplicar cor dinamicamente
-        st.markdown(
-            f"""
-            <style>
-            div.stButton > button {{
-                background-color: {cor_fundo} !important;
-                color: white !important;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
+    
 
     with col_jogo:
         if st.session_state.pergunta:
