@@ -146,18 +146,24 @@ else:
             )
             st.markdown(f"## {exibicao}")
 
-            # teclado de letras
-            letras = list(string.ascii_uppercase)
-            cols = st.columns(13)
-            for i, l in enumerate(letras):
-                disabled = l in st.session_state.letras_corretas or l in st.session_state.letras_erradas
-                if cols[i % 13].button(l, key=f"btn_{l}", disabled=disabled):
-                    if l in st.session_state.palavra:
-                        st.session_state.letras_corretas.append(l)
-                    else:
-                        st.session_state.letras_erradas.append(l)
-                        st.session_state.erros += 1
-                    st.rerun()
+       # teclado de letras em português
+        letras = [
+            "A","Á","Ã","Â","B","C","Ç","D","E","É","Ê","F","G","H","I","J","K","L","M",
+            "N","O","Ó","Õ","Ô","P","Q","R","S","T","U","Ú","V","W","X","Y","Z"
+        ]
+        
+        cols = st.columns(10)  # distribui em 10 colunas para ficar organizado
+        
+        for i, l in enumerate(letras):
+            disabled = l in st.session_state.letras_corretas or l in st.session_state.letras_erradas
+            if cols[i % 10].button(l, key=f"btn_{l}", disabled=disabled):
+                if l in st.session_state.palavra:
+                    st.session_state.letras_corretas.append(l)
+                else:
+                    st.session_state.letras_erradas.append(l)
+                    st.session_state.erros += 1
+                st.rerun()
+
 
             if st.session_state.erros >= st.session_state.max_erros:
                 st.error("💀 Você perdeu!")
