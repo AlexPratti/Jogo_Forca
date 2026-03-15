@@ -128,19 +128,21 @@ else:
         st.markdown(
             """
             <style>
+            /* estilo para os botões de ação */
             div.stButton > button {
-                font-size: 80px !important;
+                font-size: 20px !important;   /* tamanho da fonte */
                 font-weight: bold;
-                height: 50px !important;
-                width: 160px !important;
+                height: 50px !important;      /* altura fixa */
+                width: 180px !important;      /* largura fixa para caber o texto */
                 margin: 6px 0;
                 border-radius: 6px;
+                white-space: nowrap;          /* impede quebra de linha no texto */
             }
             </style>
             """,
             unsafe_allow_html=True
         )
-
+    
         cor_fundo = "#f97316" if st.session_state.indice is None else "#111"
         st.markdown(
             f"""
@@ -153,7 +155,7 @@ else:
             """,
             unsafe_allow_html=True
         )
-
+    
         label_btn = "JOGAR" if st.session_state.indice is None else "PRÓXIMO"
         if st.button(label_btn, key="btn_jogar"):
             iniciar_nova_pergunta()
@@ -164,6 +166,7 @@ else:
         if st.button("SAIR DO JOGO", key="btn_sair"):
             st.session_state.clear()
             st.rerun()
+
 
     with col_jogo:
         if st.session_state.pergunta:
