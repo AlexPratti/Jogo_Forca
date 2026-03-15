@@ -167,7 +167,7 @@ else:
         if st.button("RESETAR", key="btn_resetar"):
             st.session_state.clear()
             st.rerun()
-        if st.button("SAIR DO JOGO", key="btn_sair"):
+        if st.button("SAIR", key="btn_sair"):
             st.session_state.clear()
             st.rerun()
 
