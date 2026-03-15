@@ -147,6 +147,26 @@ else:
             )
             st.markdown(f"## {exibicao}")
 
+            # CSS para estilizar os botões
+            st.markdown(
+                """
+                <style>
+                div.stButton > button {
+                    background-color: #222 !important;
+                    color: white !important;
+                    font-size: 24px !important; /* dobro do tamanho padrão */
+                    border-radius: 6px;
+                    margin: 2px;
+                }
+                div.stButton > button:disabled {
+                    background-color: #555 !important;
+                    color: #aaa !important;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+
             # teclado de letras em português
             letras = [
                 "A","Á","Ã","Â","B","C","Ç","D","E","É","Ê","F","G","H","I","J","K","L","M",
@@ -169,7 +189,7 @@ else:
                 st.write(f"A palavra era: {st.session_state.palavra}")
                 st.session_state.derrotas += 1
 
-            # condição de vitória (com verificação de None)
+            # condição de vitória
             elif st.session_state.palavra and all(
                 l in st.session_state.letras_corretas for l in st.session_state.palavra
             ):
