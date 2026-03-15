@@ -186,7 +186,7 @@ else:
                 div[data-testid="stHorizontalBlock"] div.stButton > button {
                     background-color: #111 !important;
                     color: white !important;
-                    font-size: 40px !important; /* ainda maior */
+                    font-size: 80px !important; /* ainda maior */
                     font-weight: bold;
                     height: 90px !important;
                     width: 90px !important;
