@@ -295,11 +295,11 @@ else:
 
     carregar_perguntas()
 
-     if not st.session_state.pares:
-    
-        st.warning("Nenhuma pergunta encontrada. O administrador precisa enviar um arquivo.")
-    
-    else:
+         if not st.session_state.pares:
+        
+            st.warning("Nenhuma pergunta encontrada. O administrador precisa enviar um arquivo.")
+        
+        else:
 
 # ================================
 # PLACAR
