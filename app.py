@@ -271,17 +271,20 @@ else:
 # ADMIN
 # ================================
 
-    if st.session_state.jogador.lower()=="pratti":
-
-        arquivo = st.file_uploader("Carregar perguntas (.docx)",type=["docx"])
-
+    if st.session_state.jogador.lower() == "pratti":
+    
+        arquivo = st.file_uploader("Carregar perguntas (.docx)", type=["docx"])
+    
         if arquivo and "arquivo_enviado" not in st.session_state:
-
+    
             salvar_no_supabase(arquivo)
-
-            st.session_state.arquivo_enviado=True
-
-            st.success("Perguntas atualizadas!")
+    
+            # extrai perguntas imediatamente
+            st.session_state.pares = extrair_perguntas_respostas(arquivo)
+    
+            st.session_state.arquivo_enviado = True
+    
+            st.success("Perguntas carregadas!")
 
 # ================================
 # CARREGAR PERGUNTAS
