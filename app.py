@@ -307,12 +307,12 @@ else:
 # PLACAR
 # ================================
 
-    st.markdown(f"""
-**Jogador:** {st.session_state.jogador}  
-**Acertos:** {st.session_state.acertos}  
-**Derrotas:** {st.session_state.derrotas}  
-**Erros:** {st.session_state.erros}/{st.session_state.max_erros}
-""")
+        st.markdown(f"""
+        **Jogador:** {st.session_state.jogador}  
+        **Acertos:** {st.session_state.acertos}  
+        **Derrotas:** {st.session_state.derrotas}  
+        **Erros:** {st.session_state.erros}/{st.session_state.max_erros}
+        """)
 
     col_forca,col_controles,col_jogo = st.columns([1,1,2])
 
