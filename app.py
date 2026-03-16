@@ -167,7 +167,7 @@ if st.session_state.pares:
             st.markdown(f"## `{texto_exibicao}`")
 
             # Teclado Virtual
-            alfabeto_completo = "AÁÃÂBCÇDEÉÊFGHIÍJKLMNOÓÕÔPQRSTUÚVWXYZ"
+            alfabeto_completo = "AÁÃÂBCÇDEÉÊFGHIÍJKLMNOÓÕÔPQRSTUÚVWXYZ-"
             venceu = all(l in st.session_state.letras_corretas or l == " " for l in st.session_state.palavra)
             perdeu = st.session_state.erros >= st.session_state.max_erros
             
