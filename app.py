@@ -100,7 +100,7 @@ if st.session_state.jogador == "PRATTI":
                         file_options={"upsert": True}
                     )
 
-                    )
+                    
                     # Reseta o jogo para carregar as novas perguntas
                     st.session_state.pares = []
                     st.session_state.precisa_recarregar = True
