@@ -28,30 +28,27 @@ def remover_acentos(texto):
     return "".join([c for c in nfkd if not unicodedata.combining(c)])
 
 def extrair_dados_do_docx(arquivo_docx):
-    """Lê o Word e ignora as linhas vazias (conforme sua imagem)"""
     try:
         doc = Document(arquivo_docx)
-        textos_reais = []
+        textos_reais = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
         
-        # Percorre o Word e pega apenas o que tem texto escrito
-        for p in doc.paragraphs:
-            texto_limpo = p.text.strip()
-            if texto_limpo:
-                textos_reais.append(texto_limpo)
-        
-        # Monta os pares: Pergunta (linha 1), Resposta (linha 2)...
         lista_final = []
-        for i in range(0, len(textos_reais) - 1, 2):
-            pergunta = textos_reais[i]
-            # Resposta fica em maiúsculo e sem acentos
-            resposta = remover_acentos(textos_reais[i+1].upper())
-            lista_final.append({"pergunta": pergunta, "resposta": resposta})
+        # Garante que só monta pares se houver pelo menos 2 linhas
+        for i in range(0, len(textos_reais), 2):
+            if i+1 < len(textos_reais):
+                pergunta = textos_reais[i]
+                resposta = remover_acentos(textos_reais[i+1].upper())
+                lista_final.append({"pergunta": pergunta, "resposta": resposta})
+        
+        if not lista_final:
+            st.warning("Nenhum par válido de pergunta/resposta foi encontrado no arquivo.")
         
         random.shuffle(lista_final)
         return lista_final
     except Exception as e:
         st.error(f"Erro ao processar o Word: {e}")
         return []
+
 
 # ==================================================
 # 3. INICIALIZAÇÃO DO ESTADO (SESSION STATE)
