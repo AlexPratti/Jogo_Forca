@@ -1,6 +1,5 @@
 import streamlit as st
 import os
-import time
 from docx import Document
 from io import BytesIO
 from supabase import create_client
@@ -50,7 +49,6 @@ def extrair_perguntas_respostas(docx_file):
 def salvar_no_supabase(arquivo):
     """Salva arquivo no Supabase"""
     try:
-        # remove antigo se existir
         try:
             supabase.storage.from_("forca").remove(["arquivo_compartilhado.docx"])
         except:
@@ -71,8 +69,17 @@ def carregar_do_supabase():
     except Exception:
         return None
 
+def carregar_perguntas():
+    """Carrega perguntas do Supabase se ainda não carregadas"""
+    if st.session_state.pares:
+        return
+    arquivo = carregar_do_supabase()
+    if arquivo:
+        st.session_state.pares = extrair_perguntas_respostas(arquivo)
+
 def iniciar_nova_pergunta():
     """Inicia próxima pergunta"""
+    carregar_perguntas()  # garante que pares estejam carregados
     if not st.session_state.pares:
         st.warning("Nenhuma pergunta carregada.")
         return
@@ -95,14 +102,6 @@ def iniciar_nova_pergunta():
         st.session_state.pergunta = None
         st.session_state.palavra = None
         st.session_state.fim_de_jogo = True
-
-def carregar_perguntas():
-    """Carrega perguntas do Supabase se ainda não carregadas"""
-    if st.session_state.pares:
-        return
-    arquivo = carregar_do_supabase()
-    if arquivo:
-        st.session_state.pares = extrair_perguntas_respostas(arquivo)
 
 # ================================
 # Entrada do jogador
