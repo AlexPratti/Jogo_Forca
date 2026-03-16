@@ -137,7 +137,7 @@ if st.session_state.pares:
             st.write(f"Forca: {st.session_state.erros} erros")
 
     with col_controles:
-        if st.button("🚀 PRÓXIMA PERGUNTA", use_container_width=True):
+        if st.button("🚀 JOGAR", use_container_width=True):
             st.session_state.indice += 1
             if st.session_state.indice < len(st.session_state.pares):
                 item_atual = st.session_state.pares[st.session_state.indice]
@@ -167,7 +167,7 @@ if st.session_state.pares:
             st.markdown(f"## `{texto_exibicao}`")
 
             # Teclado Virtual
-            alfabeto_completo = "ABCÇDEFGHIJKLMNOPQRSTUVWXYZ"
+            alfabeto_completo = "AÁÃÂBCÇDEÉÊFGHIÍJKLMNOÓÕÔPQRSTUÚVWXYZ"
             venceu = all(l in st.session_state.letras_corretas or l == " " for l in st.session_state.palavra)
             perdeu = st.session_state.erros >= st.session_state.max_erros
             
