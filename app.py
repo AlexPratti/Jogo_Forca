@@ -19,7 +19,7 @@ st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
 # ================================
 if 'pares' not in st.session_state:
     st.session_state.pares = []
-    st.session_state.indice = -1  # -1 significa ainda não começou
+    st.session_state.indice = -1
     st.session_state.acertos = 0
     st.session_state.derrotas = 0
     st.session_state.pergunta = None
@@ -29,7 +29,7 @@ if 'pares' not in st.session_state:
     st.session_state.erros = 0
     st.session_state.max_erros = 6
     st.session_state.fim_de_jogo = False
-    st.session_state.novo_arquivo_carregado = False  # flag para controlar reload
+    st.session_state.novo_arquivo_carregado = False
 
 # ================================
 # Funções
@@ -47,16 +47,25 @@ def extrair_perguntas_respostas(docx_file):
 
 def salvar_no_supabase(arquivo):
     try:
+        # Tenta deletar se existir, mas o upsert=True resolve a maioria dos casos
         try:
             supabase.storage.from_("forca").remove(["arquivo_compartilhado.docx"])
         except:
             pass
+            
         supabase.storage.from_("forca").upload(
             path="arquivo_compartilhado.docx",
-            file=arquivo.getvalue()
+            file=arquivo.getvalue(),
+            upsert=True
         )
-        st.success("Arquivo enviado para o Supabase!")
+        # Limpa o estado atual para forçar o recarregamento do novo arquivo
+        st.session_state.pares = []
+        st.session_state.indice = -1
+        st.session_state.pergunta = None
+        st.session_state.palavra = None
         st.session_state.novo_arquivo_carregado = True
+        st.success("Arquivo enviado e carregado com sucesso!")
+        st.rerun()
     except Exception as e:
         st.error(f"Erro ao enviar arquivo: {e}")
 
@@ -68,21 +77,24 @@ def carregar_do_supabase():
         return None
 
 def carregar_perguntas():
-    """Carrega perguntas se não existirem ou se houve upload novo"""
+    """Garante que as perguntas sejam baixadas se a lista estiver vazia ou houver novo upload"""
     if st.session_state.novo_arquivo_carregado or not st.session_state.pares:
         arquivo = carregar_do_supabase()
         if arquivo:
-            st.session_state.pares = extrair_perguntas_respostas(arquivo)
-            st.session_state.indice = -1
-            st.session_state.pergunta = None
-            st.session_state.palavra = None
-        st.session_state.novo_arquivo_carregado = False
+            try:
+                novos_pares = extrair_perguntas_respostas(arquivo)
+                if novos_pares:
+                    st.session_state.pares = novos_pares
+                    st.session_state.novo_arquivo_carregado = False
+            except Exception as e:
+                st.error(f"Erro ao ler DOCX: {e}")
 
 def iniciar_nova_pergunta():
-    carregar_perguntas()  # garante perguntas atualizadas
+    carregar_perguntas()
     if not st.session_state.pares:
-        st.warning("Nenhuma pergunta carregada.")
+        st.warning("Nenhuma pergunta carregada no sistema.")
         return
+    
     st.session_state.indice += 1
     if st.session_state.indice < len(st.session_state.pares):
         pergunta, resposta = st.session_state.pares[st.session_state.indice]
@@ -96,92 +108,111 @@ def iniciar_nova_pergunta():
         st.session_state.pergunta = None
         st.session_state.palavra = None
         st.session_state.fim_de_jogo = True
-        st.info("Fim do jogo!")
+        st.info("Fim das perguntas disponíveis!")
 
 # ================================
-# Entrada do jogador
+# Fluxo Principal
 # ================================
 if "jogador" not in st.session_state:
     nome = st.text_input("Digite seu nome:")
     if st.button("Entrar no jogo") and nome.strip():
         st.session_state.jogador = nome.strip().upper()
         st.rerun()
-
 else:
     st.markdown("<h1 style='color:black;'>JOGO DA FORCA</h1>", unsafe_allow_html=True)
 
     # ADMIN
     if st.session_state.jogador.lower() == "pratti":
-        arquivo = st.file_uploader("Carregar perguntas (.docx)", type=["docx"])
-        if arquivo:
-            salvar_no_supabase(arquivo)
+        with st.expander("⚙️ Painel do Administrador"):
+            arq = st.file_uploader("Subir novo arquivo de perguntas (.docx)", type=["docx"])
+            if st.button("Confirmar e Atualizar Jogo"):
+                if arq:
+                    salvar_no_supabase(arq)
+                else:
+                    st.warning("Selecione um arquivo .docx primeiro.")
 
-    # Carrega perguntas sempre que necessário
+    # Tenta carregar se a lista estiver vazia
     carregar_perguntas()
 
     if not st.session_state.pares:
-        st.warning("Nenhuma pergunta encontrada. O administrador precisa enviar um arquivo.")
+        st.warning("Aguardando o administrador enviar o arquivo de perguntas...")
+    else:
+        # PLACAR
+        st.markdown(
+            f"<div style='background-color:#222; color:white; padding:10px; border-radius:5px; margin-bottom:20px;'>"
+            f"Jogador: {st.session_state.jogador}<br>"
+            f"Acertos: {st.session_state.acertos} | Derrotas: {st.session_state.derrotas}<br>"
+            f"Erros atuais: {st.session_state.erros}/{st.session_state.max_erros}"
+            f"</div>", unsafe_allow_html=True
+        )
 
-    # PLACAR
-    st.markdown(
-        f"<div style='background-color:#222; color:white; padding:10px; border-radius:5px;'>"
-        f"Jogador: {st.session_state.jogador}<br>"
-        f"Acertos: {st.session_state.acertos} | Derrotas: {st.session_state.derrotas}<br>"
-        f"Erros atuais: {st.session_state.erros}/{st.session_state.max_erros}"
-        f"</div>", unsafe_allow_html=True
-    )
+        col_forca, col_controles, col_jogo = st.columns([1,0.8,2])
 
-    col_forca, col_controles, col_jogo = st.columns([1,0.8,2])
+        with col_forca:
+            nome_imagem = f"erro{st.session_state.erros}.png"
+            if os.path.exists(nome_imagem):
+                st.image(nome_imagem)
 
-    # IMAGEM
-    with col_forca:
-        nome_imagem = f"erro{st.session_state.erros}.png"
-        if os.path.exists(nome_imagem):
-            st.image(nome_imagem)
+        with col_controles:
+            if st.button("JOGAR / PRÓXIMA", use_container_width=True):
+                iniciar_nova_pergunta()
+                st.rerun()
+            if st.button("RESETAR GERAL", use_container_width=True):
+                # Limpa tudo exceto o nome do jogador
+                jogador_atual = st.session_state.jogador
+                st.session_state.clear()
+                st.session_state.jogador = jogador_atual
+                st.rerun()
+            if st.button("SAIR", use_container_width=True):
+                st.session_state.clear()
+                st.rerun()
 
-    # CONTROLES
-    with col_controles:
-        if st.button("JOGAR" if st.session_state.indice==-1 else "PRÓXIMO"):
-            iniciar_nova_pergunta()
-            st.rerun()
-        if st.button("RESETAR"):
-            st.session_state.clear()
-            st.rerun()
-        if st.button("SAIR"):
-            st.session_state.clear()
-            st.rerun()
-
-    # JOGO
-    with col_jogo:
-        if st.session_state.pergunta:
-            st.subheader(st.session_state.pergunta)
-            exibicao = " ".join(l if l in st.session_state.letras_corretas else "_" for l in st.session_state.palavra)
-            st.markdown(f"## {exibicao}")
-
-            letras = [
-                "A","Á","Ã","Â","B","C","Ç","D","E","É","Ê","F","G","H","I","J","K","L","M",
-                "N","O","Ó","Õ","Ô","P","Q","R","S","T","U","Ú","V","W","X","Y","Z"
-            ]
-            bloqueado = st.session_state.erros>=st.session_state.max_erros or all(l in st.session_state.letras_corretas for l in st.session_state.palavra)
-
-            cols = st.columns(10)
-            for i,l in enumerate(letras):
-                disabled = bloqueado or l in st.session_state.letras_corretas or l in st.session_state.letras_erradas
-                if cols[i%10].button(l,key=f"btn_{l}",disabled=disabled):
-                    if l in st.session_state.palavra:
-                        st.session_state.letras_corretas.append(l)
+        with col_jogo:
+            if st.session_state.pergunta:
+                st.subheader(f"Dica: {st.session_state.pergunta}")
+                
+                # Monta a visualização da palavra
+                exibicao = ""
+                for letra in st.session_state.palavra:
+                    if letra == " ":
+                        exibicao += "  "
+                    elif letra in st.session_state.letras_corretas:
+                        exibicao += f"{letra} "
                     else:
-                        st.session_state.letras_erradas.append(l)
-                        st.session_state.erros += 1
-                    st.rerun()
+                        exibicao += "_ "
+                
+                st.markdown(f"## `{exibicao}`")
 
-            if st.session_state.erros>=st.session_state.max_erros:
-                st.error("💀 Você perdeu!")
-                st.write(f"A palavra era: {st.session_state.palavra}")
-                st.session_state.derrotas += 1
-            elif all(l in st.session_state.letras_corretas for l in st.session_state.palavra):
-                st.success("🎉 Você venceu!")
-                st.session_state.acertos += 1
+                # Teclado Virtual
+                letras = [
+                    "A","Á","Ã","Â","B","C","Ç","D","E","É","Ê","F","G","H","I","J","K","L","M",
+                    "N","O","Ó","Õ","Ô","P","Q","R","S","T","U","Ú","V","W","X","Y","Z"
+                ]
+                
+                venceu = all((l in st.session_state.letras_corretas or l == " ") for l in st.session_state.palavra)
+                perdeu = st.session_state.erros >= st.session_state.max_erros
+                bloqueado = venceu or perdeu
 
-        else:
-            st.info("Clique em JOGAR para começar.")
+                cols = st.columns(10)
+                for i, l in enumerate(letras):
+                    ja_tentou = l in st.session_state.letras_corretas or l in st.session_state.letras_erradas
+                    if cols[i%10].button(l, key=f"btn_{l}", disabled=bloqueado or ja_tentou):
+                        if l in st.session_state.palavra:
+                            st.session_state.letras_corretas.append(l)
+                        else:
+                            st.session_state.letras_erradas.append(l)
+                            st.session_state.erros += 1
+                        st.rerun()
+
+                if perdeu:
+                    st.error(f"💀 Você perdeu! A palavra era: {st.session_state.palavra}")
+                    if not st.session_state.fim_de_jogo:
+                        st.session_state.derrotas += 1
+                        st.session_state.fim_de_jogo = True
+                elif venceu:
+                    st.success("🎉 Você venceu!")
+                    if not st.session_state.fim_de_jogo:
+                        st.session_state.acertos += 1
+                        st.session_state.fim_de_jogo = True
+            else:
+                st.info("Clique em JOGAR para carregar a primeira pergunta.")
