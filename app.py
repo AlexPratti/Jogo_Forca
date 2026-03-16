@@ -34,22 +34,38 @@ if 'pares' not in st.session_state:
 # ================================
 # Funções
 # ================================
+import unicodedata
+
+def remover_acentos(texto):
+    # Transforma 'Á' em 'A', 'Ç' em 'C', etc.
+    return "".join(c for c in unicodedata.normalize('NFD', texto)
+                   if unicodedata.category(c) != 'Mn')
+
 def extrair_perguntas_respostas(docx_file):
-    doc = Document(docx_file)
-    # O segredo está aqui: .strip() remove espaços e o 'if p.text.strip()' ignora linhas vazias
-    linhas =
-    
-    pares = []
-    # Agora o 'linhas' só tem texto real. Vamos pegar de 2 em 2.
-    for i in range(0, len(linhas) - 1, 2):
-        pergunta = linhas[i]
-        resposta = linhas[i+1].upper().strip()
-        # Remove acentos da resposta para não dificultar o jogo (opcional)
-        # resposta = remover_acentos(resposta) 
-        pares.append((pergunta, resposta))
-    
-    random.shuffle(pares)
-    return pares
+    try:
+        doc = Document(docx_file)
+        # Pega apenas linhas que possuem texto real, ignorando as linhas em branco da sua imagem
+        linhas =
+        
+        pares = []
+        # Itera de 2 em 2 (Pergunta na linha i, Resposta na linha i+1)
+        for i in range(0, len(linhas) - 1, 2):
+            pergunta = linhas[i]
+            # Limpa a resposta: maiúsculas, sem espaços extras e sem acentos
+            resposta_suja = linhas[i+1].upper().strip()
+            resposta_limpa = remover_acentos(resposta_suja)
+            
+            pares.append((pergunta, resposta_limpa))
+        
+        if not pares:
+            st.error("O arquivo parece estar vazio ou fora do padrão (Pergunta na linha 1, Resposta na linha 2).")
+            return []
+            
+        random.shuffle(pares)
+        return pares
+    except Exception as e:
+        st.error(f"Erro ao processar o documento Word: {e}")
+        return []
 
 
 def salvar_no_supabase(arquivo):
