@@ -97,7 +97,9 @@ if st.session_state.jogador == "PRATTI":
                     supabase.storage.from_("forca").upload(
                         path="arquivo_compartilhado.docx",
                         file=arquivo_subido.getvalue(),
-                        upsert=True
+                        file_options={"upsert": True}
+                    )
+
                     )
                     # Reseta o jogo para carregar as novas perguntas
                     st.session_state.pares = []
