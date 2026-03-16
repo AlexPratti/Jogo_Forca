@@ -278,16 +278,19 @@ else:
     
         arquivo = st.file_uploader("Carregar perguntas (.docx)", type=["docx"])
     
-        if arquivo and "arquivo_enviado" not in st.session_state:
+        if arquivo:
     
             salvar_no_supabase(arquivo)
     
-            # extrai perguntas imediatamente
+            # carrega imediatamente no jogo
             st.session_state.pares = extrair_perguntas_respostas(arquivo)
     
-            st.session_state.arquivo_enviado = True
+            # reinicia o jogo
+            st.session_state.indice = None
+            st.session_state.pergunta = None
+            st.session_state.palavra = None
     
-            st.success("Perguntas carregadas!")
+            st.success("Novo arquivo carregado!")
 
 # ================================
 # CARREGAR PERGUNTAS
