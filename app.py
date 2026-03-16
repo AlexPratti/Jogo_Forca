@@ -36,14 +36,21 @@ if 'pares' not in st.session_state:
 # ================================
 def extrair_perguntas_respostas(docx_file):
     doc = Document(docx_file)
-    linhas = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+    # O segredo está aqui: .strip() remove espaços e o 'if p.text.strip()' ignora linhas vazias
+    linhas =
+    
     pares = []
-    for i in range(0, len(linhas)-1, 2):
+    # Agora o 'linhas' só tem texto real. Vamos pegar de 2 em 2.
+    for i in range(0, len(linhas) - 1, 2):
         pergunta = linhas[i]
-        resposta = linhas[i+1].upper()
+        resposta = linhas[i+1].upper().strip()
+        # Remove acentos da resposta para não dificultar o jogo (opcional)
+        # resposta = remover_acentos(resposta) 
         pares.append((pergunta, resposta))
+    
     random.shuffle(pares)
     return pares
+
 
 def salvar_no_supabase(arquivo):
     try:
