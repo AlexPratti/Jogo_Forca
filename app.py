@@ -214,6 +214,9 @@ def carregar_perguntas():
 def iniciar_nova_pergunta():
 
     if not st.session_state.pares:
+
+        st.warning("Nenhuma pergunta carregada.")
+
         return
 
     if st.session_state.indice is None:
