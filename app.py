@@ -159,18 +159,15 @@ def arena_viva():
             st.caption(f"Última jogada por: **{jogo['ultimo_jogador']}**")
 
         # --- LÓGICA DE FIM DE JOGO ---
-        # Balões aparecem apenas se o campo 'vitoria_final' for True no Banco
         if jogo.get('vitoria_final'):
             st.success("🏆 PARABÉNS! O DESAFIO COMPLETO FOI VENCIDO!")
             st.balloons()
 
-       if vitoria_rodada and erros_atuais < 6:
+        # >>> ESTE BLOCO PRECISA ESTAR ALINHADO AQUI <<<
+        if vitoria_rodada and erros_atuais < 6:
             st.success("✅ Palavra Descoberta! Clique em 'Próxima Pergunta' no topo.")
-            
-            # Atualiza para soltar balões automaticamente
             supabase.table("forca_disputa_arena").update({"vitoria_final": True}).eq("id", 1).execute()
             
-            # Busca o vencedor no ranking
             vencedor = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(1).execute()
             if vencedor.data:
                 st.success(f"🏆 VENCEDOR: {vencedor.data[0]['jogador']} com {vencedor.data[0]['pontos']} pontos!")
@@ -186,6 +183,7 @@ def arena_viva():
                 if cols_tec[i % 9].button(letra, key=f"bt_{letra}", disabled=ja_foi, use_container_width=True):
                     registrar_jogada(letra, jogo)
                     st.rerun()
+
 
     with col_rank:
         st.markdown("### 🏆 Ranking")
