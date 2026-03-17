@@ -1,35 +1,42 @@
 import streamlit as st
+import os
 import random
-from docx import Document
 import unicodedata
+from io import BytesIO
+from docx import Document
+from supabase import create_client
 
-# ---------------- CONFIGURAÇÃO DA PÁGINA ----------------
-st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="centered")
+# ==================================================
+# 1. CONFIGURAÇÃO DO SUPABASE
+# ==================================================
+# Certifique-se que estas chaves estão no seu secrets do Streamlit
+URL_SUPABASE = st.secrets["URL_SUPABASE"]
+KEY_SUPABASE = st.secrets["KEY_SUPABASE"]
+supabase = create_client(URL_SUPABASE, KEY_SUPABASE)
 
-# CSS para responsividade em celular
-st.markdown("""
-    <style>
-    @media (max-width: 600px) {
-        .stButton button {
-            font-size: 18px !important;
-            padding: 12px !important;
-        }
-        .stMarkdown {
-            font-size: 16px !important;
-        }
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.set_page_config(page_title="Jogo da Forca", page_icon="🎮", layout="wide")
 
-# ---------------- FUNÇÕES ----------------
-def remover_acentos(txt):
-    return ''.join(c for c in unicodedata.normalize('NFD', txt)
-                   if unicodedata.category(c) != 'Mn')
+# ==================================================
+# 2. FUNÇÕES DE APOIO
+# ==================================================
+
+def remover_acentos(texto):
+    """Remove acentos e cedilha para não quebrar o jogo"""
+    if not texto:
+        return ""
+    nfkd = unicodedata.normalize('NFKD', texto)
+    return "".join([c for c in nfkd if not unicodedata.combining(c)])
 
 def extrair_dados_do_docx(arquivo_docx):
+    from docx import Document
+    import random
     try:
         doc = Document(arquivo_docx)
+
+        # Junta todo o texto do documento em uma única string
         texto_bruto = "\n".join([p.text for p in doc.paragraphs])
+
+        # Divide em linhas, ignorando vazias
         linhas = [linha.strip() for linha in texto_bruto.splitlines() if linha.strip()]
 
         lista_final = []
@@ -39,113 +46,190 @@ def extrair_dados_do_docx(arquivo_docx):
                 resposta = remover_acentos(linhas[i+1].upper())
                 lista_final.append({"pergunta": pergunta, "resposta": resposta})
 
+        if not lista_final:
+            st.warning("Nenhum par válido de pergunta/resposta foi encontrado no arquivo.")
+
         random.shuffle(lista_final)
         return lista_final
+
     except Exception as e:
         st.error(f"Erro ao processar o Word: {e}")
         return []
 
-# ---------------- ESTADO INICIAL ----------------
+
+
+
+# ==================================================
+# 3. INICIALIZAÇÃO DO ESTADO (SESSION STATE)
+# ==================================================
+if 'pares' not in st.session_state:
+    st.session_state.pares = []
+    st.session_state.indice = -1
+    st.session_state.acertos = 0
+    st.session_state.derrotas = 0
+    st.session_state.pergunta = ""
+    st.session_state.palavra = ""
+    st.session_state.letras_corretas = []
+    st.session_state.letras_erradas = []
+    st.session_state.erros = 0
+    st.session_state.max_erros = 6
+    st.session_state.fim_da_rodada = False
+    st.session_state.precisa_recarregar = False
+
+# ==================================================
+# 4. TELA DE LOGIN
+# ==================================================
 if "jogador" not in st.session_state:
-    st.session_state.jogador = "PRAT"
-if "pares" not in st.session_state:
-    st.session_state.pares = []
-if "indice" not in st.session_state:
-    st.session_state.indice = -1
-if "acertos" not in st.session_state:
-    st.session_state.acertos = 0
-if "derrotas" not in st.session_state:
-    st.session_state.derrotas = 0
-if "erros" not in st.session_state:
-    st.session_state.erros = 0
-if "max_erros" not in st.session_state:
-    st.session_state.max_erros = 6
-if "letras_corretas" not in st.session_state:
-    st.session_state.letras_corretas = []
-if "letras_erradas" not in st.session_state:
-    st.session_state.letras_erradas = []
-if "fim_do_jogo" not in st.session_state:
-    st.session_state.fim_do_jogo = False
-
-# ---------------- CABEÇALHO ----------------
-st.subheader(f"JOGO DA FORCA - JOGADOR: {st.session_state.jogador}")
-st.write(f"✅ Acertos: {st.session_state.acertos}")
-st.write(f"❌ Derrotas: {st.session_state.derrotas}")
-st.write(f"⚠️ Erros: {st.session_state.erros} / {st.session_state.max_erros}")
-
-# ---------------- IMAGEM DA FORCA ----------------
-if "erros" in st.session_state:
-    img_path = f"forca{st.session_state.erros}.png"
-    try:
-        st.image(img_path, use_container_width=True)
-    except:
-        st.warning("Imagem da forca não encontrada. Verifique os arquivos forca0.png até forca6.png.")
-
-# ---------------- PERGUNTA ----------------
-if st.session_state.indice >= 0 and st.session_state.indice < len(st.session_state.pares):
-    st.subheader(st.session_state.pares[st.session_state.indice]["pergunta"])
-
-# ---------------- PALAVRA ATUAL ----------------
-if "palavra" in st.session_state and st.session_state.palavra:
-    palavra_atual = "".join([letra if letra in st.session_state.letras_corretas else "_" 
-                             for letra in st.session_state.palavra])
-    st.write("Palavra:", palavra_atual)
-
-    # Verificação de vitória
-    if "_" not in palavra_atual and not st.session_state.fim_do_jogo:
-        st.success("Você acertou! 🎉")
-        st.session_state.acertos += 1
-        st.session_state.fim_do_jogo = True
-
-    # Verificação de derrota
-    if st.session_state.erros >= st.session_state.max_erros and not st.session_state.fim_do_jogo:
-        st.error(f"Você perdeu! A palavra era: {st.session_state.palavra}")
-        st.session_state.derrotas += 1
-        st.session_state.fim_do_jogo = True
-
-# ---------------- BOTÕES DE CONTROLE ----------------
-if st.button("🚀 JOGAR", use_container_width=True):
-    st.session_state.indice += 1
-    if st.session_state.indice < len(st.session_state.pares):
-        item_atual = st.session_state.pares[st.session_state.indice]
-        st.session_state.pergunta = item_atual["pergunta"]
-        st.session_state.palavra = item_atual["resposta"]
-        st.session_state.letras_corretas = []
-        st.session_state.letras_erradas = []
-        st.session_state.erros = 0
-        st.session_state.fim_do_jogo = False
-    else:
-        st.success("🎉 Fim de Jogo!")
-        st.session_state.fim_do_jogo = True
-    st.rerun()
-
-if st.button("🔄 Resetar Jogo", use_container_width=True):
-    jogador = st.session_state.jogador
-    st.session_state.pares = []
-    st.session_state.indice = -1
-    st.session_state.acertos = 0
-    st.session_state.derrotas = 0
-    st.session_state.erros = 0
-    st.session_state.max_erros = 6
-    st.session_state.letras_corretas = []
-    st.session_state.letras_erradas = []
-    st.session_state.fim_do_jogo = False
-    st.session_state.jogador = jogador
-    st.rerun()
-
-if st.button("❌ Sair do Jogo", use_container_width=True):
-    st.session_state.clear()
-    st.rerun()
-
-# ---------------- TECLADO VIRTUAL ----------------
-alfabeto = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-colunas_teclas = st.columns(4)  # menos colunas para celular
-
-for i, letra in enumerate(alfabeto):
-    if colunas_teclas[i % 4].button(letra, use_container_width=True):
-        if letra in st.session_state.palavra:
-            st.session_state.letras_corretas.append(letra)
-        else:
-            st.session_state.letras_erradas.append(letra)
-            st.session_state.erros += 1
+    st.title("🎮 Bem-vindo ao Jogo da Forca")
+    nome_digitado = st.text_input("Quem está jogando?")
+    if st.button("Entrar no Jogo") and nome_digitado.strip():
+        st.session_state.jogador = nome_digitado.strip().upper()
         st.rerun()
+    st.stop()
+
+# ==================================================
+# 5. INTERFACE DO JOGO
+# ==================================================
+st.markdown(f"## JOGO DA FORCA - JOGADOR: {st.session_state.jogador}")
+
+# PAINEL DO ADMINISTRADOR (PRATTI)
+if st.session_state.jogador == "PRATTI":
+    with st.expander("⚙️ PAINEL DO ADMIN (Upload de Perguntas)"):
+        arquivo_subido = st.file_uploader("Suba o arquivo .docx", type=["docx"])
+        if st.button("SALVAR E ATUALIZAR JOGO"):
+            if arquivo_subido:
+                try:
+                    # Envia para o Supabase Storage
+                    supabase.storage.from_("forca").upload(
+                        path="arquivo_compartilhado.docx",
+                        file=arquivo_subido.getvalue(),
+                        file_options={"upsert": "true"}   # precisa ser string
+                    )
+
+
+                    
+                    # Reseta o jogo para carregar as novas perguntas
+                    st.session_state.pares = []
+                    st.session_state.precisa_recarregar = True
+                    st.success("Perguntas atualizadas com sucesso!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro no Supabase: {e}")
+
+# CARREGAR PERGUNTAS DO SERVIDOR
+if not st.session_state.pares or st.session_state.precisa_recarregar:
+    try:
+        conteudo_download = supabase.storage.from_("forca").download("arquivo_compartilhado.docx")
+        st.session_state.pares = extrair_dados_do_docx(BytesIO(conteudo_download))
+        st.session_state.precisa_recarregar = False
+    except:
+        st.info("Aguardando o administrador subir o primeiro arquivo de perguntas.")
+
+# SE JÁ TIVER PERGUNTAS CARREGADAS
+if st.session_state.pares:
+    
+    col_placar, col_vazio = st.columns([2, 1])
+    with col_placar:
+        st.write(f"🏆 Acertos: **{st.session_state.acertos}** | 💀 Derrotas: **{st.session_state.derrotas}**")
+        st.write(f"⚠️ Erros: **{st.session_state.erros} / {st.session_state.max_erros}**")
+
+    st.divider()
+
+    col_img, col_controles, col_teclado = st.columns([1, 1, 2])
+
+    with col_img:
+        # Tenta carregar a imagem da forca baseada no número de erros
+        caminho_imagem = f"erro{st.session_state.erros}.png"
+        if os.path.exists(caminho_imagem):
+            st.image(caminho_imagem, width=180)
+        else:
+            st.write(f"Forca: {st.session_state.erros} erros")
+
+    with col_controles:
+        # Botão Jogar
+        if st.button("🚀 JOGAR", use_container_width=True):
+            st.session_state.indice += 1
+            if st.session_state.indice < len(st.session_state.pares):
+                item_atual = st.session_state.pares[st.session_state.indice]
+                st.session_state.pergunta = item_atual["pergunta"]
+                st.session_state.palavra = item_atual["resposta"]
+                st.session_state.letras_corretas = []
+                st.session_state.letras_erradas = []
+                st.session_state.erros = 0
+                st.session_state.fim_da_rodada = False
+            else:
+                st.success("🎉 Fim de Jogo!")
+                st.session_state.fim_do_jogo = True
+            st.rerun()
+    
+        # Botão Resetar Jogo
+        if st.button("🔄 Resetar Jogo", use_container_width=True):
+            jogador = st.session_state.jogador  # guarda o jogador
+            # Reinicia manualmente o estado
+            st.session_state.pares = []
+            st.session_state.indice = -1
+            st.session_state.acertos = 0
+            st.session_state.derrotas = 0
+            st.session_state.pergunta = ""
+            st.session_state.palavra = ""
+            st.session_state.letras_corretas = []
+            st.session_state.letras_erradas = []
+            st.session_state.erros = 0
+            st.session_state.max_erros = 6
+            st.session_state.fim_da_rodada = False
+            st.session_state.precisa_recarregar = True
+            st.session_state.jogador = jogador  # restaura o jogador
+            st.rerun()
+    
+        # Botão Sair do Jogo (destacado)
+        if st.button("❌ Sair do Jogo", use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
+    
+
+            
+
+    with col_teclado:
+        if st.session_state.palavra:
+            st.subheader(st.session_state.pergunta)
+
+            
+            # Desenha a palavra na tela (ex: _ _ A _ _)
+            texto_exibicao = ""
+            for letra in st.session_state.palavra:
+                if letra == " ":
+                    texto_exibicao += "  "
+                elif letra in st.session_state.letras_corretas:
+                    texto_exibicao += f"{letra} "
+                else:
+                    texto_exibicao += "_ "
+            st.markdown(f"## `{texto_exibicao}`")
+
+            # Teclado Virtual
+            alfabeto_completo = "AÁÃÂBCÇDEÉÊFGHIÍJKLMNOÓÕÔPQRSTUÚVWXYZ-"
+            venceu = all(l in st.session_state.letras_corretas or l == " " for l in st.session_state.palavra)
+            perdeu = st.session_state.erros >= st.session_state.max_erros
+            
+            colunas_teclas = st.columns(9)
+            for i, letra_tecla in enumerate(alfabeto_completo):
+                ja_foi = letra_tecla in st.session_state.letras_corretas or letra_tecla in st.session_state.letras_erradas
+                
+                if colunas_teclas[i % 9].button(letra_tecla, key=f"t_{letra_tecla}", disabled=ja_foi or venceu or perdeu):
+                    if letra_tecla in st.session_state.palavra:
+                        st.session_state.letras_corretas.append(letra_tecla)
+                    else:
+                        st.session_state.letras_erradas.append(letra_tecla)
+                        st.session_state.erros += 1
+                    st.rerun()
+
+            # Mensagens de Vitória/Derrota
+            if venceu and not st.session_state.fim_da_rodada:
+                st.success("🎉 Você acertou!")
+                st.session_state.acertos += 1
+                st.session_state.fim_da_rodada = True
+            elif perdeu and not st.session_state.fim_da_rodada:
+                st.error(f"💀 Você perdeu! A palavra era: {st.session_state.palavra}")
+                st.session_state.derrotas += 1
+                st.session_state.fim_da_rodada = True
+        else:
+            st.info("Clique no botão PRÓXIMA PERGUNTA para começar!")
