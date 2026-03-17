@@ -162,18 +162,23 @@ if st.session_state.pares:
             st.rerun()
 
         if st.button("🔄 Resetar Jogo", use_container_width=True):
-                    # Reinicia o estado sem apagar o jogador
-                    jogador = st.session_state.jogador
-                    st.session_state.clear()
-                    st.session_state.jogador = jogador
-                    st.session_state.pares = []
-                    st.session_state.indice = -1
-                    st.session_state.acertos = 0
-                    st.session_state.derrotas = 0
-                    st.session_state.erros = 0
-                    st.session_state.fim_da_rodada = False
-                    st.session_state.precisa_recarregar = True
-                    st.rerun()
+            jogador = st.session_state.jogador  # guarda o jogador
+            # Reinicia manualmente o estado
+            st.session_state.pares = []
+            st.session_state.indice = -1
+            st.session_state.acertos = 0
+            st.session_state.derrotas = 0
+            st.session_state.pergunta = ""
+            st.session_state.palavra = ""
+            st.session_state.letras_corretas = []
+            st.session_state.letras_erradas = []
+            st.session_state.erros = 0
+            st.session_state.max_erros = 6
+            st.session_state.fim_da_rodada = False
+            st.session_state.precisa_recarregar = True
+            st.session_state.jogador = jogador  # restaura o jogador
+            st.rerun()
+
 
             
 
