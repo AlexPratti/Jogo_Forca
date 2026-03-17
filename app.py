@@ -2,7 +2,7 @@ import streamlit as st
 import unicodedata
 import random
 import time
-import os  # Adicionado para verificar os arquivos de imagem
+import os
 from io import BytesIO
 from docx import Document
 from supabase import create_client
@@ -25,11 +25,7 @@ def remover_acentos(texto):
 def extrair_dados_do_docx(arquivo_docx):
     try:
         doc = Document(arquivo_docx)
-        todas_as_linhas = []
-        for p in doc.paragraphs:
-            texto_limpo = p.text.strip()
-            if texto_limpo: todas_as_linhas.append(texto_limpo)
-        
+        todas_as_linhas =
         lista_final = []
         for i in range(0, len(todas_as_linhas), 2):
             if i + 1 < len(todas_as_linhas):
@@ -41,6 +37,22 @@ def extrair_dados_do_docx(arquivo_docx):
     except Exception as e:
         st.error(f"Erro no Word: {e}")
         return []
+
+def trocar_pergunta():
+    """Função para sortear nova pergunta (usada por Admin e Jogadores)"""
+    # Aqui assumimos que as perguntas estão guardadas em um estado global ou arquivo
+    if "lista_perguntas" in st.session_state and st.session_state.lista_perguntas:
+        nova = random.choice(st.session_state.lista_perguntas)
+        supabase.table("forca_disputa_arena").update({
+            "pergunta": nova['pergunta'], 
+            "palavra": nova['resposta'],
+            "letras_tentadas": "", 
+            "erros": 0, 
+            "ultimo_jogador": f"Sorteio por {st.session_state.jogador}",
+            "vitoria_final": False # Reseta o estado dos balões
+        }).eq("id", 1).execute()
+        return True
+    return False
 
 # ==================================================
 # 2. TELA DE LOGIN
@@ -55,7 +67,7 @@ if "jogador" not in st.session_state:
     st.stop()
 
 # ==================================================
-# 3. LÓGICA DE JOGO (GLOBAL)
+# 3. LÓGICA DE JOGO
 # ==================================================
 def registrar_jogada(letra, jogo_atual):
     lista_antiga = jogo_atual['letras_tentadas']
@@ -65,23 +77,42 @@ def registrar_jogada(letra, jogo_atual):
     if letra not in jogo_atual['palavra']:
         novos_erros += 1
     
-    # Atualiza mesa global
     supabase.table("forca_disputa_arena").update({
         "letras_tentadas": novas_letras,
         "erros": novos_erros,
         "ultimo_jogador": st.session_state.jogador
     }).eq("id", 1).execute()
 
-    # Ranking individual
-    if letra in jogo_atual['palavra']:
+    # Ranking: Admin (PRATTI) não ganha pontos
+    if letra in jogo_atual['palavra'] and st.session_state.jogador != "PRATTI":
         res = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", st.session_state.jogador).single().execute()
         pts = res.data['pontos'] if res.data else 0
         supabase.table("forca_disputa_ranking").update({"pontos": pts + 1}).eq("jogador", st.session_state.jogador).execute()
 
 # ==================================================
-# 4. INTERFACE DA ARENA (COM IMAGENS)
+# 4. INTERFACE DA ARENA (BOTÕES NO TOPO)
 # ==================================================
-st.markdown(f"### 🕹️ Competidor: `{st.session_state.jogador}`")
+
+# --- BARRA DE COMANDOS SUPERIOR ---
+c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
+with c1:
+    st.markdown(f"### 🕹️ Competidor: `{st.session_state.jogador}`")
+with c2:
+    if st.button("🎮 Próxima Pergunta", use_container_width=True):
+        if not trocar_pergunta():
+            st.warning("Mestre precisa carregar o arquivo .docx primeiro!")
+with c3:
+    if st.button("🔄 Resetar Arena", use_container_width=True):
+        supabase.table("forca_disputa_arena").update({
+            "letras_tentadas": "", "erros": 0, "ultimo_jogador": "Reset Manual"
+        }).eq("id", 1).execute()
+        st.rerun()
+with c4:
+    if st.button("🚪 Sair", use_container_width=True, type="primary"):
+        del st.session_state.jogador
+        st.rerun()
+
+st.divider()
 
 @st.fragment(run_every=2)
 def arena_viva():
@@ -94,13 +125,10 @@ def arena_viva():
     col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        # --- BLOCO DA IMAGEM E PALAVRA ---
         c_img, c_txt = st.columns([1, 2])
-        
         erros_atuais = jogo['erros']
         
         with c_img:
-            # Busca a imagem baseada nos erros globais do banco
             nome_img = f"erro{erros_atuais}.png"
             if os.path.exists(nome_img):
                 st.image(nome_img, width=180)
@@ -112,22 +140,26 @@ def arena_viva():
             tentadas = [l.strip() for l in jogo['letras_tentadas'].split(",") if l.strip()]
             palavra_alvo = jogo['palavra']
             
-            vitoria = True
+            vitoria_rodada = True
             texto_visual = ""
             for letra in palavra_alvo:
                 if letra == " ": texto_visual += "  "
                 elif letra in tentadas or erros_atuais >= 6: texto_visual += letra + " "
                 else:
                     texto_visual += "_ "
-                    vitoria = False
+                    vitoria_rodada = False
             
             st.markdown(f"## `{texto_visual}`")
             st.caption(f"Última jogada por: **{jogo['ultimo_jogador']}**")
 
-        # --- LÓGICA DE FIM DE JOGO E TECLADO ---
-        if vitoria and erros_atuais < 6:
-            st.success("🎉 VITÓRIA COLETIVA!")
+        # --- LÓGICA DE FIM DE JOGO ---
+        # Balões aparecem apenas se o campo 'vitoria_final' for True no Banco
+        if jogo.get('vitoria_final'):
+            st.success("🏆 PARABÉNS! O DESAFIO COMPLETO FOI VENCIDO!")
             st.balloons()
+
+        if vitoria_rodada and erros_atuais < 6:
+            st.success("✅ Palavra Descoberta! Clique em 'Próxima Pergunta' no topo.")
         elif erros_atuais >= 6:
             st.error(f"💀 DERROTA! A resposta era: {palavra_alvo}")
         else:
@@ -143,7 +175,9 @@ def arena_viva():
         st.markdown("### 🏆 Ranking")
         res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(10).execute()
         for i, r in enumerate(res_rank.data):
-            st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
+            # O mestre Pratti não aparece no ranking para não confundir
+            if r['jogador'] != "PRATTI":
+                st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
 
 arena_viva()
 
@@ -153,20 +187,25 @@ arena_viva()
 if st.session_state.jogador == "PRATTI":
     st.divider()
     with st.expander("⚙️ PAINEL DO MESTRE"):
-        arquivo = st.file_uploader("Arquivo .docx", type=["docx"])
-        if st.button("🚀 LANÇAR NOVA PALAVRA") and arquivo:
+        arquivo = st.file_uploader("Carregar Banco de Perguntas (.docx)", type=["docx"])
+        if st.button("🚀 CARREGAR E LANÇAR PRIMEIRA") and arquivo:
             lista_q = extrair_dados_do_docx(arquivo)
             if lista_q:
+                st.session_state.lista_perguntas = lista_q # Salva na sessão
                 esc = random.choice(lista_q)
                 supabase.table("forca_disputa_arena").update({
                     "pergunta": esc['pergunta'], "palavra": esc['resposta'],
-                    "letras_tentadas": "", "erros": 0, "ultimo_jogador": "Mestre Pratti"
+                    "letras_tentadas": "", "erros": 0, "ultimo_jogador": "Mestre Pratti",
+                    "vitoria_final": False
                 }).eq("id", 1).execute()
-                st.success("Nova rodada!")
+                st.success(f"Carregadas {len(lista_q)} perguntas!")
                 time.sleep(1)
                 st.rerun()
         
-        if st.button("🧹 ZERAR RANKING"):
-            supabase.table("forca_disputa_ranking").update({"pontos": 0}).neq("jogador", "").execute()
+        if st.button("🎊 SOLTAR BALÕES (VITÓRIA FINAL)"):
+            supabase.table("forca_disputa_arena").update({"vitoria_final": True}).eq("id", 1).execute()
             st.rerun()
 
+        if st.button("🧹 ZERAR PONTOS DO RANKING"):
+            supabase.table("forca_disputa_ranking").update({"pontos": 0}).neq("jogador", "").execute()
+            st.rerun()
