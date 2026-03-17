@@ -231,7 +231,9 @@ if st.session_state.jogador == "PRATTI":
             supabase.table("forca_disputa_arena").update({
                 "pergunta": "", "palavra": "",
                 "letras_tentadas": "", "erros": 0,
-                "ultimo_jogador": "Reset Geral", "vitoria_final": False
+                "ultimo_jogador": "Reset Geral",
+                "vitoria_final": False
             }).eq("id", 1).execute()
             st.success("Todos os jogadores foram removidos e o jogo resetado!")
             st.rerun()
+
