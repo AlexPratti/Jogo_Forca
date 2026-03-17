@@ -105,13 +105,13 @@ with c2:
             st.warning("Mestre precisa carregar o arquivo .docx primeiro!")
 with c3:
     if st.button("🔄 Resetar Arena", use_container_width=True):
-    supabase.table("forca_disputa_arena").update({
-        "pergunta": "", "palavra": "",
-        "letras_tentadas": "", "erros": 0,
-        "ultimo_jogador": "Reset Manual",
-        "vitoria_final": False
-    }).eq("id", 1).execute()
-    st.rerun()
+        supabase.table("forca_disputa_arena").update({
+            "pergunta": "", "palavra": "",
+            "letras_tentadas": "", "erros": 0,
+            "ultimo_jogador": "Reset Manual",
+            "vitoria_final": False
+        }).eq("id", 1).execute()
+        st.rerun()
 
 with c4:
     if st.button("🚪 Sair", use_container_width=True, type="primary"):
