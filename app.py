@@ -163,8 +163,8 @@ def arena_viva():
             st.success("🏆 PARABÉNS! O DESAFIO COMPLETO FOI VENCIDO!")
             st.balloons()
 
-        # >>> ESTE BLOCO PRECISA ESTAR ALINHADO AQUI <<<
-        if vitoria_rodada and erros_atuais < 6:
+        # Vitória automática só se houver pergunta ativa
+        if vitoria_rodada and erros_atuais < 6 and jogo['pergunta']:
             st.success("✅ Palavra Descoberta! Clique em 'Próxima Pergunta' no topo.")
             supabase.table("forca_disputa_arena").update({"vitoria_final": True}).eq("id", 1).execute()
             
@@ -173,7 +173,7 @@ def arena_viva():
                 st.success(f"🏆 VENCEDOR: {vencedor.data[0]['jogador']} com {vencedor.data[0]['pontos']} pontos!")
                 st.balloons()
 
-        elif erros_atuais >= 6:
+        elif erros_atuais >= 6 and jogo['pergunta']:
             st.error(f"💀 DERROTA! A resposta era: {palavra_alvo}")
         else:
             letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
@@ -184,12 +184,10 @@ def arena_viva():
                     registrar_jogada(letra, jogo)
                     st.rerun()
 
-
     with col_rank:
         st.markdown("### 🏆 Ranking")
         res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(10).execute()
         for i, r in enumerate(res_rank.data):
-            # O mestre Pratti não aparece no ranking para não confundir
             if r['jogador'] != "PRATTI":
                 st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
 
