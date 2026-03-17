@@ -193,7 +193,7 @@ if st.session_state.jogador == "PRATTI":
         if st.button("🚀 CARREGAR E LANÇAR PRIMEIRA") and arquivo:
             lista_q = extrair_dados_do_docx(arquivo)
             if lista_q:
-                st.session_state.lista_perguntas = lista_q # Salva na sessão
+                st.session_state.lista_perguntas = lista_q
                 esc = random.choice(lista_q)
                 supabase.table("forca_disputa_arena").update({
                     "pergunta": esc['pergunta'], "palavra": esc['resposta'],
@@ -210,4 +210,24 @@ if st.session_state.jogador == "PRATTI":
 
         if st.button("🧹 ZERAR PONTOS DO RANKING"):
             supabase.table("forca_disputa_ranking").update({"pontos": 0}).neq("jogador", "").execute()
+            st.rerun()
+
+        # --- NOVOS BOTÕES ---
+        jogadores = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador","PRATTI").execute()
+        lista_jogadores = [j["jogador"] for j in jogadores.data]
+
+        jogador_selecionado = st.selectbox("Selecionar jogador para excluir:", lista_jogadores)
+        if st.button("❌ Excluir Jogador Selecionado"):
+            supabase.table("forca_disputa_ranking").delete().eq("jogador", jogador_selecionado).execute()
+            st.success(f"Jogador {jogador_selecionado} removido!")
+            st.rerun()
+
+        if st.button("🔥 Remover TODOS os Jogadores e Resetar Jogo"):
+            supabase.table("forca_disputa_ranking").delete().neq("jogador","").execute()
+            supabase.table("forca_disputa_arena").update({
+                "pergunta": "", "palavra": "",
+                "letras_tentadas": "", "erros": 0,
+                "ultimo_jogador": "Reset Geral", "vitoria_final": False
+            }).eq("id", 1).execute()
+            st.success("Todos os jogadores foram removidos e o jogo resetado!")
             st.rerun()
