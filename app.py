@@ -29,41 +29,33 @@ def remover_acentos(texto):
 
 def extrair_dados_do_docx(arquivo_docx):
     from docx import Document
+    import random
     try:
         doc = Document(arquivo_docx)
 
-        # Junta todo o texto do documento, separando por quebras de linha
-        texto_completo = []
-        for p in doc.paragraphs:
-            if p.text.strip():
-                texto_completo.append(p.text.strip())
+        # Junta todo o texto do documento em uma única string
+        texto_bruto = "\n".join([p.text for p in doc.paragraphs])
 
-        # Se não encontrou nada em paragraphs, tenta pegar tabelas também
-        if not texto_completo:
-            for table in doc.tables:
-                for row in table.rows:
-                    for cell in row.cells:
-                        if cell.text.strip():
-                            texto_completo.append(cell.text.strip())
+        # Divide em linhas, ignorando vazias
+        linhas = [linha.strip() for linha in texto_bruto.splitlines() if linha.strip()]
 
-        # Agora monta pares: pergunta (linha i), resposta (linha i+1)
         lista_final = []
-        for i in range(0, len(texto_completo), 2):
-            if i+1 < len(texto_completo):
-                pergunta = texto_completo[i]
-                resposta = remover_acentos(texto_completo[i+1].upper())
+        for i in range(0, len(linhas), 2):
+            if i+1 < len(linhas):
+                pergunta = linhas[i]
+                resposta = remover_acentos(linhas[i+1].upper())
                 lista_final.append({"pergunta": pergunta, "resposta": resposta})
 
         if not lista_final:
             st.warning("Nenhum par válido de pergunta/resposta foi encontrado no arquivo.")
 
-        import random
         random.shuffle(lista_final)
         return lista_final
 
     except Exception as e:
         st.error(f"Erro ao processar o Word: {e}")
         return []
+
 
 
 
