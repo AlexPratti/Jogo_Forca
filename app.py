@@ -162,7 +162,8 @@ if st.session_state.pares:
 
     with col_teclado:
         if st.session_state.palavra:
-            st.subheader(f"Dica: {st.session_state.pergunta}")
+            st.subheader(st.session_state.pergunta)
+
             
             # Desenha a palavra na tela (ex: _ _ A _ _)
             texto_exibicao = ""
