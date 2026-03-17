@@ -146,6 +146,7 @@ if st.session_state.pares:
             st.write(f"Forca: {st.session_state.erros} erros")
 
     with col_controles:
+        # Botão Jogar
         if st.button("🚀 JOGAR", use_container_width=True):
             st.session_state.indice += 1
             if st.session_state.indice < len(st.session_state.pares):
@@ -160,7 +161,8 @@ if st.session_state.pares:
                 st.success("🎉 Fim de Jogo!")
                 st.session_state.fim_do_jogo = True
             st.rerun()
-
+    
+        # Botão Resetar Jogo
         if st.button("🔄 Resetar Jogo", use_container_width=True):
             jogador = st.session_state.jogador  # guarda o jogador
             # Reinicia manualmente o estado
@@ -178,7 +180,12 @@ if st.session_state.pares:
             st.session_state.precisa_recarregar = True
             st.session_state.jogador = jogador  # restaura o jogador
             st.rerun()
-
+    
+        # Botão Sair do Jogo (destacado)
+        if st.button("❌ Sair do Jogo", use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
+    
 
             
 
