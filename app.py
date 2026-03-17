@@ -157,7 +157,8 @@ if st.session_state.pares:
                 st.session_state.erros = 0
                 st.session_state.fim_da_rodada = False
             else:
-                st.warning("Todas as perguntas foram respondidas!")
+                st.success("🎉 Fim de Jogo!")
+                st.session_state.fim_do_jogo = True
             st.rerun()
 
     with col_teclado:
