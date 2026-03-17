@@ -161,19 +161,19 @@ if st.session_state.pares:
                 st.session_state.fim_do_jogo = True
             st.rerun()
 
-        if st.button("🔄 Resetar Jogo", use_container_width=True):
-        # Reinicia o estado sem apagar o jogador
-        jogador = st.session_state.jogador
-        st.session_state.clear()
-        st.session_state.jogador = jogador
-        st.session_state.pares = []
-        st.session_state.indice = -1
-        st.session_state.acertos = 0
-        st.session_state.derrotas = 0
-        st.session_state.erros = 0
-        st.session_state.fim_da_rodada = False
-        st.session_state.precisa_recarregar = True
-        st.rerun()
+            if st.button("🔄 Resetar Jogo", use_container_width=True):
+            # Reinicia o estado sem apagar o jogador
+            jogador = st.session_state.jogador
+            st.session_state.clear()
+            st.session_state.jogador = jogador
+            st.session_state.pares = []
+            st.session_state.indice = -1
+            st.session_state.acertos = 0
+            st.session_state.derrotas = 0
+            st.session_state.erros = 0
+            st.session_state.fim_da_rodada = False
+            st.session_state.precisa_recarregar = True
+            st.rerun()
 
 
     with col_teclado:
