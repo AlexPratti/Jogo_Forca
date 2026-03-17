@@ -25,7 +25,9 @@ def remover_acentos(texto):
 def extrair_dados_do_docx(arquivo_docx):
     try:
         doc = Document(arquivo_docx)
-        todas_as_linhas =
+        # Extrai o texto de cada parágrafo
+        todas_as_linhas = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+        
         lista_final = []
         for i in range(0, len(todas_as_linhas), 2):
             if i + 1 < len(todas_as_linhas):
