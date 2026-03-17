@@ -234,7 +234,4 @@ if st.session_state.pares:
         else:
             st.info("Clique no botão PRÓXIMA PERGUNTA para começar!")
 
-# Botão de sair na lateral
-if st.sidebar.button("Sair do Jogo"):
-    st.session_state.clear()
-    st.rerun()
+
