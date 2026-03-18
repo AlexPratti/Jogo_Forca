@@ -25,34 +25,45 @@ def remover_acentos(texto):
 def extrair_dados_do_docx(arquivo_docx):
     try:
         doc = Document(arquivo_docx)
-        todas_as_linhas = []
+        # 1. Extrai absolutamente todo o texto de parágrafos e tabelas
+        texto_bruto = []
+        
+        # Pega textos de parágrafos
         for p in doc.paragraphs:
-            texto_limpo = p.text.strip()
-            if texto_limpo: todas_as_linhas.append(texto_limpo)
+            txt = p.text.strip()
+            if txt:
+                texto_bruto.append(txt)
+        
+        # Pega textos de tabelas (caso existam)
+        for tabela in doc.tables:
+            for linha in tabela.rows:
+                for celula in linha.cells:
+                    txt = celula.text.strip()
+                    if txt and txt not in texto_bruto:
+                        texto_bruto.append(txt)
         
         lista_final = []
-        for i in range(0, len(todas_as_linhas), 2):
-            if i + 1 < len(todas_as_linhas):
+        # 2. Agrupa em pares (Pergunta -> Próxima linha disponível)
+        # O range pula de 2 em 2, garantindo o par pergunta/resposta
+        for i in range(0, len(texto_bruto), 2):
+            if i + 1 < len(texto_bruto):
+                pergunta = texto_bruto[i]
+                # Limpa a resposta: remove acentos e caracteres especiais de espaço
+                resposta = remover_acentos(texto_bruto[i+1].upper().replace(" ", ""))
+                
                 lista_final.append({
-                    "pergunta": todas_as_linhas[i], 
-                    "resposta": remover_acentos(todas_as_linhas[i+1].upper())
+                    "pergunta": pergunta, 
+                    "resposta": resposta
                 })
+        
+        if not lista_final:
+            st.warning("Nenhum par de Pergunta/Resposta foi detectado no arquivo.")
+            
         return lista_final
     except Exception as e:
-        st.error(f"Erro no Word: {e}")
+        st.error(f"Erro ao ler o documento Word: {e}")
         return []
 
-# ==================================================
-# 2. TELA DE LOGIN
-# ==================================================
-if "jogador" not in st.session_state:
-    st.title("⚔️ Bem-vindo à Arena da Forca")
-    nome_digitado = st.text_input("Qual seu nome de competidor?").strip().upper()
-    if st.button("Entrar na Disputa") and nome_digitado:
-        st.session_state.jogador = nome_digitado
-        supabase.table("forca_disputa_ranking").upsert({"jogador": nome_digitado}, on_conflict="jogador").execute()
-        st.rerun()
-    st.stop()
 
 # ==================================================
 # 3. LÓGICA DE JOGO (GLOBAL)
