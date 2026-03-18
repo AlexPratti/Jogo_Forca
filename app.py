@@ -25,7 +25,6 @@ def remover_acentos(texto):
 def extrair_dados_do_docx(arquivo_docx):
     try:
         doc = Document(arquivo_docx)
-        # Extrai o texto de cada parágrafo
         todas_as_linhas = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
         
         lista_final = []
@@ -42,42 +41,21 @@ def extrair_dados_do_docx(arquivo_docx):
 
 def trocar_pergunta():
     if "lista_perguntas" in st.session_state and st.session_state.lista_perguntas:
+        nova = random.choice(st.session_state.lista_perguntas)
+        # registra pergunta usada
         if "perguntas_usadas" not in st.session_state:
             st.session_state.perguntas_usadas = []
-
-        perguntas_disponiveis = [
-            p for p in st.session_state.lista_perguntas 
-            if p["pergunta"] not in st.session_state.perguntas_usadas
-        ]
-
-        if not perguntas_disponiveis:
-            # Todas já foram usadas → fim de jogo, mas sem balões ainda
-            supabase.table("forca_disputa_arena").update({
-                "pergunta": "", "palavra": "",
-                "letras_tentadas": "", "erros": 0,
-                "ultimo_jogador": "Fim do Jogo",
-                "vitoria_final": False,
-                "status": "fim"
-            }).eq("id", 1).execute()
-            st.warning("⚠️ Todas as perguntas já foram usadas. O jogo terminou!")
-            return False
-
-        nova = random.choice(perguntas_disponiveis)
-        st.session_state.perguntas_usadas.append(nova["pergunta"])
-
+        st.session_state.perguntas_usadas.append(nova)
         supabase.table("forca_disputa_arena").update({
             "pergunta": nova['pergunta'], 
             "palavra": nova['resposta'],
             "letras_tentadas": "", 
             "erros": 0, 
             "ultimo_jogador": f"Sorteio por {st.session_state.jogador}",
-            "vitoria_final": False,
-            "status": "rodando"
+            "vitoria_final": False
         }).eq("id", 1).execute()
         return True
     return False
-
-
 
 # ==================================================
 # 2. TELA DE LOGIN
@@ -108,17 +86,14 @@ def registrar_jogada(letra, jogo_atual):
         "ultimo_jogador": st.session_state.jogador
     }).eq("id", 1).execute()
 
-    # Ranking: Admin (PRATTI) não ganha pontos
     if letra in jogo_atual['palavra'] and st.session_state.jogador != "PRATTI":
         res = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", st.session_state.jogador).single().execute()
         pts = res.data['pontos'] if res.data else 0
         supabase.table("forca_disputa_ranking").update({"pontos": pts + 1}).eq("jogador", st.session_state.jogador).execute()
 
 # ==================================================
-# 4. INTERFACE DA ARENA (BOTÕES NO TOPO)
+# 4. INTERFACE DA ARENA
 # ==================================================
-
-# --- BARRA DE COMANDOS SUPERIOR ---
 c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
 with c1:
     st.markdown(f"### 🕹️ Competidor: `{st.session_state.jogador}`")
@@ -134,8 +109,8 @@ with c3:
             "ultimo_jogador": "Reset Manual",
             "vitoria_final": False
         }).eq("id", 1).execute()
+        st.session_state.perguntas_usadas = []
         st.rerun()
-
 with c4:
     if st.button("🚪 Sair", use_container_width=True, type="primary"):
         del st.session_state.jogador
@@ -184,28 +159,16 @@ def arena_viva():
         # --- LÓGICA DE FIM DE JOGO ---
         total_perguntas = len(st.session_state.lista_perguntas) if "lista_perguntas" in st.session_state else 0
         usadas = len(st.session_state.perguntas_usadas) if "perguntas_usadas" in st.session_state else 0
-        ultima_pergunta = (usadas == total_perguntas)
+        ultima_pergunta = (usadas == total_perguntas and total_perguntas > 0)
 
-        if vitoria_rodada and erros_atuais < 6 and jogo['pergunta']:
-            st.success("✅ Palavra Descoberta!")
-            supabase.table("forca_disputa_arena").update({"vitoria_final": True}).eq("id", 1).execute()
+        if jogo.get('vitoria_final') and ultima_pergunta:
+            st.success("🏆 PARABÉNS! O DESAFIO COMPLETO FOI VENCIDO!")
+            st.balloons()
 
-            if ultima_pergunta:   # só solta balões se for a última
-                vencedor = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(1).execute()
-                if vencedor.data:
-                    st.success(f"🏆 JOGO ENCERRADO! Vencedor: {vencedor.data[0]['jogador']} com {vencedor.data[0]['pontos']} pontos!")
-                    st.balloons()
-
-        elif erros_atuais >= 6 and jogo['pergunta']:
+        if vitoria_rodada and erros_atuais < 6:
+            st.success("✅ Palavra Descoberta! Clique em 'Próxima Pergunta' no topo.")
+        elif erros_atuais >= 6:
             st.error(f"💀 DERROTA! A resposta era: {palavra_alvo}")
-            supabase.table("forca_disputa_arena").update({"vitoria_final": True}).eq("id", 1).execute()
-
-            if ultima_pergunta:   # só solta balões se for a última
-                vencedor = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(1).execute()
-                if vencedor.data:
-                    st.success(f"🏆 JOGO ENCERRADO! Vencedor: {vencedor.data[0]['jogador']} com {vencedor.data[0]['pontos']} pontos!")
-                    st.balloons()
-
         else:
             letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
             cols_tec = st.columns(9)
@@ -222,6 +185,7 @@ def arena_viva():
             if r['jogador'] != "PRATTI":
                 st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
 
+arena
 
 # --- PAINEL DO MESTRE ---
 with st.expander("🎩 Painel do Mestre (PRATTI)", expanded=True):
