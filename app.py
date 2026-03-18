@@ -24,22 +24,27 @@ def remover_acentos(texto):
 
 def extrair_dados_do_docx(arquivo_docx):
     try:
+        # Lê o arquivo Word
         doc = Document(arquivo_docx)
-        # ESTA LINHA ABAIXO FOI A QUE MUDOU:
-        # Ela lê o texto de cada parágrafo e pula os que estiverem vazios
-        todas_as_linhas = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+        # Pega o texto de todos os parágrafos que NÃO estão em branco
+        linhas_limpas = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
         
+        if not linhas_limpas:
+            st.warning("O arquivo parece estar sem texto ou vazio.")
+            return []
+
         lista_final = []
-        # Percorre a lista de 2 em 2 (Pergunta e depois Resposta)
-        for i in range(0, len(todas_as_linhas) - 1, 2):
+        # Percorre a lista de 2 em 2 (i é pergunta, i+1 é resposta)
+        for i in range(0, len(linhas_limpas) - 1, 2):
             lista_final.append({
-                "pergunta": todas_as_linhas[i], 
-                "resposta": remover_acentos(todas_as_linhas[i+1].upper())
+                "pergunta": linhas_limpas[i], 
+                "resposta": remover_acentos(linhas_limpas[i+1].upper())
             })
         return lista_final
     except Exception as e:
-        st.error(f"Erro no Word: {e}")
+        st.error(f"Erro ao ler o arquivo Word: {e}")
         return []
+
 
 
 
