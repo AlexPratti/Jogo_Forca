@@ -42,19 +42,30 @@ def extrair_dados_do_docx(arquivo_docx):
 
 def trocar_pergunta():
     """Função para sortear nova pergunta (usada por Admin e Jogadores)"""
-    # Aqui assumimos que as perguntas estão guardadas em um estado global ou arquivo
     if "lista_perguntas" in st.session_state and st.session_state.lista_perguntas:
-        nova = random.choice(st.session_state.lista_perguntas)
+        # Recupera pergunta atual
+        res = supabase.table("forca_disputa_arena").select("pergunta").eq("id", 1).single().execute()
+        pergunta_atual = res.data["pergunta"] if res.data else None
+
+        # Filtra lista removendo a pergunta atual
+        perguntas_disponiveis = [p for p in st.session_state.lista_perguntas if p["pergunta"] != pergunta_atual]
+
+        if not perguntas_disponiveis:
+            st.warning("⚠️ Não há mais perguntas disponíveis. O jogo terminou!")
+            return False
+
+        nova = random.choice(perguntas_disponiveis)
         supabase.table("forca_disputa_arena").update({
             "pergunta": nova['pergunta'], 
             "palavra": nova['resposta'],
             "letras_tentadas": "", 
             "erros": 0, 
             "ultimo_jogador": f"Sorteio por {st.session_state.jogador}",
-            "vitoria_final": False # Reseta o estado dos balões
+            "vitoria_final": False
         }).eq("id", 1).execute()
         return True
     return False
+
 
 # ==================================================
 # 2. TELA DE LOGIN
