@@ -64,6 +64,25 @@ def extrair_dados_do_docx(arquivo_docx):
         st.error(f"Erro ao ler o documento Word: {e}")
         return []
 
+# ==================================================
+# 2. INICIALIZAÇÃO DE ESTADO E LOGIN
+# ==================================================
+if "jogador" not in st.session_state:
+    st.session_state.jogador = None
+
+if not st.session_state.jogador:
+    st.title("⚔️ Arena da Forca")
+    nome = st.text_input("Digite seu nome para entrar na Arena:", key="input_nome")
+    if st.button("ENTRAR NA ARENA"):
+        if nome:
+            st.session_state.jogador = nome.strip().upper()
+            # Registra no ranking se não existir
+            supabase.table("forca_disputa_ranking").upsert({"jogador": st.session_state.jogador, "pontos": 0}, on_conflict="jogador").execute()
+            st.rerun()
+        else:
+            st.warning("Por favor, digite um nome.")
+    st.stop() # Interrompe a execução aqui até o login ser feito
+
 
 # ==================================================
 # 3. LÓGICA DE JOGO (GLOBAL)
