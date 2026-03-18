@@ -190,6 +190,7 @@ def arena_viva():
             st.success("✅ Palavra Descoberta!")
             supabase.table("forca_disputa_arena").update({"vitoria_final": True}).eq("id", 1).execute()
 
+            # Só solta balões se for a última pergunta
             if ultima_pergunta:
                 vencedor = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(1).execute()
                 if vencedor.data:
@@ -200,6 +201,7 @@ def arena_viva():
             st.error(f"💀 DERROTA! A resposta era: {palavra_alvo}")
             supabase.table("forca_disputa_arena").update({"vitoria_final": True}).eq("id", 1).execute()
 
+            # Só solta balões se for a última pergunta
             if ultima_pergunta:
                 vencedor = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(1).execute()
                 if vencedor.data:
@@ -221,6 +223,7 @@ def arena_viva():
         for i, r in enumerate(res_rank.data):
             if r['jogador'] != "PRATTI":
                 st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
+
 
 
 arena_viva()
