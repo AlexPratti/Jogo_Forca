@@ -182,22 +182,30 @@ def arena_viva():
             st.caption(f"Última jogada por: **{jogo['ultimo_jogador']}**")
 
         # --- LÓGICA DE FIM DE JOGO ---
-        if jogo.get('vitoria_final'):
-            st.success("🏆 PARABÉNS! O DESAFIO COMPLETO FOI VENCIDO!")
-            st.balloons()
+        total_perguntas = len(st.session_state.lista_perguntas) if "lista_perguntas" in st.session_state else 0
+        usadas = len(st.session_state.perguntas_usadas) if "perguntas_usadas" in st.session_state else 0
+        ultima_pergunta = (usadas == total_perguntas)
 
-        # Vitória automática só se houver pergunta ativa
         if vitoria_rodada and erros_atuais < 6 and jogo['pergunta']:
-            st.success("✅ Palavra Descoberta! Clique em 'Próxima Pergunta' no topo.")
+            st.success("✅ Palavra Descoberta!")
             supabase.table("forca_disputa_arena").update({"vitoria_final": True}).eq("id", 1).execute()
-            
-            vencedor = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(1).execute()
-            if vencedor.data:
-                st.success(f"🏆 VENCEDOR: {vencedor.data[0]['jogador']} com {vencedor.data[0]['pontos']} pontos!")
-                st.balloons()
+
+            if ultima_pergunta:
+                vencedor = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(1).execute()
+                if vencedor.data:
+                    st.success(f"🏆 JOGO ENCERRADO! Vencedor: {vencedor.data[0]['jogador']} com {vencedor.data[0]['pontos']} pontos!")
+                    st.balloons()
 
         elif erros_atuais >= 6 and jogo['pergunta']:
             st.error(f"💀 DERROTA! A resposta era: {palavra_alvo}")
+            supabase.table("forca_disputa_arena").update({"vitoria_final": True}).eq("id", 1).execute()
+
+            if ultima_pergunta:
+                vencedor = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(1).execute()
+                if vencedor.data:
+                    st.success(f"🏆 JOGO ENCERRADO! Vencedor: {vencedor.data[0]['jogador']} com {vencedor.data[0]['pontos']} pontos!")
+                    st.balloons()
+
         else:
             letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
             cols_tec = st.columns(9)
@@ -213,6 +221,7 @@ def arena_viva():
         for i, r in enumerate(res_rank.data):
             if r['jogador'] != "PRATTI":
                 st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
+
 
 arena_viva()
 
