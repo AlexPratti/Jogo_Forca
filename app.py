@@ -231,7 +231,7 @@ arena_viva()
 # ==================================================
 # 5. PAINEL DO ADMIN (PRATTI)
 # ==================================================
-wwith st.expander("🎩 Painel do Mestre (PRATTI)", expanded=True):
+with st.expander("🎩 Painel do Mestre (PRATTI)", expanded=True):
     # Upload do documento
     uploaded_file = st.file_uploader("📂 Carregar documento de perguntas", type=["csv", "xlsx", "txt"], key="upload_doc")
     if uploaded_file is not None:
