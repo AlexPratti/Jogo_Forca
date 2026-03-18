@@ -185,7 +185,8 @@ def arena_viva():
             if r['jogador'] != "PRATTI":
                 st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
 
-arena
+arena_viva()
+
 
 # --- PAINEL DO MESTRE ---
 with st.expander("🎩 Painel do Mestre (PRATTI)", expanded=True):
