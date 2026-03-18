@@ -25,9 +25,11 @@ def remover_acentos(texto):
 def extrair_dados_do_docx(arquivo_docx):
     try:
         doc = Document(arquivo_docx)
+        # CORREÇÃO: Lê os parágrafos do Word e coloca na lista
         todas_as_linhas = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
         
         lista_final = []
+        # Pula de 2 em 2 (assumindo: linha 1 pergunta, linha 2 resposta)
         for i in range(0, len(todas_as_linhas), 2):
             if i + 1 < len(todas_as_linhas):
                 lista_final.append({
@@ -38,6 +40,7 @@ def extrair_dados_do_docx(arquivo_docx):
     except Exception as e:
         st.error(f"Erro no Word: {e}")
         return []
+
 
 def trocar_pergunta():
     if "lista_perguntas" in st.session_state and st.session_state.lista_perguntas:
