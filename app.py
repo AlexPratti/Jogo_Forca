@@ -231,7 +231,14 @@ arena_viva()
 # ==================================================
 # 5. PAINEL DO ADMIN (PRATTI)
 # ==================================================
-with st.expander("🎩 Painel do Mestre (PRATTI)", expanded=True):
+wwith st.expander("🎩 Painel do Mestre (PRATTI)", expanded=True):
+    # Upload do documento
+    uploaded_file = st.file_uploader("📂 Carregar documento de perguntas", type=["csv", "xlsx", "txt"], key="upload_doc")
+    if uploaded_file is not None:
+        st.session_state.lista_perguntas = carregar_perguntas(uploaded_file)
+        st.session_state.perguntas_usadas = []
+        st.success(f"✅ Documento carregado com {len(st.session_state.lista_perguntas)} perguntas!")
+
     # Contador de progresso
     total_perguntas = len(st.session_state.lista_perguntas) if "lista_perguntas" in st.session_state else 0
     usadas = len(st.session_state.perguntas_usadas) if "perguntas_usadas" in st.session_state else 0
