@@ -25,11 +25,10 @@ def remover_acentos(texto):
 def extrair_dados_do_docx(arquivo_docx):
     try:
         doc = Document(arquivo_docx)
-        # CORREÇÃO: Lê os parágrafos do Word e coloca na lista
+        # Captura apenas parágrafos que não estejam em branco
         todas_as_linhas = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
         
         lista_final = []
-        # Pula de 2 em 2 (assumindo: linha 1 pergunta, linha 2 resposta)
         for i in range(0, len(todas_as_linhas), 2):
             if i + 1 < len(todas_as_linhas):
                 lista_final.append({
@@ -38,17 +37,17 @@ def extrair_dados_do_docx(arquivo_docx):
                 })
         return lista_final
     except Exception as e:
-        st.error(f"Erro no Word: {e}")
+        st.error(f"Erro ao ler arquivo: {e}")
         return []
 
 
+
 def trocar_pergunta():
+    """Busca a lista de perguntas da sessão e atualiza o banco de dados"""
     if "lista_perguntas" in st.session_state and st.session_state.lista_perguntas:
         nova = random.choice(st.session_state.lista_perguntas)
-        # registra pergunta usada
-        if "perguntas_usadas" not in st.session_state:
-            st.session_state.perguntas_usadas = []
-        st.session_state.perguntas_usadas.append(nova)
+        
+        # ATUALIZAÇÃO NO SUPABASE (Isso faz a pergunta aparecer para todos)
         supabase.table("forca_disputa_arena").update({
             "pergunta": nova['pergunta'], 
             "palavra": nova['resposta'],
