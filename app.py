@@ -242,14 +242,14 @@ with st.expander("🎩 Painel do Mestre (PRATTI)", expanded=True):
         st.info("📊 Todas as perguntas já foram usadas")
 
     # Botão próxima pergunta
-    if st.button("➡️ Próxima Pergunta", use_container_width=True):
+    if st.button("➡️ Próxima Pergunta", key="btn_proxima", use_container_width=True):
         ok = trocar_pergunta()
         if not ok:
             st.warning("⚠️ Não há mais perguntas disponíveis. O jogo terminou!")
         st.rerun()
 
     # Botão reset
-    if st.button("🔄 Resetar Arena", use_container_width=True):
+    if st.button("🔄 Resetar Arena", key="btn_reset", use_container_width=True):
         supabase.table("forca_disputa_arena").update({
             "pergunta": "", "palavra": "",
             "letras_tentadas": "", "erros": 0,
@@ -257,12 +257,11 @@ with st.expander("🎩 Painel do Mestre (PRATTI)", expanded=True):
             "vitoria_final": False,
             "status": "aguardando"
         }).eq("id", 1).execute()
-        # Reset também limpa histórico de perguntas usadas
         st.session_state.perguntas_usadas = []
         st.rerun()
 
     # Botão remover todos jogadores
-    if st.button("🔥 Remover TODOS os Jogadores e Resetar Jogo", use_container_width=True):
+    if st.button("🔥 Remover TODOS os Jogadores e Resetar Jogo", key="btn_remover_todos", use_container_width=True):
         supabase.table("forca_disputa_ranking").delete().neq("jogador","").execute()
         supabase.table("forca_disputa_arena").update({
             "pergunta": "", "palavra": "",
@@ -274,4 +273,3 @@ with st.expander("🎩 Painel do Mestre (PRATTI)", expanded=True):
         st.session_state.perguntas_usadas = []
         st.success("Todos os jogadores foram removidos e o jogo resetado!")
         st.rerun()
-
