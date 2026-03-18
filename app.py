@@ -25,30 +25,26 @@ def remover_acentos(texto):
 def extrair_dados_do_docx(arquivo_docx):
     try:
         doc = Document(arquivo_docx)
-        # 1. Extrai absolutamente todo o texto de parágrafos e tabelas
         texto_bruto = []
         
-        # Pega textos de parágrafos
+        # Mantém sua lógica original de parágrafos
         for p in doc.paragraphs:
             txt = p.text.strip()
-            if txt:
-                texto_bruto.append(txt)
+            if txt: texto_bruto.append(txt)
         
-        # Pega textos de tabelas (caso existam)
+        # Mantém sua lógica original de tabelas
         for tabela in doc.tables:
             for linha in tabela.rows:
                 for celula in linha.cells:
                     txt = celula.text.strip()
-                    if txt and txt not in texto_bruto:
-                        texto_bruto.append(txt)
+                    if txt and txt not in texto_bruto: texto_bruto.append(txt)
         
         lista_final = []
-        # 2. Agrupa em pares (Pergunta -> Próxima linha disponível)
-        # O range pula de 2 em 2, garantindo o par pergunta/resposta
+        # Agrupa em pares (Pergunta -> Resposta)
         for i in range(0, len(texto_bruto), 2):
             if i + 1 < len(texto_bruto):
                 pergunta = texto_bruto[i]
-                # Limpa a resposta: remove acentos e caracteres especiais de espaço
+                # Mantém sua limpeza rigorosa de resposta
                 resposta = remover_acentos(texto_bruto[i+1].upper().replace(" ", ""))
                 
                 lista_final.append({
@@ -57,12 +53,13 @@ def extrair_dados_do_docx(arquivo_docx):
                 })
         
         if not lista_final:
-            st.warning("Nenhum par de Pergunta/Resposta foi detectado no arquivo.")
-            
+            st.warning("Nenhum par de Pergunta/Resposta detectado.")
         return lista_final
     except Exception as e:
         st.error(f"Erro ao ler o documento Word: {e}")
         return []
+
+
 
 # ==================================================
 # 2. INICIALIZAÇÃO DE ESTADO E LOGIN
@@ -155,11 +152,21 @@ def arena_viva():
             st.caption(f"Última jogada por: **{jogo['ultimo_jogador']}**")
 
         # --- LÓGICA DE FIM DE JOGO E TECLADO ---
+        # Busca a coluna 'restantes' que você criou no Supabase
+        restantes = jogo.get('restantes', 0)
+
         if vitoria and erros_atuais < 6:
-            st.success("🎉 VITÓRIA COLETIVA!")
-            st.balloons()
+            if restantes == 0:
+                st.success("🎉 VITÓRIA FINAL DA EQUIPE!")
+                st.balloons()
+            else:
+                st.info(f"✅ Palavra correta! Aguardando o Mestre lançar a próxima (Faltam {restantes}).")
+        
         elif erros_atuais >= 6:
             st.error(f"💀 DERROTA! A resposta era: {palavra_alvo}")
+            if restantes == 0:
+                st.snow()
+                st.error("Fim de jogo. A arena caiu no último desafio!")
         else:
             letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
             cols_tec = st.columns(9)
@@ -184,54 +191,56 @@ arena_viva()
 if st.session_state.jogador == "PRATTI":
     st.divider()
     with st.expander("⚙️ PAINEL DO MESTRE"):
+        # Inicializa a fila se não existir
+        if "fila_perguntas" not in st.session_state:
+            st.session_state.fila_perguntas = []
+
         col_adm1, col_adm2 = st.columns(2)
         
         with col_adm1:
             st.markdown("#### 📝 Carregar Desafio")
-            arquivo = st.file_uploader("Arquivo .docx", type=["docx"])
-            if st.button("🚀 LANÇAR NOVA PALAVRA") and arquivo:
-                lista_q = extrair_dados_do_docx(arquivo)
-                if lista_q:
-                    esc = random.choice(lista_q)
+            arquivo = st.file_uploader("Arquivo .docx", type=["docx"], key="mestre_upload")
+            
+            # Botão para processar o arquivo
+            if st.button("📥 PROCESSAR ARQUIVO"):
+                if arquivo:
+                    st.session_state.fila_perguntas = extrair_dados_do_docx(arquivo)
+                    st.success(f"{len(st.session_state.fila_perguntas)} questões carregadas!")
+                else:
+                    st.error("Selecione um arquivo primeiro.")
+
+            # Botão para lançar a próxima pergunta da fila
+            if st.button("🚀 LANÇAR PRÓXIMA PERGUNTA", type="primary"):
+                if st.session_state.fila_perguntas:
+                    esc = st.session_state.fila_perguntas.pop(0) # Pega a próxima da lista
+                    restantes = len(st.session_state.fila_perguntas)
+                    
                     supabase.table("forca_disputa_arena").update({
                         "pergunta": esc['pergunta'], 
                         "palavra": esc['resposta'],
                         "letras_tentadas": "", 
                         "erros": 0, 
-                        "ultimo_jogador": "Mestre Pratti"
+                        "ultimo_jogador": "Mestre Pratti",
+                        "restantes": restantes # Envia quantos faltam para o banco
                     }).eq("id", 1).execute()
-                    st.success(f"Nova rodada lançada: {len(lista_q)} questões carregadas!")
-                    time.sleep(1.5)
+                    
+                    st.success(f"Lançada! Restam {restantes} perguntas.")
+                    time.sleep(1)
                     st.rerun()
                 else:
-                    st.error("O arquivo Word parece estar vazio ou fora do padrão.")
+                    st.warning("A fila está vazia! Carregue um novo arquivo.")
 
         with col_adm2:
             st.markdown("#### 🛡️ Gestão da Arena")
-            
             if st.button("🧹 ZERAR APENAS RANKING", use_container_width=True):
                 supabase.table("forca_disputa_ranking").update({"pontos": 0}).neq("jogador", "").execute()
                 st.toast("Ranking zerado!")
-                time.sleep(1)
                 st.rerun()
 
-            # Botão de Reset Total para emergências ou nova aula
             if st.button("💥 RESET TOTAL DA ARENA", type="primary", use_container_width=True):
-                # Limpa a Arena
                 supabase.table("forca_disputa_arena").update({
-                    "pergunta": "AGUARDANDO MESTRE...", 
-                    "palavra": "",
-                    "letras_tentadas": "", 
-                    "erros": 0, 
-                    "ultimo_jogador": "SISTEMA"
+                    "pergunta": "AGUARDANDO MESTRE...", "palavra": "",
+                    "letras_tentadas": "", "erros": 0, "ultimo_jogador": "Mestre", "restantes": 0
                 }).eq("id", 1).execute()
-                
-                # Zera o Ranking
-                supabase.table("forca_disputa_ranking").update({"pontos": 0}).neq("jogador", "").execute()
-                
-                st.warning("Tudo foi resetado!")
-                time.sleep(1.5)
+                st.session_state.fila_perguntas = []
                 st.rerun()
-
-    # Log de segurança para você ver o que está no banco (opcional)
-    st.caption(f"Conectado ao Supabase: {URL_SUPABASE}")
