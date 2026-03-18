@@ -233,7 +233,7 @@ arena_viva()
 # ==================================================
 with st.expander("🎩 Painel do Mestre (PRATTI)", expanded=True):
     # Upload do documento
-    uploaded_file = st.file_uploader("📂 Carregar documento de perguntas", type=["csv", "xlsx", "txt"], key="upload_doc")
+    uploaded_file = st.file_uploader("📂 Carregar documento de perguntas", type=["csv", "xlsx", "txt", "docx"], key="upload_doc")
     if uploaded_file is not None:
         st.session_state.lista_perguntas = carregar_perguntas(uploaded_file)
         st.session_state.perguntas_usadas = []
