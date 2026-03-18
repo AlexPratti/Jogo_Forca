@@ -43,18 +43,23 @@ def extrair_dados_do_docx(arquivo_docx):
 def trocar_pergunta():
     """Função para sortear nova pergunta (usada por Admin e Jogadores)"""
     if "lista_perguntas" in st.session_state and st.session_state.lista_perguntas:
-        # Recupera pergunta atual
-        res = supabase.table("forca_disputa_arena").select("pergunta").eq("id", 1).single().execute()
-        pergunta_atual = res.data["pergunta"] if res.data else None
+        # Inicializa histórico se não existir
+        if "perguntas_usadas" not in st.session_state:
+            st.session_state.perguntas_usadas = []
 
-        # Filtra lista removendo a pergunta atual
-        perguntas_disponiveis = [p for p in st.session_state.lista_perguntas if p["pergunta"] != pergunta_atual]
+        # Filtra lista removendo perguntas já usadas
+        perguntas_disponiveis = [
+            p for p in st.session_state.lista_perguntas 
+            if p["pergunta"] not in st.session_state.perguntas_usadas
+        ]
 
         if not perguntas_disponiveis:
-            st.warning("⚠️ Não há mais perguntas disponíveis. O jogo terminou!")
+            st.warning("⚠️ Todas as perguntas já foram usadas. O jogo terminou!")
             return False
 
         nova = random.choice(perguntas_disponiveis)
+        st.session_state.perguntas_usadas.append(nova["pergunta"])
+
         supabase.table("forca_disputa_arena").update({
             "pergunta": nova['pergunta'], 
             "palavra": nova['resposta'],
