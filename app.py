@@ -54,9 +54,24 @@ def trocar_pergunta():
         ]
 
         if not perguntas_disponiveis:
-            st.warning("⚠️ Todas as perguntas já foram usadas. O jogo terminou!")
+            # Todas as perguntas já foram usadas → vitória final
+            supabase.table("forca_disputa_arena").update({
+                "pergunta": "", "palavra": "",
+                "letras_tentadas": "", "erros": 0,
+                "ultimo_jogador": "Fim do Jogo",
+                "vitoria_final": True
+            }).eq("id", 1).execute()
+
+            # Busca vencedor
+            vencedor = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(1).execute()
+            if vencedor.data:
+                st.success(f"🏆 JOGO ENCERRADO! Vencedor: {vencedor.data[0]['jogador']} com {vencedor.data[0]['pontos']} pontos!")
+                st.balloons()
+            else:
+                st.warning("⚠️ Jogo encerrado, mas não há jogadores no ranking.")
             return False
 
+        # Sorteia nova pergunta
         nova = random.choice(perguntas_disponiveis)
         st.session_state.perguntas_usadas.append(nova["pergunta"])
 
