@@ -158,25 +158,61 @@ def arena_viva():
 
 arena_viva()
 
+
 # ==================================================
 # 5. PAINEL DO ADMIN (PRATTI)
 # ==================================================
 if st.session_state.jogador == "PRATTI":
     st.divider()
     with st.expander("⚙️ PAINEL DO MESTRE"):
-        arquivo = st.file_uploader("Arquivo .docx", type=["docx"])
-        if st.button("🚀 LANÇAR NOVA PALAVRA") and arquivo:
-            lista_q = extrair_dados_do_docx(arquivo)
-            if lista_q:
-                esc = random.choice(lista_q)
-                supabase.table("forca_disputa_arena").update({
-                    "pergunta": esc['pergunta'], "palavra": esc['resposta'],
-                    "letras_tentadas": "", "erros": 0, "ultimo_jogador": "Mestre Pratti"
-                }).eq("id", 1).execute()
-                st.success("Nova rodada!")
+        col_adm1, col_adm2 = st.columns(2)
+        
+        with col_adm1:
+            st.markdown("#### 📝 Carregar Desafio")
+            arquivo = st.file_uploader("Arquivo .docx", type=["docx"])
+            if st.button("🚀 LANÇAR NOVA PALAVRA") and arquivo:
+                lista_q = extrair_dados_do_docx(arquivo)
+                if lista_q:
+                    esc = random.choice(lista_q)
+                    supabase.table("forca_disputa_arena").update({
+                        "pergunta": esc['pergunta'], 
+                        "palavra": esc['resposta'],
+                        "letras_tentadas": "", 
+                        "erros": 0, 
+                        "ultimo_jogador": "Mestre Pratti"
+                    }).eq("id", 1).execute()
+                    st.success(f"Nova rodada lançada: {len(lista_q)} questões carregadas!")
+                    time.sleep(1.5)
+                    st.rerun()
+                else:
+                    st.error("O arquivo Word parece estar vazio ou fora do padrão.")
+
+        with col_adm2:
+            st.markdown("#### 🛡️ Gestão da Arena")
+            
+            if st.button("🧹 ZERAR APENAS RANKING", use_container_width=True):
+                supabase.table("forca_disputa_ranking").update({"pontos": 0}).neq("jogador", "").execute()
+                st.toast("Ranking zerado!")
                 time.sleep(1)
                 st.rerun()
-        
-        if st.button("🧹 ZERAR RANKING"):
-            supabase.table("forca_disputa_ranking").update({"pontos": 0}).neq("jogador", "").execute()
-            st.rerun()
+
+            # Botão de Reset Total para emergências ou nova aula
+            if st.button("💥 RESET TOTAL DA ARENA", type="primary", use_container_width=True):
+                # Limpa a Arena
+                supabase.table("forca_disputa_arena").update({
+                    "pergunta": "AGUARDANDO MESTRE...", 
+                    "palavra": "",
+                    "letras_tentadas": "", 
+                    "erros": 0, 
+                    "ultimo_jogador": "SISTEMA"
+                }).eq("id", 1).execute()
+                
+                # Zera o Ranking
+                supabase.table("forca_disputa_ranking").update({"pontos": 0}).neq("jogador", "").execute()
+                
+                st.warning("Tudo foi resetado!")
+                time.sleep(1.5)
+                st.rerun()
+
+    # Log de segurança para você ver o que está no banco (opcional)
+    st.caption(f"Conectado ao Supabase: {URL_SUPABASE}")
