@@ -41,37 +41,27 @@ def extrair_dados_do_docx(arquivo_docx):
         return []
 
 def trocar_pergunta():
-    """Função para sortear nova pergunta (usada por Admin e Jogadores)"""
     if "lista_perguntas" in st.session_state and st.session_state.lista_perguntas:
-        # Inicializa histórico se não existir
         if "perguntas_usadas" not in st.session_state:
             st.session_state.perguntas_usadas = []
 
-        # Filtra lista removendo perguntas já usadas
         perguntas_disponiveis = [
             p for p in st.session_state.lista_perguntas 
             if p["pergunta"] not in st.session_state.perguntas_usadas
         ]
 
         if not perguntas_disponiveis:
-            # Todas as perguntas já foram usadas → vitória final
+            # Todas já foram usadas → fim de jogo, mas sem balões ainda
             supabase.table("forca_disputa_arena").update({
                 "pergunta": "", "palavra": "",
                 "letras_tentadas": "", "erros": 0,
                 "ultimo_jogador": "Fim do Jogo",
-                "vitoria_final": True
+                "vitoria_final": False,
+                "status": "fim"
             }).eq("id", 1).execute()
-
-            # Busca vencedor
-            vencedor = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(1).execute()
-            if vencedor.data:
-                st.success(f"🏆 JOGO ENCERRADO! Vencedor: {vencedor.data[0]['jogador']} com {vencedor.data[0]['pontos']} pontos!")
-                st.balloons()
-            else:
-                st.warning("⚠️ Jogo encerrado, mas não há jogadores no ranking.")
+            st.warning("⚠️ Todas as perguntas já foram usadas. O jogo terminou!")
             return False
 
-        # Sorteia nova pergunta
         nova = random.choice(perguntas_disponiveis)
         st.session_state.perguntas_usadas.append(nova["pergunta"])
 
@@ -81,10 +71,12 @@ def trocar_pergunta():
             "letras_tentadas": "", 
             "erros": 0, 
             "ultimo_jogador": f"Sorteio por {st.session_state.jogador}",
-            "vitoria_final": False
+            "vitoria_final": False,
+            "status": "rodando"
         }).eq("id", 1).execute()
         return True
     return False
+
 
 
 # ==================================================
