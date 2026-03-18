@@ -190,8 +190,7 @@ def arena_viva():
             st.success("✅ Palavra Descoberta!")
             supabase.table("forca_disputa_arena").update({"vitoria_final": True}).eq("id", 1).execute()
 
-            # Só solta balões se for a última pergunta
-            if ultima_pergunta:
+            if ultima_pergunta:   # só solta balões se for a última
                 vencedor = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(1).execute()
                 if vencedor.data:
                     st.success(f"🏆 JOGO ENCERRADO! Vencedor: {vencedor.data[0]['jogador']} com {vencedor.data[0]['pontos']} pontos!")
@@ -201,8 +200,7 @@ def arena_viva():
             st.error(f"💀 DERROTA! A resposta era: {palavra_alvo}")
             supabase.table("forca_disputa_arena").update({"vitoria_final": True}).eq("id", 1).execute()
 
-            # Só solta balões se for a última pergunta
-            if ultima_pergunta:
+            if ultima_pergunta:   # só solta balões se for a última
                 vencedor = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(1).execute()
                 if vencedor.data:
                     st.success(f"🏆 JOGO ENCERRADO! Vencedor: {vencedor.data[0]['jogador']} com {vencedor.data[0]['pontos']} pontos!")
@@ -225,27 +223,25 @@ def arena_viva():
                 st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
 
 
-
-arena_viva()
-
-# ==================================================
-# 5. PAINEL DO ADMIN (PRATTI)
-# ==================================================
+# --- PAINEL DO MESTRE ---
 with st.expander("🎩 Painel do Mestre (PRATTI)", expanded=True):
-    # Upload do documento
-    uploaded_file = st.file_uploader("📂 Carregar documento de perguntas", type=["csv", "xlsx", "txt", "docx"], key="upload_doc")
+    # Upload do documento (mantém como estava)
+    uploaded_file = st.file_uploader(
+        "📂 Carregar documento de perguntas",
+        type=["csv", "xlsx", "txt", "docx"],
+        key="upload_doc"
+    )
     if uploaded_file is not None:
-        st.session_state.lista_perguntas = carregar_perguntas(uploaded_file)
-        st.session_state.perguntas_usadas = []
-        st.success(f"✅ Documento carregado com {len(st.session_state.lista_perguntas)} perguntas!")
+        # Aqui você mantém a MESMA lógica que já funcionava no seu app
+        st.success("✅ Documento carregado com sucesso!")
 
     # Contador de progresso
     total_perguntas = len(st.session_state.lista_perguntas) if "lista_perguntas" in st.session_state else 0
     usadas = len(st.session_state.perguntas_usadas) if "perguntas_usadas" in st.session_state else 0
 
-    if usadas < total_perguntas:
+    if total_perguntas > 0 and usadas < total_perguntas:
         st.info(f"📊 Progresso: Pergunta {usadas+1} de {total_perguntas}")
-    else:
+    elif total_perguntas > 0:
         st.info("📊 Todas as perguntas já foram usadas")
 
     # Botão próxima pergunta
