@@ -105,6 +105,25 @@ def registrar_jogada(letra, jogo_atual):
         pts = res.data['pontos'] if res.data else 0
         supabase.table("forca_disputa_ranking").update({"pontos": pts + 1}).eq("jogador", st.session_state.jogador).execute()
 
+def reiniciar_arena_completa():
+    # 1. Zera os pontos de todos no ranking
+    supabase.table("forca_disputa_ranking").update({"pontos": 0}).neq("jogador", "").execute()
+    
+    # 2. Reseta a mesa de jogo para o estado inicial
+    supabase.table("forca_disputa_arena").update({
+        "pergunta": "Aguardando nova pergunta...",
+        "palavra": "",
+        "letras_tentadas": "",
+        "erros": 0,
+        "restantes": 0,
+        "ultimo_jogador": "SISTEMA"
+    }).eq("id", 1).execute()
+    
+    st.toast("Arena e Ranking resetados com sucesso!")
+    time.sleep(1)
+    st.rerun()
+
+
 # ==================================================
 # 4. INTERFACE DA ARENA (COM IMAGENS)
 # ==================================================
@@ -183,6 +202,12 @@ def arena_viva():
         res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(10).execute()
         for i, r in enumerate(res_rank.data):
             st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
+        
+        st.divider()
+        # Botão acessível a todos os jogadores
+        if st.button("🔄 REINICIAR ARENA", use_container_width=True, help="Zera o ranking e limpa o jogo atual"):
+            reiniciar_arena_completa()
+    
 
 arena_viva()
 
