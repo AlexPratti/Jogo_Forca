@@ -123,7 +123,7 @@ def arena_viva():
     res = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
     jogo = res.data
     if not jogo:
-        st.warning("Aguardando o Mestre Pratti iniciar...")
+        st.warning("Aguardando o Administrador do Jogo iniciar...")
         return
 
     col_jogo, col_rank = st.columns([3, 1])
@@ -167,7 +167,7 @@ def arena_viva():
             else:
                 prefixo = f"📝 Pergunta {contagem}" if contagem > 0 else "🔥 PERGUNTA FINAL"
                 st.subheader(prefixo)
-                st.info(f"❓ **DICA:** {jogo['pergunta']}")
+                st.info(f"❓ **VALE 10 PONTOS:** {jogo['pergunta']}")
 
             texto_visual = "".join([f"{l} " if (l == " " or l in tentadas or erros_atuais >= 6) else "_ " for l in palavra_alvo])
             st.markdown(f"## `{texto_visual}`")
@@ -194,7 +194,7 @@ def arena_viva():
                     registrar_jogada(letra, jogo)
                     st.rerun()
         elif not (contagem == 0) and vitoria:
-             st.info("✅ Palavra correta! Aguardando o Mestre lançar a próxima.")
+             st.info("✅ Palavra correta! Aguardando o Administrador lançar o próximo desafio.")
 
     with col_rank:
         st.markdown("### 🏆 Ranking")
