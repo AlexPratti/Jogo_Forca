@@ -134,8 +134,18 @@ def arena_viva():
             else:
                 st.metric("Erros da Equipe", f"{erros_atuais}/6")
 
-        with c_txt:
+         with c_txt:
+            # --- LÓGICA DE CONTAGEM DE PERGUNTAS ---
+            # Busca o valor da coluna 'restantes' que você acabou de criar
+            contagem = jogo.get('restantes', 0)
+
+            if contagem > 0:
+                st.subheader(f"📝 Esta é a pergunta de número {contagem}")
+            else:
+                st.subheader("🔥 ESTA É A PERGUNTA FINAL!")
+
             st.info(f"❓ **DICA:** {jogo['pergunta']}")
+            
             tentadas = [l.strip() for l in jogo['letras_tentadas'].split(",") if l.strip()]
             palavra_alvo = jogo['palavra']
             
@@ -151,22 +161,21 @@ def arena_viva():
             st.markdown(f"## `{texto_visual}`")
             st.caption(f"Última jogada por: **{jogo['ultimo_jogador']}**")
 
-        # --- LÓGICA DE FIM DE JOGO E TECLADO ---
-        # Busca a coluna 'restantes' que você criou no Supabase
-        restantes = jogo.get('restantes', 0)
-
+        # --- LÓGICA DE FIM DE JOGO ---
         if vitoria and erros_atuais < 6:
-            if restantes == 0:
+            if contagem == 0:
                 st.success("🎉 VITÓRIA FINAL DA EQUIPE!")
-                st.balloons()
+                # st.balloons()  <-- Desativado
             else:
-                st.info(f"✅ Palavra correta! Aguardando o Mestre lançar a próxima (Faltam {restantes}).")
+                st.info(f"✅ Palavra correta! Aguardando o Mestre lançar a próxima.")
         
         elif erros_atuais >= 6:
             st.error(f"💀 DERROTA! A resposta era: {palavra_alvo}")
-            if restantes == 0:
-                st.snow()
+            if contagem == 0:
                 st.error("Fim de jogo. A arena caiu no último desafio!")
+                # st.snow()
+                # st.balloons() <-- Desativado
+       
         else:
             letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
             cols_tec = st.columns(9)
@@ -191,7 +200,6 @@ arena_viva()
 if st.session_state.jogador == "PRATTI":
     st.divider()
     with st.expander("⚙️ PAINEL DO MESTRE"):
-        # Inicializa a fila se não existir
         if "fila_perguntas" not in st.session_state:
             st.session_state.fila_perguntas = []
 
@@ -201,7 +209,6 @@ if st.session_state.jogador == "PRATTI":
             st.markdown("#### 📝 Carregar Desafio")
             arquivo = st.file_uploader("Arquivo .docx", type=["docx"], key="mestre_upload")
             
-            # Botão para processar o arquivo
             if st.button("📥 PROCESSAR ARQUIVO"):
                 if arquivo:
                     st.session_state.fila_perguntas = extrair_dados_do_docx(arquivo)
@@ -209,38 +216,25 @@ if st.session_state.jogador == "PRATTI":
                 else:
                     st.error("Selecione um arquivo primeiro.")
 
-            # Botão para lançar a próxima pergunta da fila
-            if st.button("🚀 LANÇAR PRÓXIMA PERGUNTA", type="primary"):
+            if st.button("🚀 LANÇAR PRÓXIMA PERGUNTA"):
                 if st.session_state.fila_perguntas:
-                    esc = st.session_state.fila_perguntas.pop(0) # Pega a próxima da lista
-                    restantes = len(st.session_state.fila_perguntas)
+                    # Pega o total na fila antes de remover
+                    total_antes_de_tirar = len(st.session_state.fila_perguntas)
+                    proxima = st.session_state.fila_perguntas.pop(0)
                     
+                    # Se restar algo na fila após tirar esta, manda o número atual.
+                    # Se não restar nada, manda 0 para indicar que é a Pergunta Final.
+                    valor_para_banco = total_antes_de_tirar if len(st.session_state.fila_perguntas) > 0 else 0
+
                     supabase.table("forca_disputa_arena").update({
-                        "pergunta": esc['pergunta'], 
-                        "palavra": esc['resposta'],
-                        "letras_tentadas": "", 
-                        "erros": 0, 
-                        "ultimo_jogador": "Mestre Pratti",
-                        "restantes": restantes # Envia quantos faltam para o banco
+                        "pergunta": proxima['pergunta'],
+                        "palavra": proxima['resposta'],
+                        "letras_tentadas": "",
+                        "erros": 0,
+                        "restantes": valor_para_banco, # Atualizando sua nova coluna
+                        "ultimo_jogador": "SISTEMA"
                     }).eq("id", 1).execute()
-                    
-                    st.success(f"Lançada! Restam {restantes} perguntas.")
-                    time.sleep(1)
                     st.rerun()
                 else:
-                    st.warning("A fila está vazia! Carregue um novo arquivo.")
+                    st.warning("A fila de perguntas está vazia!")
 
-        with col_adm2:
-            st.markdown("#### 🛡️ Gestão da Arena")
-            if st.button("🧹 ZERAR APENAS RANKING", use_container_width=True):
-                supabase.table("forca_disputa_ranking").update({"pontos": 0}).neq("jogador", "").execute()
-                st.toast("Ranking zerado!")
-                st.rerun()
-
-            if st.button("💥 RESET TOTAL DA ARENA", type="primary", use_container_width=True):
-                supabase.table("forca_disputa_arena").update({
-                    "pergunta": "AGUARDANDO MESTRE...", "palavra": "",
-                    "letras_tentadas": "", "erros": 0, "ultimo_jogador": "Mestre", "restantes": 0
-                }).eq("id", 1).execute()
-                st.session_state.fila_perguntas = []
-                st.rerun()
