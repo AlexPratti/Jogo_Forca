@@ -187,100 +187,79 @@ def arena_viva():
 
     with col_rank:
         st.markdown("### 🏆 Ranking")
-        # Busca os dados do Supabase
+        # Busca os dados do ranking no Supabase
         res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute()
         
-        # FILTRO: Remove o "PRATTI" da lista para ele não aparecer para ninguém
+        # Filtra para que o nome "PRATTI" nunca apareça na lista visual
         jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "PRATTI"]
 
-        for i, r in enumerate(jogadores_faciais):
-            # Se for o Admin (PRATTI), mostra o nome com o botão de excluir ao lado
-            if st.session_state.jogador == "PRATTI":
-                c_nome, c_del = st.columns([3, 1])
-                c_nome.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
-                if c_del.button("❌", key=f"del_{r['jogador']}"):
-                    supabase.table("forca_disputa_ranking").delete().eq("jogador", r['jogador']).execute()
-                    st.rerun()
-            # Se for jogador comum, mostra apenas o Top 10 sem botões
-            elif i < 10:
+        if jogadores_faciais:
+            for i, r in enumerate(jogadores_faciais[:10]): # Mostra apenas o Top 10
                 st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
-
-        # --- BLOCO DE CONTROLE EXCLUSIVO (SÓ APARECE PARA O PRATTI) ---
-        if st.session_state.jogador == "PRATTI":
-            st.divider()
-            st.subheader("🛠️ Gestão da Arena")
-            
-            # Botão Reiniciar Arena (Agora protegido pela trava de Admin)
-            if st.button("🔄 REINICIAR ARENA", use_container_width=True):
-                reiniciar_arena_completa()
-            
-            # Botão Excluir Todos
-            if st.button("🗑️ EXCLUIR TODOS OS JOGADORES", use_container_width=True, type="primary"):
-                supabase.table("forca_disputa_ranking").delete().neq("jogador", "PRATTI").execute()
-                st.success("Ranking resetado!")
-                st.rerun()
+        else:
+            st.caption("Aguardando jogadores...")
 
 # EXECUÇÃO DA ARENA
 arena_viva()
 
 # ==================================================
-# 5. PAINEL DO ADMIN (PRATTI) - COMPLETO E SEM SIMPLIFICAÇÕES
+# 5. PAINEL DO ADMIN (PRATTI) - CONTROLES CENTRALIZADOS
 # ==================================================
 if st.session_state.jogador == "PRATTI":
     st.divider()
-    with st.expander("⚙️ PAINEL DO MESTRE"):
-        # Garante que a fila exista na sessão do Mestre
+    with st.expander("⚙️ PAINEL DO MESTRE", expanded=True):
         if "fila_perguntas" not in st.session_state:
             st.session_state.fila_perguntas = []
 
-        col_adm1, col_adm2 = st.columns(2)
+        col_adm1, col_adm2, col_adm3 = st.columns([2, 1, 1])
         
         with col_adm1:
-            st.markdown("#### 📝 Carregar Desafio")
-            # Widget de upload original
+            st.markdown("#### 📝 Carregar e Lançar")
             arquivo = st.file_uploader("Arquivo .docx", type=["docx"], key="mestre_upload")
             
-            # 1. PROCESSAR ARQUIVO: Mantém sua lógica de extração original
             if st.button("📥 PROCESSAR ARQUIVO"):
                 if arquivo:
-                    # Chama a função que percorre parágrafos e tabelas do DOCX
                     st.session_state.fila_perguntas = extrair_dados_do_docx(arquivo)
                     st.success(f"{len(st.session_state.fila_perguntas)} questões carregadas!")
                 else:
                     st.error("Selecione um arquivo primeiro.")
 
-            # 2. LANÇAR PRÓXIMA: Gerencia a fila e a nova contagem de 'restantes'
-            if st.button("🚀 LANÇAR PRÓXIMA PERGUNTA"):
+            if st.button("🚀 LANÇAR PRÓXIMA PERGUNTA", use_container_width=True):
                 if st.session_state.fila_perguntas:
-                    # Captura o total antes de remover da lista para a contagem visual
-                    total_antes_de_tirar = len(st.session_state.fila_perguntas)
-                    
-                    # Remove a primeira pergunta da fila (Lógica FIFO)
+                    total_antes = len(st.session_state.fila_perguntas)
                     proxima = st.session_state.fila_perguntas.pop(0)
-                    
-                    # Define o valor que vai para a coluna 'restantes' no Supabase:
-                    # Se após o pop ainda houver perguntas, manda o número atual.
-                    # Se a fila esvaziou, manda 0 (ativando o texto 'PERGUNTA FINAL')
-                    valor_para_banco = total_antes_de_tirar if len(st.session_state.fila_perguntas) > 0 else 0
+                    valor_banco = total_antes if len(st.session_state.fila_perguntas) > 0 else 0
 
-                    # Atualização ATÔMICA no Supabase
                     supabase.table("forca_disputa_arena").update({
-                        "pergunta": proxima['pergunta'],
-                        "palavra": proxima['resposta'],
-                        "letras_tentadas": "",
-                        "erros": 0,
-                        "restantes": valor_para_banco,
+                        "pergunta": proxima['pergunta'], "palavra": proxima['resposta'],
+                        "letras_tentadas": "", "erros": 0, "restantes": valor_banco,
                         "ultimo_jogador": "SISTEMA"
                     }).eq("id", 1).execute()
-                    
-                    # Força o app a atualizar para o Mestre ver que a fila diminuiu
                     st.rerun()
                 else:
                     st.warning("A fila de perguntas está vazia!")
         
         with col_adm2:
-            # Informação útil para o mestre controlar a fila
-            st.markdown("#### 📊 Status da Fila")
-            st.metric("Perguntas na Fila", len(st.session_state.fila_perguntas))
-            if st.session_state.fila_perguntas:
-                st.write("Próxima pergunta será lançada ao clicar no foguete.")
+            st.markdown("#### 🔄 Arena")
+            st.metric("Na Fila", len(st.session_state.fila_perguntas))
+            st.write("")
+            # BOTÃO REINICIAR (Apenas aqui agora)
+            if st.button("🔄 REINICIAR ARENA", use_container_width=True):
+                reiniciar_arena_completa()
+
+        with col_adm3:
+            st.markdown("#### 👥 Jogadores")
+            # BOTÃO EXCLUIR TODOS
+            if st.button("🗑️ LIMPAR TUDO", use_container_width=True, type="primary", help="Exclui todos os jogadores do ranking"):
+                supabase.table("forca_disputa_ranking").delete().neq("jogador", "PRATTI").execute()
+                st.rerun()
+            
+            st.divider()
+            # LISTA PARA EXCLUSÃO INDIVIDUAL
+            res_jogadores = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "PRATTI").execute()
+            for j in res_jogadores.data:
+                c1, c2 = st.columns([3, 1])
+                c1.caption(j['jogador'])
+                if c2.button("❌", key=f"excluir_{j['jogador']}"):
+                    supabase.table("forca_disputa_ranking").delete().eq("jogador", j['jogador']).execute()
+                    st.rerun()
