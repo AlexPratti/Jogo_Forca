@@ -187,43 +187,38 @@ def arena_viva():
 
     with col_rank:
         st.markdown("### 🏆 Ranking")
+        # Busca os dados do Supabase
         res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute()
         
-        # Filtra para não mostrar o "PRATTI" na lista visual
+        # FILTRO: Remove o "PRATTI" da lista para ele não aparecer para ninguém
         jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "PRATTI"]
 
         for i, r in enumerate(jogadores_faciais):
-            # Se for o Admin, mostra o botão de excluir individual (X)
+            # Se for o Admin (PRATTI), mostra o nome com o botão de excluir ao lado
             if st.session_state.jogador == "PRATTI":
                 c_nome, c_del = st.columns([3, 1])
                 c_nome.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
                 if c_del.button("❌", key=f"del_{r['jogador']}"):
                     supabase.table("forca_disputa_ranking").delete().eq("jogador", r['jogador']).execute()
                     st.rerun()
-            else:
-                # Para os jogadores comuns, mostra apenas o Top 10 sem botões
-                if i < 10:
-                    st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
+            # Se for jogador comum, mostra apenas o Top 10 sem botões
+            elif i < 10:
+                st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
 
-        st.divider()
-        
-        # --- BLOCO EXCLUSIVO DO ADMINISTRADOR ---
+        # --- BLOCO DE CONTROLE EXCLUSIVO (SÓ APARECE PARA O PRATTI) ---
         if st.session_state.jogador == "PRATTI":
+            st.divider()
             st.subheader("🛠️ Gestão da Arena")
             
-            # AGORA O BOTÃO SÓ APARECE PARA VOCÊ AQUI
+            # Botão Reiniciar Arena (Agora protegido pela trava de Admin)
             if st.button("🔄 REINICIAR ARENA", use_container_width=True):
                 reiniciar_arena_completa()
             
-            # Botão para excluir todos os jogadores
+            # Botão Excluir Todos
             if st.button("🗑️ EXCLUIR TODOS OS JOGADORES", use_container_width=True, type="primary"):
-                supabase.table("forca_disputa_ranking").delete().neq("jogador", "").execute()
+                supabase.table("forca_disputa_ranking").delete().neq("jogador", "PRATTI").execute()
                 st.success("Ranking resetado!")
-                time.sleep(1)
                 st.rerun()
-
-
-
 
 # EXECUÇÃO DA ARENA
 arena_viva()
