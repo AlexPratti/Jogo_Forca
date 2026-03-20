@@ -118,8 +118,6 @@ def reiniciar_arena_completa():
 # 4. INTERFACE DA ARENA (CHAMADA ÚNICA)
 # ==================================================
 
-
-
 @st.fragment(run_every=2)
 def arena_viva():
     res = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
@@ -128,11 +126,11 @@ def arena_viva():
         st.warning("Aguardando o Mestre Pratti iniciar...")
         return
 
-    # Mantendo suas proporções originais [3, 1]
+    # Mantida a proporção original [3, 1]
     col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        # Mantendo suas proporções originais [1, 2]
+        # Mantida a proporção original [1, 2]
         c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -150,7 +148,7 @@ def arena_viva():
             palavra_alvo = jogo['palavra']
             vitoria = all((letra == " " or letra in tentadas) for letra in palavra_alvo)
 
-            # --- LÓGICA DE PONTUAÇÃO (Inalterada) ---
+            # --- LÓGICA DE PONTUAÇÃO (Original preservada) ---
             if vitoria and erros_atuais < 6:
                 id_palavra_atual = f"vitoria_{palavra_alvo}_{contagem}"
                 if id_palavra_atual not in st.session_state:
@@ -161,7 +159,7 @@ def arena_viva():
                         st.toast(f"🏆 +10 pontos por vencer o desafio!")
                     st.session_state[id_palavra_atual] = True
 
-            # --- MENSAGENS DE INTERFACE (Inalterada) ---
+            # --- MENSAGENS DE INTERFACE (Original preservada) ---
             if vitoria and contagem == 0:
                 st.subheader("🏆 ARENA CONQUISTADA!")
                 st.success(f"🌟 **{ultimo_player}** venceu o desafio final!")
@@ -173,10 +171,9 @@ def arena_viva():
                 st.subheader(prefixo)
                 st.info(f"❓ **DICA:** {jogo['pergunta']}")
 
-            # --- AJUSTE SOLICITADO: LÓGICA DE ESPAÇAMENTO ---
-            # Se for um espaço entre palavras, insere 3 espaços ("   "). 
-            # Se for letra descoberta ou fim de jogo, mostra a letra e 1 espaço ("L ").
-            # Se for letra oculta, mostra o traço e 1 espaço ("_ ").
+            # --- AJUSTE DE ESPAÇAMENTO PARA RESPOSTAS COM MAIS DE UMA PALAVRA ---
+            # Se for espaço " ", coloca 3 espaços ("   ") para separar os blocos de traços.
+            # Se a letra estiver correta ou jogo acabar, mostra a letra. Caso contrário, traço.
             texto_visual = "".join([
                 "   " if l == " " else 
                 f"{l} " if (l in tentadas or erros_atuais >= 6) else 
@@ -187,7 +184,7 @@ def arena_viva():
             st.markdown(f"## `{texto_visual}`")
             st.caption(f"Última jogada por: **{ultimo_player}**")
 
-        # --- CONTROLE DO TECLADO E SEGURANÇA (Inalterada) ---
+        # --- CONTROLE DO TECLADO E SEGURANÇA (Original preservada) ---
         if not vitoria and erros_atuais < 6:
             if st.session_state.jogador != "PRATTI":
                 valido = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
@@ -196,7 +193,7 @@ def arena_viva():
                     if st.button("SAIR DA ARENA", key="btn_sair_arena_expulso"):
                         st.session_state.jogador = None
                         st.rerun()
-                    st.stop() 
+                    st.stop()
 
             letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
             cols_tec = st.columns(9)
