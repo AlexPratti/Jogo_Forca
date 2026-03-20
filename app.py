@@ -211,6 +211,9 @@ def arena_viva():
         jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "PRATTI"]
         for i, r in enumerate(jogadores_faciais[:10]):
             st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
+            
+# EXECUÇÃO DA ARENA
+arena_viva()
 
 
 # ==================================================
