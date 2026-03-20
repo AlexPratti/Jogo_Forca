@@ -162,7 +162,7 @@ def arena_viva():
                 st.subheader("🏆 ARENA CONQUISTADA!")
                 st.success(f"🌟 **{ultimo_player}** venceu o desafio final!")
             elif erros_atuais >= 6 and contagem == 0:
-                st.subheader("💀 FIM DA LINHA")
+                st.subheader(f"🌟 **{ultimo_player}** 💀 FIM DA LINHA")
                 st.error("A arena caiu no último desafio!")
             else:
                 prefixo = f"📝 Pergunta {contagem}" if contagem > 0 else "🔥 PERGUNTA FINAL"
