@@ -46,7 +46,7 @@ def extrair_dados_do_docx(arquivo_docx):
         return []
 
 # ==================================================
-# 2. LOGIN E ESTADO
+# 2. LOGIN E ESTADO (VERSÃO COM TRAVA DE ADMIN)
 # ==================================================
 if "jogador" not in st.session_state:
     st.session_state.jogador = None
@@ -56,12 +56,23 @@ if not st.session_state.jogador:
     nome = st.text_input("Digite seu nome para entrar na Arena:", key="input_nome")
     if st.button("ENTRAR NA ARENA"):
         if nome:
-            st.session_state.jogador = nome.strip().upper()
-            supabase.table("forca_disputa_ranking").upsert({"jogador": st.session_state.jogador, "pontos": 0}, on_conflict="jogador").execute()
+            nome_upper = nome.strip().upper()
+            st.session_state.jogador = nome_upper
+            
+            # --- ALTERAÇÃO AQUI ---
+            # Só registra no banco de dados se o nome NÃO for o seu
+            if nome_upper != "PRATTI":
+                supabase.table("forca_disputa_ranking").upsert(
+                    {"jogador": nome_upper, "pontos": 0}, 
+                    on_conflict="jogador"
+                ).execute()
+            # ----------------------
+            
             st.rerun()
         else:
             st.warning("Por favor, digite um nome.")
     st.stop()
+
 
 # ==================================================
 # 3. LÓGICA DE JOGO
@@ -176,12 +187,42 @@ def arena_viva():
 
     with col_rank:
         st.markdown("### 🏆 Ranking")
-        res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).limit(10).execute()
-        for i, r in enumerate(res_rank.data):
-            st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
+        # Busca todos os jogadores
+        res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute()
+        
+        # Filtra para não mostrar o "PRATTI" na lista visual
+        jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "PRATTI"]
+
+        for i, r in enumerate(jogadores_faciais):
+            # Cria colunas para colocar o botão de excluir ao lado do nome (só para o admin)
+            if st.session_state.jogador == "PRATTI":
+                c_nome, c_del = st.columns([4, 1])
+                c_nome.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
+                if c_del.button("❌", key=f"del_{r['jogador']}", help=f"Excluir {r['jogador']}"):
+                    supabase.table("forca_disputa_ranking").delete().eq("jogador", r['jogador']).execute()
+                    st.rerun()
+            else:
+                # Visualização normal para os outros jogadores (apenas os 10 primeiros)
+                if i < 10:
+                    st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
+
         st.divider()
-        if st.button("🔄 REINICIAR ARENA", use_container_width=True):
-            reiniciar_arena_completa()
+        
+        # CONTROLES EXCLUSIVOS DO ADMINISTRADOR (PRATTI)
+        if st.session_state.jogador == "PRATTI":
+            st.subheader("🛠️ Gestão da Arena")
+            
+            # Botão Reiniciar Arena (Acessível apenas ao Pratti)
+            if st.button("🔄 REINICIAR ARENA", use_container_width=True):
+                reiniciar_arena_completa()
+            
+            # Botão Excluir Todos
+            if st.button("🗑️ EXCLUIR TODOS OS JOGADORES", use_container_width=True, type="primary"):
+                # Remove todos da tabela de ranking
+                supabase.table("forca_disputa_ranking").delete().neq("jogador", "").execute()
+                st.success("Ranking resetado!")
+                st.rerun()
+
 
 
 # EXECUÇÃO DA ARENA
