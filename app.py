@@ -78,20 +78,31 @@ if not st.session_state.jogador:
 # 3. LÓGICA DE JOGO
 # ==================================================
 def registrar_jogada(letra, jogo_atual):
+    # --- NOVA TRAVA DE SEGURANÇA ---
+    # Verifica se o jogador ainda existe no banco (ou se é o Admin Pratti)
+    if st.session_state.jogador != "PRATTI":
+        check = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
+        if not check.data:
+            st.error("🚫 Sua entrada na arena foi revogada. Saindo...")
+            time.sleep(2)
+            st.session_state.jogador = None
+            st.rerun()
+            return
+    # -------------------------------
+
     lista_antiga = jogo_atual['letras_tentadas']
     novas_letras = (lista_antiga + "," + letra) if lista_antiga else letra
     novos_erros = jogo_atual['erros']
     
-    # Se a letra não está na palavra, incrementa erro
     if letra not in jogo_atual['palavra']:
         novos_erros += 1
     
-    # Atualiza a mesa global com a nova letra e o autor da jogada
     supabase.table("forca_disputa_arena").update({
         "letras_tentadas": novas_letras,
         "erros": novos_erros,
         "ultimo_jogador": st.session_state.jogador
     }).eq("id", 1).execute()
+
 
 def reiniciar_arena_completa():
     if "baloes_disparados" in st.session_state:
@@ -137,17 +148,19 @@ def arena_viva():
             vitoria = all((letra == " " or letra in tentadas) for letra in palavra_alvo)
 
             # --- LÓGICA DE PONTUAÇÃO ÚNICA POR VITÓRIA ---
-            if vitoria and erros_atuais < 6:
-                # Usamos uma variável de estado local para garantir que o ponto só suba UMA VEZ por palavra
-                id_palavra_atual = f"vitoria_{palavra_alvo}_{contagem}"
-                if id_palavra_atual not in st.session_state:
-                    # Se o jogador atual é quem deu o último palpite certeiro
-                    if st.session_state.jogador == ultimo_player:
-                        res_p = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", st.session_state.jogador).single().execute()
-                        pts = res_p.data['pontos'] if res_p.data else 0
-                        supabase.table("forca_disputa_ranking").update({"pontos": pts + 10}).eq("jogador", st.session_state.jogador).execute()
-                        st.toast(f"🏆 +10 pontos por vencer o desafio!")
-                    st.session_state[id_palavra_atual] = True
+             if not vitoria and erros_atuais < 6:
+                # Verifica se o jogador ainda é válido antes de mostrar o teclado
+                if st.session_state.jogador != "PRATTI":
+                    valido = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
+                    if not valido.data:
+                        st.warning("⚠️ Você não está mais na lista de jogadores ativos.")
+                        if st.button("SAIR DA ARENA"):
+                            st.session_state.jogador = None
+                            st.rerun()
+                        return # Interrompe a renderização do teclado
+
+                letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
+                cols_tec = st.columns(9)
 
             # --- MENSAGENS DE INTERFACE ---
             if vitoria and contagem == 0:
