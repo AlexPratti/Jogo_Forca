@@ -108,8 +108,6 @@ def registrar_jogada(letra, jogo_atual):
 # ==================================================
 # 4. INTERFACE DA ARENA (COM IMAGENS)
 # ==================================================
-st.markdown(f"### 🕹️ Competidor: `{st.session_state.jogador}`")
-
 @st.fragment(run_every=2)
 def arena_viva():
     res = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
@@ -127,19 +125,16 @@ def arena_viva():
         erros_atuais = jogo['erros']
         
         with c_img:
-            # Busca a imagem baseada nos erros globais do banco
             nome_img = f"erro{erros_atuais}.png"
             if os.path.exists(nome_img):
                 st.image(nome_img, width=180)
             else:
                 st.metric("Erros da Equipe", f"{erros_atuais}/6")
 
-         with c_txt:
+        with c_txt:
             # --- LÓGICA DE CONTAGEM DE PERGUNTAS ---
-            # Busca o valor da coluna 'restantes' que você acabou de criar
             contagem = jogo.get('restantes', 0)
-
-            if contagem > 0:
+            if contagem and contagem > 0:
                 st.subheader(f"📝 Esta é a pergunta de número {contagem}")
             else:
                 st.subheader("🔥 ESTA É A PERGUNTA FINAL!")
@@ -165,7 +160,7 @@ def arena_viva():
         if vitoria and erros_atuais < 6:
             if contagem == 0:
                 st.success("🎉 VITÓRIA FINAL DA EQUIPE!")
-                # st.balloons()  <-- Desativado
+                # st.balloons()
             else:
                 st.info(f"✅ Palavra correta! Aguardando o Mestre lançar a próxima.")
         
@@ -173,9 +168,7 @@ def arena_viva():
             st.error(f"💀 DERROTA! A resposta era: {palavra_alvo}")
             if contagem == 0:
                 st.error("Fim de jogo. A arena caiu no último desafio!")
-                # st.snow()
-                # st.balloons() <-- Desativado
-       
+
         else:
             letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
             cols_tec = st.columns(9)
