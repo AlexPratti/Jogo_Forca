@@ -70,17 +70,17 @@ def registrar_jogada(letra, jogo_atual):
     lista_antiga = jogo_atual['letras_tentadas']
     novas_letras = (lista_antiga + "," + letra) if lista_antiga else letra
     novos_erros = jogo_atual['erros']
+    
+    # Se a letra não está na palavra, incrementa erro
     if letra not in jogo_atual['palavra']:
         novos_erros += 1
     
+    # Atualiza a mesa global com a nova letra e o autor da jogada
     supabase.table("forca_disputa_arena").update({
-        "letras_tentadas": novas_letras, "erros": novos_erros, "ultimo_jogador": st.session_state.jogador
+        "letras_tentadas": novas_letras,
+        "erros": novos_erros,
+        "ultimo_jogador": st.session_state.jogador
     }).eq("id", 1).execute()
-
-    if letra in jogo_atual['palavra']:
-        res = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", st.session_state.jogador).single().execute()
-        pts = res.data['pontos'] if res.data else 0
-        supabase.table("forca_disputa_ranking").update({"pontos": pts + 1}).eq("jogador", st.session_state.jogador).execute()
 
 def reiniciar_arena_completa():
     if "baloes_disparados" in st.session_state:
@@ -108,6 +108,7 @@ def arena_viva():
     with col_jogo:
         c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
+        ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         
         with c_img:
             nome_img = f"erro{erros_atuais}.png"
@@ -118,42 +119,50 @@ def arena_viva():
 
         with c_txt:
             contagem = jogo.get('restantes', 0)
-            if contagem > 0:
-                st.subheader(f"📝 Esta é a pergunta de número {contagem}")
-            else:
-                st.subheader("🔥 ESTA É A PERGUNTA FINAL!")
-
-            st.info(f"❓ **DICA:** {jogo['pergunta']}")
-            
             tentadas = [l.strip() for l in jogo['letras_tentadas'].split(",") if l.strip()]
             palavra_alvo = jogo['palavra']
             
-            vitoria = True
-            texto_visual = ""
-            for letra in palavra_alvo:
-                if letra == " ": texto_visual += "  "
-                elif letra in tentadas or erros_atuais >= 6: texto_visual += letra + " "
-                else:
-                    texto_visual += "_ "
-                    vitoria = False
-            
-            st.markdown(f"## `{texto_visual}`")
-            st.caption(f"Última jogada por: **{jogo['ultimo_jogador']}**")
+            # Verifica se a palavra foi toda descoberta
+            vitoria = all((letra == " " or letra in tentadas) for letra in palavra_alvo)
 
-        if vitoria and erros_atuais < 6:
-            if contagem == 0:
-                st.success("🎉 VITÓRIA FINAL DA EQUIPE!")
+            # --- LÓGICA DE PONTUAÇÃO ÚNICA POR VITÓRIA ---
+            if vitoria and erros_atuais < 6:
+                # Usamos uma variável de estado local para garantir que o ponto só suba UMA VEZ por palavra
+                id_palavra_atual = f"vitoria_{palavra_alvo}_{contagem}"
+                if id_palavra_atual not in st.session_state:
+                    # Se o jogador atual é quem deu o último palpite certeiro
+                    if st.session_state.jogador == ultimo_player:
+                        res_p = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", st.session_state.jogador).single().execute()
+                        pts = res_p.data['pontos'] if res_p.data else 0
+                        supabase.table("forca_disputa_ranking").update({"pontos": pts + 10}).eq("jogador", st.session_state.jogador).execute()
+                        st.toast(f"🏆 +10 pontos por vencer o desafio!")
+                    st.session_state[id_palavra_atual] = True
+
+            # --- MENSAGENS DE INTERFACE ---
+            if vitoria and contagem == 0:
+                st.subheader("🏆 ARENA CONQUISTADA!")
+                st.success(f"🌟 **{ultimo_player}** venceu o desafio final!")
+            elif erros_atuais >= 6 and contagem == 0:
+                st.subheader("💀 FIM DA LINHA")
+                st.error("A arena caiu no último desafio!")
             else:
-                st.info(f"✅ Palavra correta! Aguardando o Mestre.")
-        
-        elif erros_atuais >= 6:
-            st.error(f"💀 DERROTA! A resposta era: {palavra_alvo}")
-            if contagem == 0:
-                st.error("Fim de jogo. A arena caiu no último desafio!")
-                if "baloes_disparados" not in st.session_state:
-                    st.balloons()
-                    st.session_state.baloes_disparados = True
-        else:
+                prefixo = f"📝 Pergunta {contagem}" if contagem > 0 else "🔥 PERGUNTA FINAL"
+                st.subheader(prefixo)
+                st.info(f"❓ **DICA:** {jogo['pergunta']}")
+
+            # Renderização da palavra
+            texto_visual = "".join([f"{l} " if (l == " " or l in tentadas or erros_atuais >= 6) else "_ " for l in palavra_alvo])
+            st.markdown(f"## `{texto_visual}`")
+            st.caption(f"Última jogada por: **{ultimo_player}**")
+
+        # --- BALÕES ---
+        if contagem == 0 and (vitoria or erros_atuais >= 6):
+            if "baloes_fim" not in st.session_state:
+                st.balloons()
+                st.session_state.baloes_fim = True
+
+        # Teclado (só aparece se o jogo estiver ativo)
+        if not vitoria and erros_atuais < 6:
             letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
             cols_tec = st.columns(9)
             for i, letra in enumerate(letras_abc):
@@ -161,6 +170,8 @@ def arena_viva():
                 if cols_tec[i % 9].button(letra, key=f"bt_{letra}", disabled=ja_foi, use_container_width=True):
                     registrar_jogada(letra, jogo)
                     st.rerun()
+        elif not (contagem == 0) and vitoria:
+             st.info("✅ Palavra correta! Aguardando o Mestre.")
 
     with col_rank:
         st.markdown("### 🏆 Ranking")
@@ -170,6 +181,7 @@ def arena_viva():
         st.divider()
         if st.button("🔄 REINICIAR ARENA", use_container_width=True):
             reiniciar_arena_completa()
+
 
 # EXECUÇÃO DA ARENA
 arena_viva()
