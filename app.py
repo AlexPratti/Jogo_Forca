@@ -159,10 +159,10 @@ def arena_viva():
 
             # --- MENSAGENS DE INTERFACE ---
             if vitoria and contagem == 0:
-                st.subheader("🏆 ARENA CONQUISTADA!")
+                st.subheader(f"🌟 **{ultimo_player}** VENCEU E ACERTOU O ÚLTIMO DESAFIO!🏆 ARENA CONQUISTADA! 💀 FIM DA LINHA PARA OS DEMAIS JOGADORES")
                 st.success(f"🌟 **{ultimo_player}** venceu o desafio final!")
             elif erros_atuais >= 6 and contagem == 0:
-                st.subheader(f"🌟 **{ultimo_player}** 💀 FIM DA LINHA")
+                st.subheader(f"🌟 **{ultimo_player}** VENCEU A ARENA! 💀 FIM DA LINHA PARA OS DEMAIS JOGADORES")
                 st.error("A arena caiu no último desafio!")
             else:
                 prefixo = f"📝 Pergunta {contagem}" if contagem > 0 else "🔥 PERGUNTA FINAL"
