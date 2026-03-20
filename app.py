@@ -118,6 +118,8 @@ def reiniciar_arena_completa():
 # 4. INTERFACE DA ARENA (CHAMADA ÚNICA)
 # ==================================================
 
+
+
 @st.fragment(run_every=2)
 def arena_viva():
     res = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
@@ -126,9 +128,11 @@ def arena_viva():
         st.warning("Aguardando o Mestre Pratti iniciar...")
         return
 
+    # Mantendo suas proporções originais [3, 1]
     col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
+        # Mantendo suas proporções originais [1, 2]
         c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -144,11 +148,9 @@ def arena_viva():
             contagem = jogo.get('restantes', 0)
             tentadas = [l.strip() for l in jogo['letras_tentadas'].split(",") if l.strip()]
             palavra_alvo = jogo['palavra']
-            
-            # Condição de vitória: Todas as letras (que não sejam espaços) foram adivinhadas
             vitoria = all((letra == " " or letra in tentadas) for letra in palavra_alvo)
 
-            # --- LÓGICA DE PONTUAÇÃO ---
+            # --- LÓGICA DE PONTUAÇÃO (Inalterada) ---
             if vitoria and erros_atuais < 6:
                 id_palavra_atual = f"vitoria_{palavra_alvo}_{contagem}"
                 if id_palavra_atual not in st.session_state:
@@ -159,7 +161,7 @@ def arena_viva():
                         st.toast(f"🏆 +10 pontos por vencer o desafio!")
                     st.session_state[id_palavra_atual] = True
 
-            # --- MENSAGENS DE INTERFACE ---
+            # --- MENSAGENS DE INTERFACE (Inalterada) ---
             if vitoria and contagem == 0:
                 st.subheader("🏆 ARENA CONQUISTADA!")
                 st.success(f"🌟 **{ultimo_player}** venceu o desafio final!")
@@ -171,26 +173,22 @@ def arena_viva():
                 st.subheader(prefixo)
                 st.info(f"❓ **DICA:** {jogo['pergunta']}")
 
-            # --- NOVA LÓGICA DE EXIBIÇÃO (ESPAÇO ENTRE PALAVRAS) ---
-            visual_list = []
-            for letra in palavra_alvo:
-                if letra == " ":
-                    # Insere um "vão" maior (3 espaços) para separar as palavras visualmente
-                    visual_list.append("   ") 
-                elif letra in tentadas or erros_atuais >= 6:
-                    # Se a letra foi descoberta ou o jogo acabou, mostra a letra
-                    visual_list.append(f"{letra} ")
-                else:
-                    # Caso contrário, mostra o traço
-                    visual_list.append("_ ")
+            # --- AJUSTE SOLICITADO: LÓGICA DE ESPAÇAMENTO ---
+            # Se for um espaço entre palavras, insere 3 espaços ("   "). 
+            # Se for letra descoberta ou fim de jogo, mostra a letra e 1 espaço ("L ").
+            # Se for letra oculta, mostra o traço e 1 espaço ("_ ").
+            texto_visual = "".join([
+                "   " if l == " " else 
+                f"{l} " if (l in tentadas or erros_atuais >= 6) else 
+                "_ " 
+                for l in palavra_alvo
+            ])
             
-            texto_visual = "".join(visual_list)
             st.markdown(f"## `{texto_visual}`")
             st.caption(f"Última jogada por: **{ultimo_player}**")
 
-        # --- CONTROLE DO TECLADO E SEGURANÇA ---
+        # --- CONTROLE DO TECLADO E SEGURANÇA (Inalterada) ---
         if not vitoria and erros_atuais < 6:
-            # Verifica se o jogador ainda existe no ranking (Expulsão em tempo real)
             if st.session_state.jogador != "PRATTI":
                 valido = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
                 if not valido.data:
@@ -198,9 +196,8 @@ def arena_viva():
                     if st.button("SAIR DA ARENA", key="btn_sair_arena_expulso"):
                         st.session_state.jogador = None
                         st.rerun()
-                    st.stop()
+                    st.stop() 
 
-            # Renderiza o teclado
             letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
             cols_tec = st.columns(9)
             for i, letra in enumerate(letras_abc):
@@ -217,6 +214,7 @@ def arena_viva():
         jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "PRATTI"]
         for i, r in enumerate(jogadores_faciais[:10]):
             st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
+
 
 # ==================================================
 # 5. PAINEL DO ADMIN (PRATTI) - CONTROLES CENTRALIZADOS
