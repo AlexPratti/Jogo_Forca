@@ -148,8 +148,8 @@ def arena_viva():
             vitoria = all((letra == " " or letra in tentadas) for letra in palavra_alvo)
 
             # --- LÓGICA DE PONTUAÇÃO ÚNICA POR VITÓRIA ---
-             if not vitoria and erros_atuais < 6:
-                # Verifica se o jogador ainda é válido antes de mostrar o teclado
+            if not vitoria and erros_atuais < 6:
+                # Trava de segurança para jogadores excluídos
                 if st.session_state.jogador != "PRATTI":
                     valido = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
                     if not valido.data:
@@ -157,10 +157,18 @@ def arena_viva():
                         if st.button("SAIR DA ARENA"):
                             st.session_state.jogador = None
                             st.rerun()
-                        return # Interrompe a renderização do teclado
-
+                        st.stop() # Interrompe a execução aqui para este usuário
+    
+                # Renderização do Teclado
                 letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
                 cols_tec = st.columns(9)
+                for i, letra in enumerate(letras_abc):
+                    ja_foi = letra in tentadas
+                    if cols_tec[i % 9].button(letra, key=f"bt_{letra}", disabled=ja_foi, use_container_width=True):
+                        registrar_jogada(letra, jogo)
+                        st.rerun()
+            elif not (contagem == 0) and vitoria:
+                 st.info("✅ Palavra correta! Aguardando o Mestre.")
 
             # --- MENSAGENS DE INTERFACE ---
             if vitoria and contagem == 0:
