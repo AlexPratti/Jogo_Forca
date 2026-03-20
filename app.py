@@ -117,6 +117,7 @@ def reiniciar_arena_completa():
 # ==================================================
 # 4. INTERFACE DA ARENA (CHAMADA ÚNICA)
 # ==================================================
+
 @st.fragment(run_every=2)
 def arena_viva():
     res = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
@@ -143,38 +144,23 @@ def arena_viva():
             contagem = jogo.get('restantes', 0)
             tentadas = [l.strip() for l in jogo['letras_tentadas'].split(",") if l.strip()]
             palavra_alvo = jogo['palavra']
-            
-            # Verifica se a palavra foi toda descoberta
             vitoria = all((letra == " " or letra in tentadas) for letra in palavra_alvo)
 
-            # --- LÓGICA DE PONTUAÇÃO ÚNICA POR VITÓRIA ---
-            if not vitoria and erros_atuais < 6:
-                # Trava de segurança para jogadores excluídos
-                if st.session_state.jogador != "PRATTI":
-                    valido = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
-                    if not valido.data:
-                        st.warning("⚠️ Você não está mais na lista de jogadores ativos.")
-                        if st.button("SAIR DA ARENA"):
-                            st.session_state.jogador = None
-                            st.rerun()
-                        st.stop() # Interrompe a execução aqui para este usuário
-    
-                # Renderização do Teclado
-                letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
-                cols_tec = st.columns(9)
-                for i, letra in enumerate(letras_abc):
-                    ja_foi = letra in tentadas
-                    if cols_tec[i % 9].button(letra, key=f"bt_{letra}", disabled=ja_foi, use_container_width=True):
-                        registrar_jogada(letra, jogo)
-                        st.rerun()
-            elif not (contagem == 0) and vitoria:
-                 st.info("✅ Palavra correta! Aguardando o Mestre.")
+            # --- LÓGICA DE PONTUAÇÃO ---
+            if vitoria and erros_atuais < 6:
+                id_palavra_atual = f"vitoria_{palavra_alvo}_{contagem}"
+                if id_palavra_atual not in st.session_state:
+                    if st.session_state.jogador == ultimo_player:
+                        res_p = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", st.session_state.jogador).single().execute()
+                        pts = res_p.data['pontos'] if res_p.data else 0
+                        supabase.table("forca_disputa_ranking").update({"pontos": pts + 10}).eq("jogador", st.session_state.jogador).execute()
+                        st.toast(f"🏆 +10 pontos por vencer o desafio!")
+                    st.session_state[id_palavra_atual] = True
 
             # --- MENSAGENS DE INTERFACE ---
             if vitoria and contagem == 0:
                 st.subheader("🏆 ARENA CONQUISTADA!")
                 st.success(f"🌟 **{ultimo_player}** venceu o desafio final!")
-                st.balloons()
             elif erros_atuais >= 6 and contagem == 0:
                 st.subheader("💀 FIM DA LINHA")
                 st.error("A arena caiu no último desafio!")
@@ -183,42 +169,40 @@ def arena_viva():
                 st.subheader(prefixo)
                 st.info(f"❓ **DICA:** {jogo['pergunta']}")
 
-            # Renderização da palavra
             texto_visual = "".join([f"{l} " if (l == " " or l in tentadas or erros_atuais >= 6) else "_ " for l in palavra_alvo])
             st.markdown(f"## `{texto_visual}`")
             st.caption(f"Última jogada por: **{ultimo_player}**")
 
-        # --- BALÕES ---
-        if contagem == 0 and (vitoria or erros_atuais >= 6):
-            if "baloes_fim" not in st.session_state:
-                st.balloons()
-                st.session_state.baloes_fim = True
-
-        # Teclado (só aparece se o jogo estiver ativo)
+        # --- CONTROLE DO TECLADO E SEGURANÇA ---
         if not vitoria and erros_atuais < 6:
+            # Verifica se o jogador ainda existe no ranking (Expulsão em tempo real)
+            if st.session_state.jogador != "PRATTI":
+                valido = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
+                if not valido.data:
+                    st.warning("⚠️ Sua entrada na arena foi revogada pelo Mestre.")
+                    if st.button("SAIR DA ARENA", key="btn_sair_arena_expulso"):
+                        st.session_state.jogador = None
+                        st.rerun()
+                    st.stop() # Para a execução aqui para o usuário excluído
+
+            # Renderiza o teclado se o jogador for válido
             letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
             cols_tec = st.columns(9)
             for i, letra in enumerate(letras_abc):
                 ja_foi = letra in tentadas
-                if cols_tec[i % 9].button(letra, key=f"bt_{letra}", disabled=ja_foi, use_container_width=True):
+                if cols_tec[i % 9].button(letra, key=f"arena_teclado_{letra}", disabled=ja_foi, use_container_width=True):
                     registrar_jogada(letra, jogo)
                     st.rerun()
         elif not (contagem == 0) and vitoria:
-             st.info("✅ Palavra correta! Aguardando o Mestre.")
+             st.info("✅ Palavra correta! Aguardando o Mestre lançar a próxima.")
 
     with col_rank:
         st.markdown("### 🏆 Ranking")
-        # Busca os dados do ranking no Supabase
         res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute()
-        
-        # Filtra para que o nome "PRATTI" nunca apareça na lista visual
+        # Filtra o Admin da visualização lateral
         jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "PRATTI"]
-
-        if jogadores_faciais:
-            for i, r in enumerate(jogadores_faciais[:10]): # Mostra apenas o Top 10
-                st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
-        else:
-            st.caption("Aguardando jogadores...")
+        for i, r in enumerate(jogadores_faciais[:10]):
+            st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
 
 # EXECUÇÃO DA ARENA
 arena_viva()
