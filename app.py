@@ -142,6 +142,7 @@ def arena_viva():
             if vitoria and contagem == 0:
                 st.subheader("🏆 ARENA CONQUISTADA!")
                 st.success(f"🌟 **{ultimo_player}** venceu o desafio final!")
+                st.balloons()
             elif erros_atuais >= 6 and contagem == 0:
                 st.subheader("💀 FIM DA LINHA")
                 st.error("A arena caiu no último desafio!")
