@@ -126,11 +126,9 @@ def arena_viva():
         st.warning("Aguardando o Mestre Pratti iniciar...")
         return
 
-    # Mantida a proporção original [3, 1]
     col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        # Mantida a proporção original [1, 2]
         c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -148,7 +146,7 @@ def arena_viva():
             palavra_alvo = jogo['palavra']
             vitoria = all((letra == " " or letra in tentadas) for letra in palavra_alvo)
 
-            # --- LÓGICA DE PONTUAÇÃO (Original preservada) ---
+            # --- LÓGICA DE PONTUAÇÃO ---
             if vitoria and erros_atuais < 6:
                 id_palavra_atual = f"vitoria_{palavra_alvo}_{contagem}"
                 if id_palavra_atual not in st.session_state:
@@ -159,7 +157,7 @@ def arena_viva():
                         st.toast(f"🏆 +10 pontos por vencer o desafio!")
                     st.session_state[id_palavra_atual] = True
 
-            # --- MENSAGENS DE INTERFACE (Original preservada) ---
+            # --- MENSAGENS DE INTERFACE ---
             if vitoria and contagem == 0:
                 st.subheader("🏆 ARENA CONQUISTADA!")
                 st.success(f"🌟 **{ultimo_player}** venceu o desafio final!")
@@ -171,20 +169,21 @@ def arena_viva():
                 st.subheader(prefixo)
                 st.info(f"❓ **DICA:** {jogo['pergunta']}")
 
-            # --- AJUSTE DE ESPAÇAMENTO PARA RESPOSTAS COM MAIS DE UMA PALAVRA ---
-            # Se for espaço " ", coloca 3 espaços ("   ") para separar os blocos de traços.
-            # Se a letra estiver correta ou jogo acabar, mostra a letra. Caso contrário, traço.
+            # --- LÓGICA CORRIGIDA COM ESPAÇO FORÇADO (&nbsp;) ---
+            # Usamos o caractere HTML &nbsp; para garantir que o navegador não ignore o espaço.
+            # O "  " (dois espaços normais) garante a separação visual no estilo código.
             texto_visual = "".join([
-                "   " if l == " " else 
+                "&nbsp;&nbsp;&nbsp;" if l == " " else 
                 f"{l} " if (l in tentadas or erros_atuais >= 6) else 
                 "_ " 
                 for l in palavra_alvo
             ])
             
-            st.markdown(f"## `{texto_visual}`")
+            # unsafe_allow_html=True é necessário para processar o &nbsp;
+            st.markdown(f"## `{texto_visual}`", unsafe_allow_html=True)
             st.caption(f"Última jogada por: **{ultimo_player}**")
 
-        # --- CONTROLE DO TECLADO E SEGURANÇA (Original preservada) ---
+        # --- CONTROLE DO TECLADO E SEGURANÇA ---
         if not vitoria and erros_atuais < 6:
             if st.session_state.jogador != "PRATTI":
                 valido = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
@@ -211,6 +210,7 @@ def arena_viva():
         jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "PRATTI"]
         for i, r in enumerate(jogadores_faciais[:10]):
             st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
+
             
 # EXECUÇÃO DA ARENA
 arena_viva()
