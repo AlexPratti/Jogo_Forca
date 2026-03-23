@@ -72,35 +72,46 @@ if not st.session_state.jogador:
 # 3. LÓGICA DE JOGO
 # ==================================================
 def registrar_jogada(letra, jogo_atual):
+    # 1. Trava de Segurança (Mantenha igual)
     if st.session_state.jogador != "PRATTI":
         check = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
         if not check.data:
-            st.error("🚫 Sua entrada na arena foi revogada. Saindo...")
-            time.sleep(2)
             st.session_state.jogador = None
             st.rerun()
             return
 
+    # 2. Variáveis de controle
     lista_antiga = jogo_atual['letras_tentadas']
+    tentadas = [l.strip() for l in lista_antiga.split(",") if l.strip()]
+    
+    # Se a letra já foi tentada, não faz nada (proteção extra)
+    if letra in tentadas:
+        return
+
     novas_letras = (lista_antiga + "," + letra) if lista_antiga else letra
     novos_erros = jogo_atual['erros']
     palavra_alvo = jogo_atual['palavra']
     
-    if letra not in palavra_alvo:
-        novos_erros += 1
-    else:
-        # PONTUAÇÃO POR ACERTO DE LETRA (+5)
+    # 3. Lógica de Pontuação por Letra
+    if letra in palavra_alvo:
+        # JOGADOR ACERTOU A LETRA -> +5 PONTOS
         if st.session_state.jogador != "PRATTI":
             res_p = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", st.session_state.jogador).single().execute()
-            pts = res_p.data['pontos'] if res_p.data else 0
-            supabase.table("forca_disputa_ranking").update({"pontos": pts + 5}).eq("jogador", st.session_state.jogador).execute()
-            st.toast(f"🎯 +5 pontos pela letra {letra}!")
+            if res_p.data:
+                pts_atuais = res_p.data['pontos']
+                supabase.table("forca_disputa_ranking").update({"pontos": pts_atuais + 5}).eq("jogador", st.session_state.jogador).execute()
+                st.toast(f"🎯 Boa! +5 pontos pela letra {letra}!")
+    else:
+        # JOGADOR ERROU A LETRA
+        novos_erros += 1
     
+    # 4. Atualiza a Arena no Supabase
     supabase.table("forca_disputa_arena").update({
         "letras_tentadas": novas_letras,
         "erros": novos_erros,
         "ultimo_jogador": st.session_state.jogador
     }).eq("id", 1).execute()
+
 
 def reiniciar_arena_completa():
     if "baloes_disparados" in st.session_state:
