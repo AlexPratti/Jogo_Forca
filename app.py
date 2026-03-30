@@ -172,7 +172,7 @@ def arena_viva():
                         supabase.table("forca_disputa_ranking").update({"pontos": pts + 10}).eq("jogador", st.session_state.jogador).execute()
                         st.toast(f"🏆 +10 pontos por vencer o desafio!")
                     st.session_state[id_palavra_atual] = True
-
+                    
             # --- MENSAGENS DE INTERFACE E EMPATE ---
             if (vitoria or erros_atuais >= 6) and contagem == 0:
                 rank_final = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "PRATTI").order("pontos", desc=True).execute().data
@@ -180,16 +180,41 @@ def arena_viva():
                     max_pts = rank_final[0]['pontos']
                     vencedores = [r['jogador'] for r in rank_final if r['pontos'] == max_pts]
                     nomes = " & ".join(vencedores)
-                    st.subheader(f"🏁 FIM DE JOGO! Vencedor(es): **{nomes}** com {max_pts} pts")
+                    # Título de fim de jogo maior (30px)
+                    st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
                 st.error("💀 A ARENA FOI ENCERRADA.")
             else:
                 prefixo = f"📝 Pergunta {contagem}" if contagem > 0 else "🔥 PERGUNTA FINAL"
-                st.subheader(prefixo)
-                st.info(f"❓ **VALE 5 pts (letra) / 10 pts (vitória):** {jogo['pergunta']}")
-
+                # Prefixo em 24px
+                st.markdown(f"<h3 style='font-size: 24px; margin-bottom: 0px;'>{prefixo}</h3>", unsafe_allow_html=True)
+                
+                # Pergunta em 22px dentro de um quadro de destaque (estilo st.info, mas com fonte maior)
+                pergunta_texto = jogo['pergunta']
+                st.markdown(
+                    f"""
+                    <div style="background-color: #e8f4f8; padding: 15px; border-radius: 5px; border-left: 5px solid #007bff; margin-bottom: 20px;">
+                        <span style="font-size: 22px; color: #004085;">
+                            ❓ <b>VALE 5 pts (letra) / 10 pts (vitória):</b> {pergunta_texto}
+                        </span>
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
+    
+            # Palavra oculta em tamanho grande (40px) e com destaque de código
             texto_visual = "".join([f"{l} " if (l == " " or l in tentadas or erros_atuais >= 6) else "_ " for l in palavra_alvo])
-            st.markdown(f"## `{texto_visual}`")
+            st.markdown(
+                f"""
+                <div style="background-color: #f0f2f6; padding: 10px; border-radius: 10px; text-align: center;">
+                    <code style="font-size: 40px; color: #ff4b4b; font-weight: bold;">{texto_visual}</code>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+            
             st.caption(f"Última jogada por: **{ultimo_player}**")
+
+        
 
         # --- CONTROLE DO TECLADO ---
         if not vitoria and erros_atuais < 6:
