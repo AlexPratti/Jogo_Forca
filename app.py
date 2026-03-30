@@ -206,7 +206,7 @@ def arena_viva():
             st.markdown(
                 f"""
                 <div style="background-color: #f0f2f6; padding: 10px; border-radius: 10px; text-align: center;">
-                    <code style="font-size: 40px; color: #ff4b4b; font-weight: bold;">{texto_visual}</code>
+                    <code style="font-size: 20px; color: #ff4b4b; font-weight: bold;">{texto_visual}</code>
                 </div>
                 """, 
                 unsafe_allow_html=True
