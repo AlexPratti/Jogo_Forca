@@ -58,7 +58,7 @@ if not st.session_state.jogador:
         if nome:
             nome_upper = nome.strip().upper()
             st.session_state.jogador = nome_upper
-            if nome_upper != "PRATTI":
+            if nome_upper != "TREINAMENTOWLI":
                 supabase.table("forca_disputa_ranking").upsert(
                     {"jogador": nome_upper, "pontos": 0}, 
                     on_conflict="jogador"
@@ -73,7 +73,7 @@ if not st.session_state.jogador:
 # ==================================================
 def registrar_jogada(letra, jogo_atual):
     # 1. Trava de Segurança (Mantenha igual)
-    if st.session_state.jogador != "PRATTI":
+    if st.session_state.jogador != "TREINAMENTOWLI":
         check = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
         if not check.data:
             st.session_state.jogador = None
@@ -95,7 +95,7 @@ def registrar_jogada(letra, jogo_atual):
     # 3. Lógica de Pontuação por Letra
     if letra in palavra_alvo:
         # JOGADOR ACERTOU A LETRA -> +5 PONTOS
-        if st.session_state.jogador != "PRATTI":
+        if st.session_state.jogador != "TREINAMENTOWLI":
             res_p = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", st.session_state.jogador).single().execute()
             if res_p.data:
                 pts_atuais = res_p.data['pontos']
@@ -166,7 +166,7 @@ def arena_viva():
             if vitoria and erros_atuais < 6:
                 id_palavra_atual = f"vitoria_{palavra_alvo}_{contagem}"
                 if id_palavra_atual not in st.session_state:
-                    if st.session_state.jogador == ultimo_player and st.session_state.jogador != "PRATTI":
+                    if st.session_state.jogador == ultimo_player and st.session_state.jogador != "TREINAMENTOWLI":
                         res_p = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", st.session_state.jogador).single().execute()
                         pts = res_p.data['pontos'] if res_p.data else 0
                         supabase.table("forca_disputa_ranking").update({"pontos": pts + 10}).eq("jogador", st.session_state.jogador).execute()
@@ -175,7 +175,7 @@ def arena_viva():
                     
             # --- MENSAGENS DE INTERFACE E EMPATE ---
             if (vitoria or erros_atuais >= 6) and contagem == 0:
-                rank_final = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "PRATTI").order("pontos", desc=True).execute().data
+                rank_final = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("pontos", desc=True).execute().data
                 if rank_final:
                     max_pts = rank_final[0]['pontos']
                     vencedores = [r['jogador'] for r in rank_final if r['pontos'] == max_pts]
@@ -218,7 +218,7 @@ def arena_viva():
 
         # --- CONTROLE DO TECLADO ---
         if not vitoria and erros_atuais < 6:
-            if st.session_state.jogador != "PRATTI":
+            if st.session_state.jogador != "TREINAMENTOWLI":
                 valido = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
                 if not valido.data:
                     st.warning("⚠️ Sua entrada na arena foi revogada pelo Mestre.")
@@ -240,7 +240,7 @@ def arena_viva():
     with col_rank:
         st.markdown("### 🏆 Ranking")
         res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute()
-        jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "PRATTI"]
+        jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "TREINAMENTOWLI"]
         for i, r in enumerate(jogadores_faciais[:10]):
             st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
 
@@ -248,9 +248,9 @@ arena_viva()
 
 
 # ==================================================
-# 5. PAINEL DO ADMIN (PRATTI)
+# 5. PAINEL DO ADMIN (TREINAMENTOWLI)
 # ==================================================
-if st.session_state.jogador == "PRATTI":
+if st.session_state.jogador == "TREINAMENTOWLI":
     st.divider()
     with st.expander("⚙️ PAINEL DO MESTRE", expanded=True):
         if "fila_perguntas" not in st.session_state:
@@ -287,11 +287,11 @@ if st.session_state.jogador == "PRATTI":
         with col_adm3:
             st.markdown("#### 👥 Jogadores")
             if st.button("🗑️ LIMPAR TUDO", use_container_width=True, type="primary"):
-                supabase.table("forca_disputa_ranking").delete().neq("jogador", "PRATTI").execute()
+                supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
                 st.rerun()
             
             st.divider()
-            res_jogadores = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "PRATTI").execute()
+            res_jogadores = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").execute()
             for j in res_jogadores.data:
                 c1, c2 = st.columns([3, 1])
                 c1.caption(j['jogador'])
