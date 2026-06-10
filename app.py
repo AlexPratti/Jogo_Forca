@@ -159,9 +159,11 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
+    # CORREÇÃO: Definindo a proporção original do jogo e do ranking
     col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
+        # CORREÇÃO: Definindo a proporção original da imagem do boneco e do texto
         c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -263,7 +265,6 @@ def arena_viva():
             cols_tec = st.columns(9)
             for i, letra in enumerate(letras_abc):
                 ja_foi = letra in tentadas
-                # Desativa o botão se a letra já foi usada OU se as regras de turno bloquearem o jogador
                 botao_desabilitado = ja_foi or (not pode_jogar)
                 
                 if cols_tec[i % 9].button(letra, key=f"arena_tec_{letra}", disabled=botao_desabilitado, use_container_width=True):
@@ -280,6 +281,7 @@ def arena_viva():
             st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
 
 arena_viva()
+
 # ==================================================
 # 5. PAINEL DO ADMIN (TREINAMENTOWLI)
 # ==================================================
@@ -289,7 +291,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         if "fila_perguntas" not in st.session_state:
             st.session_state.fila_perguntas = []
 
-        col_adm1, col_adm2, col_adm3 = st.columns()
+        # CORREÇÃO DA LINHA 292: Passando a proporção exata das 3 colunas do painel
+        col_adm1, col_adm2, col_adm3 = st.columns([2, 1, 1])
         
         with col_adm1:
             st.markdown("#### 📝 Carregar e Lançar")
@@ -305,7 +308,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     proxima = st.session_state.fila_perguntas.pop(0)
                     valor_banco = total_antes if len(st.session_state.fila_perguntas) > 1 else 0
                     
-                    # Recupera o modo de jogo salvo no banco para mantê-lo ao lançar a próxima
                     res_m = supabase.table("forca_disputa_arena").select("modo_jogo").eq("id", 1).single().execute()
                     modo_atual = res_m.data.get('modo_jogo', 'LIVRE') if res_m.data else 'LIVRE'
 
@@ -320,7 +322,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             st.markdown("#### 🔄 Arena & Regras")
             st.metric("Na Fila", len(st.session_state.fila_perguntas))
             
-            # --- SELETOR DINÂMICO DE MODO DE JOGO ---
             res_arena_modo = supabase.table("forca_disputa_arena").select("modo_jogo").eq("id", 1).single().execute()
             modo_banco = res_arena_modo.data.get('modo_jogo', 'LIVRE') if res_arena_modo.data else 'LIVRE'
             
@@ -329,7 +330,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 "Alternar Formato de Jogo:",
                 ["LIVRE", "TURNOS"],
                 index=index_modo,
-                help="LIVRE: Todos jogam quando quiserem. TURNOS: Bloqueia o jogador de repetir jogadas seguidas."
+                help="LIVRE: Qualquer um joga a qualquer momento. TURNOS: Bloqueia o jogador de repetir jogadas seguidas."
             )
             
             if novo_modo != modo_banco:
@@ -350,8 +351,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             st.divider()
             res_jogadores = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").execute()
             for j in res_jogadores.data:
-                c1, c2 = st.columns()
+                # CORREÇÃO: Passando a proporção de colunas para o nome e o botão de excluir
+                c1, c2 = st.columns([3, 1])
                 c1.caption(j['jogador'])
                 if c2.button("❌", key=f"excluir_{j['jogador']}"):
                     supabase.table("forca_disputa_ranking").delete().eq("jogador", j['jogador']).execute()
                     st.rerun()
+
