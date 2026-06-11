@@ -442,18 +442,14 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             arena_encerrada = True
 
     # 2. Constrói a lista de abas dinamicamente
-    nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE"]
-    
-    # Define qual aba deve ser aberta por padrão (Começa na 0)
-    aba_padrao = "🎮 ARENA DO JOGO"
-    
+    # CORREÇÃO: Se o jogo acabou, colocamos o pódio em primeiro na lista para o Streamlit focar nele automaticamente!
     if arena_encerrada:
-        nomes_abas.append("🏆 PODER DOS CAMPEÕES")
-        # CORREÇÃO CRUCIAL: Se o jogo terminou, força o foco a ir direto para o Pódio automaticamente
-        aba_padrao = "🏆 PODER DOS CAMPEÕES"
+        nomes_abas = ["🏆 PODER DOS CAMPEÕES", "🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE"]
+    else:
+        nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE"]
         
-    # Declara o container de abas injetando a aba padrão automática
-    abas = st.tabs(nomes_abas, default_tab=aba_padrao)
+    # Declara o container de abas limpo e compatível com todas as versões do Streamlit
+    abas = st.tabs(nomes_abas)
     
     # Coleta dados de credenciais estáveis para as demais abas
     try:
@@ -470,9 +466,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         url_completa = "https://streamlit.io"
 
     # --------------------------------------------------
-    # ABA 0: GERENCIAMENTO DE PERGUNTAS E EXIBIÇÃO DA FORCA
+    # ABA DA ARENA DO JOGO (Se o jogo acabou, ela vira o índice 1. Se está ativo, vira índice 0)
     # --------------------------------------------------
-    with abas[0]:
+    indice_arena = 1 if arena_encerrada else 0
+    with abas[indice_arena]:
         arena_viva()
         
         st.write("")
