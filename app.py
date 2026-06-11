@@ -430,7 +430,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     except Exception:
         jogo_check = None
 
-    # CORREÇÃO DO GATILHO: A rodada terminou? Se sim, já libera a aba do campeão!
+    # Gatilho de fim de jogo
     arena_encerrada = False
     if jogo_check:
         erros_check = jogo_check.get('erros', 0)
@@ -438,17 +438,22 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         palavra_check = jogo_check['palavra']
         vitoria_check = all((letra == " " or letra in tentadas_check) for letra in palavra_check)
         
-        # Se a palavra foi descoberta OU se bateu 6 erros, o jogo acabou e a aba deve aparecer
         if vitoria_check or erros_check >= 6:
             arena_encerrada = True
 
     # 2. Constrói a lista de abas dinamicamente
     nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE"]
+    
+    # Define qual aba deve ser aberta por padrão (Começa na 0)
+    aba_padrao = "🎮 ARENA DO JOGO"
+    
     if arena_encerrada:
         nomes_abas.append("🏆 PODER DOS CAMPEÕES")
+        # CORREÇÃO CRUCIAL: Se o jogo terminou, força o foco a ir direto para o Pódio automaticamente
+        aba_padrao = "🏆 PODER DOS CAMPEÕES"
         
-    # Declara o container de abas mapeado por índices do Streamlit
-    abas = st.tabs(nomes_abas)
+    # Declara o container de abas injetando a aba padrão automática
+    abas = st.tabs(nomes_abas, default_tab=aba_padrao)
     
     # Coleta dados de credenciais estáveis para as demais abas
     try:
@@ -526,6 +531,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.write("")
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
                     reiniciar_arena_completa()
+
 
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
