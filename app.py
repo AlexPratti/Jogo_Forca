@@ -242,7 +242,7 @@ def reiniciar_arena_completa():
 
 
 # ==================================================
-# 4. INTERFACE DA ARENA (ATUALIZADA COM EXIBIÇÃO DE AVATARES)
+# 4. INTERFACE DA ARENA (CORRIGIDA E BLINDADA)
 # ==================================================
 
 @st.fragment(run_every=2)
@@ -264,10 +264,12 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    col_jogo, col_rank = st.columns()
+    # CORREÇÃO: Restaurada a proporção exata [3, 1] do seu código original para evitar a quebra
+    col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        c_img, c_txt = st.columns()
+        # CORREÇÃO: Restaurada a proporção exata [1, 2] do seu código original para imagem e texto
+        c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -359,7 +361,7 @@ def arena_viva():
         if mensagem_turno:
             st.info(mensagem_turno)
 
-        # --- TECLADO VIRTUAL RESTAURADO E OPERANTE ---
+        # --- TECLADO VIRTUAL OPERANTE ---
         if not vitoria and erros_atuais < 6:
             if st.session_state.jogador != "TREINAMENTOWLI":
                 try:
@@ -399,21 +401,21 @@ def arena_viva():
                 num_avatar = r.get("forca_avatar_num", None)
                 nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
                 
-                # Cria uma mini linha organizada: Coluna 1 para imagem do avatar, Coluna 2 para o texto do Placar
-                c_av, c_rk = st.columns()
+                # CORREÇÃO: Definida a proporção exata [1, 4] para alinhar o avatar com o texto sem erros
+                c_av, c_rk = st.columns([1, 4])
                 with c_av:
                     if nome_avatar and os.path.exists(nome_avatar):
-                        st.image(nome_avatar, width=32)
+                        st.image(nome_avatar, width=28)
                     else:
-                        st.markdown("👤") # Ícone genérico caso a imagem falte ou não exista
+                        st.markdown("👤")
                 with c_rk:
                     st.write(f"{i+1}º {r['jogador']}: {r[col_p]} pts")
         except Exception:
             st.write("Atualizando...")
 
+# Renderiza a arena viva para as telas dos alunos comuns
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
-
 
 
 # ==================================================
