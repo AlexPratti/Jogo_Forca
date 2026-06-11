@@ -8,7 +8,7 @@ import urllib.parse
 from io import BytesIO
 from docx import Document
 from supabase import create_client
-import qrcode
+
 
 # ==================================================
 # 1. CONEXÃO E CONFIGURAÇÃO
@@ -375,7 +375,7 @@ if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
 if st.session_state.jogador == "TREINAMENTOWLI":
     st.title("⚔️ Painel do Mestre - Arena da Forca")
     
-    # Criando as três abas totalmente independentes com a nova aba exclusiva de QR Code
+    # Mantendo as três abas totalmente independentes e organizadas
     aba_jogo, aba_acesso, aba_qrcode = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE"])
     
     # Puxa a senha gerada para os jogadores comuns
@@ -475,7 +475,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             st.info("Nenhum competidor conectado na arena neste momento.")
         else:
             for j in res_jogadores.data:
-                c1, c2 = st.columns()
+                c1, c2 = st.columns(2)
                 c1.markdown(f"👤 **{j['jogador']}**")
                 if c2.button("❌ EXPULSAR", key=f"excluir_aba_{j['jogador']}", use_container_width=True):
                     supabase.table("forca_disputa_ranking").delete().eq("jogador", j['jogador']).execute()
@@ -487,10 +487,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     st.rerun()
 
     # --------------------------------------------------
-    # ABA 3: NOVA ABA EXCLUSIVA DO QR CODE GIGANTE PARA O PROJETOR
+    # ABA 3: ABA EXCLUSIVA DO QR CODE GIGANTE (API QUICKCHART ALTERNATIVA)
     # --------------------------------------------------
     with aba_qrcode:
-        # Título de instruções e Senha bem legíveis no topo da projeção
+        # Título instrucional e exibição da senha destacada
         st.markdown(
             f"""
             <div style="background-color: #1e293b; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 20px; border: 2px dashed #3b82f6;">
@@ -501,20 +501,22 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             unsafe_allow_html=True
         )
 
-        # Geração interna e robusta do QR Code via biblioteca nativa Python
-        qr = qrcode.QRCode(version=1, box_size=10, border=4)
-        qr.add_data(url_completa)
-        qr.make(fit=True)
-        img_qr = qr.make_image(fill_color="black", back_color="white")
+        # Codifica o link perfeitamente para evitar quebras em URLs complexas
+        url_codificada = urllib.parse.quote_plus(url_completa)
         
-        # Converte a imagem para bytes para que o Streamlit consiga exibir de forma nativa e ultra veloz
-        buf = BytesIO()
-        img_qr.save(buf, format="PNG")
-        byte_im = buf.getvalue()
-
-        # Criação de 3 colunas para centralizar perfeitamente o QR Code gigante na tela do projetor
-        col_esq, col_centro, col_dir = st.columns()
-        with col_centro:
-            st.image(byte_im, width=550, caption="Aponte a câmera do celular para abrir a Arena")
-            
-        st.markdown(f"<p style='text-align: center; color: #64748b; font-family: monospace;'>Endereço da Sala: {url_completa}</p>", unsafe_allow_html=True)
+        # Link gerado usando a API ultra-estável do QuickChart (Tamanho 600x600 pixels)
+        qr_quickchart_url = f"https://quickchart.io{url_codificada}&size=600"
+        
+        # Centralizando e forçando o QR Code a ocupar o maior espaço possível para projeção no telão
+        st.markdown(
+            f"""
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 20px; background-color: white; border-radius: 15px; margin-bottom: 20px;">
+                <img src="{qr_quickchart_url}" style="width: 75vw; max-width: 520px; height: auto; aspect-ratio: 1/1; box-shadow: 0px 8px 25px rgba(0,0,0,0.12); border-radius: 8px;" />
+                <h2 style="color: #1e293b; font-size: 24px; margin-top: 20px; font-family: sans-serif; font-weight: bold; text-align: center; margin-bottom: 5px;">
+                    📱 ESCANEIE O CÓDIGO ACIMA PARA ENTRAR NO JOGO
+                </h2>
+                <p style="color: #64748b; font-size: 14px; font-family: monospace; margin: 0;">Link alternativo: {url_completa}</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
