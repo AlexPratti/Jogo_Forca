@@ -126,7 +126,6 @@ if not st.session_state.jogador:
 def calcular_proximo_turno(jogador_atual):
     """Calcula estritamente quem é o próximo na ordem alfabética de inscritos."""
     try:
-        # Puxa os jogadores reais ativos no banco ordenados alfabeticamente
         res = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").order("jogador").execute()
         lista_jogadores = [r['jogador'] for r in res.data]
         
@@ -135,30 +134,34 @@ def calcular_proximo_turno(jogador_atual):
         if len(lista_jogadores) == 1:
             return lista_jogadores[0]
             
-        # Determina o próximo jogador de maneira circular estrita
         if jogador_atual in lista_jogadores:
             idx = lista_jogadores.index(jogador_atual)
             idx_proximo = (idx + 1) % len(lista_jogadores)
             return lista_jogadores[idx_proximo]
         else:
-            # Caso o jogador não seja achado, entrega para o primeiro da lista
             return lista_jogadores[0]
     except Exception:
         return ""
 
 def registrar_jogada(letra, jogo_atual):
-    # Proteção: O admin não participa como jogador ativo da rodada
     if st.session_state.jogador == "TREINAMENTOWLI":
         return
 
-    # Validação do modo de jogo e do direito de turno direto na origem (Garante o bloqueio imediato)
-    modo_jogo = jogo_atual.get('forca_modo_jogo', "LIVRE")
-    proximo_autorizado = jogo_atual.get('forca_proximo_turno', "")
-    
-    if modo_jogo == "TURNOS" and proximo_autorizado and proximo_autorizado != "":
-        if st.session_state.jogador != proximo_autorizado:
-            st.session_state.clique_bloqueado = False
-            return
+    # TRAVA REALTIME NO BANCO DE DADOS
+    try:
+        res_arena_atualizada = supabase.table("forca_disputa_arena").select("forca_modo_jogo", "forca_proximo_turno").eq("id", 1).single().execute()
+        if res_arena_atualizada.data:
+            modo_jogo_real = res_arena_atualizada.data.get('forca_modo_jogo', 'LIVRE')
+            proximo_real = res_arena_atualizada.data.get('forca_proximo_turno', '')
+            
+            # Se o mestre ativou TURNOS e já existe um dono da vez, rejeita o clique imediatamente na origem
+            if modo_jogo_real == "TURNOS" and proximo_real and proximo_real != "":
+                if st.session_state.jogador != proximo_real:
+                    st.session_state.clique_bloqueado = False
+                    return
+    except Exception as e:
+        st.error(f"Erro ao validar turno no banco: {e}")
+        return
 
     try:
         check = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
@@ -168,6 +171,8 @@ def registrar_jogada(letra, jogo_atual):
             return
     except Exception:
         pass
+
+    st.session_state.clique_bloqueado = True
 
     lista_antiga = jogo_atual['letras_tentadas']
     tentadas = [l.strip() for l in lista_antiga.split(",") if l.strip()]
@@ -180,7 +185,6 @@ def registrar_jogada(letra, jogo_atual):
     novos_erros = jogo_atual['erros']
     palavra_alvo = jogo_atual['palavra']
     
-    # Lógica de Pontuação por Letra (Idêntica à original)
     if letra in palavra_alvo:
         res_p = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", st.session_state.jogador).single().execute()
         if res_p.data:
@@ -190,10 +194,10 @@ def registrar_jogada(letra, jogo_atual):
     else:
         novos_erros += 1
     
-    # Avança rigidamente o turno para o próximo jogador da lista alfabética
+    # Passa o bastão para o próximo jogador
     proximo = calcular_proximo_turno(st.session_state.jogador)
     
-    # Grava as modificações no banco de dados do Supabase
+    # Envia a gravação atualizando a coluna forca_proximo_turno
     supabase.table("forca_disputa_arena").update({
         "letras_tentadas": novas_letras,
         "erros": novos_erros,
@@ -231,7 +235,6 @@ def reiniciar_arena_completa():
 
 @st.fragment(run_every=2)
 def arena_viva():
-    # Destrava o clique local na renderização para aceitar a próxima entrada legítima
     st.session_state.clique_bloqueado = False
 
     res = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
@@ -240,16 +243,13 @@ def arena_viva():
         st.warning("Aguardando o Administrador do Jogo iniciar...")
         return
 
-    # TOCA MÚSICA SE O JOGO ESTIVER ATIVO (Mantido original)
     if jogo['pergunta'] != "Aguardando nova pergunta..." and jogo['erros'] < 6:
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # CORREÇÃO: Restaurada a proporção exata [3, 1] do seu código original para evitar o erro do log
     col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        # CORREÇÃO: Restaurada a proporção exata [1, 2] do seu código original para a imagem e o texto
         c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -269,7 +269,6 @@ def arena_viva():
             palavra_alvo = jogo['palavra']
             vitoria = all((letra == " " or letra in tentadas) for letra in palavra_alvo)
 
-            # --- LÓGICA DE PONTUAÇÃO POR PALAVRA ---
             if vitoria and erros_atuais < 6:
                 id_palavra_atual = f"vitoria_{palavra_alvo}_{contagem}"
                 if id_palavra_atual not in st.session_state:
@@ -280,7 +279,6 @@ def arena_viva():
                         st.toast(f"🏆 +10 pontos por vencer o desafio!")
                     st.session_state[id_palavra_atual] = True
                     
-            # --- MENSAGENS DE INTERFACE E EMPATE ---
             if (vitoria or erros_atuais >= 6) and contagem == 0:
                 rank_final = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("pontos", desc=True).execute().data
                 if rank_final:
@@ -305,7 +303,6 @@ def arena_viva():
                     unsafe_allow_html=True
                 )
     
-            # Palavra oculta (Tamanho original)
             texto_visual = "".join([f"{l} " if (l == " " or l in tentadas or erros_atuais >= 6) else "_ " for l in palavra_alvo])
             st.markdown(
                 f"""
@@ -318,20 +315,22 @@ def arena_viva():
             
             st.caption(f"Última jogada por: **{ultimo_player}** | Formato: **{modo_jogo}**")
 
-        # --- LÓGICA DE TURNOS RIGIDAMENTE CONTROLADA ---
+        # --- CONTROLE E EXIBIÇÃO DE QUEM É A VEZ ---
         autorizado_a_jogar = True
         mensagem_turno = ""
         
         if modo_jogo == "TURNOS" and not vitoria and erros_atuais < 6:
-            if not proximo_autorizado or proximo_autorizado == "":
-                mensagem_turno = "🔥 **Arena aberta!** Qualquer jogador cadastrado pode fazer o primeiro palpite."
+            # Se a coluna de próximo turno estiver vazia ou nula no banco, libera para qualquer um iniciar
+            if not proximo_autorizado or str(proximo_autorizado).strip() == "":
+                mensagem_turno = "🔥 **Arena aberta!** Qualquer participante cadastrado pode dar o primeiro palpite."
                 autorizado_a_jogar = True
             else:
-                if st.session_state.jogador == proximo_autorizado:
-                    mensagem_turno = f"⚔️ **SUA VEZ, {st.session_state.jogador}!** Faça a sua jogada."
+                # Compara o session_state do jogador logado com o valor gravado na coluna do banco
+                if str(st.session_state.jogador).strip() == str(proximo_autorizado).strip():
+                    mensagem_turno = f"⚔️ **SUA VEZ, {st.session_state.jogador}!** Seu teclado está ativo para uma única jogada."
                     autorizado_a_jogar = True
                 else:
-                    mensagem_turno = f"⏳ **AGUARDE TURNO!** O único jogador autorizado agora é: **{proximo_autorizado}**."
+                    mensagem_turno = f"⏳ **AGUARDE A FILA!** É a vez do jogador: **{proximo_autorizado}**. Seu teclado está bloqueado."
                     autorizado_a_jogar = False
 
         if mensagem_turno:
@@ -356,11 +355,10 @@ def arena_viva():
             for i, letra in enumerate(letras_abc):
                 ja_foi = letra in tentadas
                 
-                # Bloqueia o teclado se a letra já foi, se o clique local disparou ou se não for a vez estrita dele
+                # Se o botão do rádio do mestre for "TURNOS" e não for a vez desse jogador, desativa a tecla
                 botao_desabilitado = ja_foi or (not autorizado_a_jogar) or st.session_state.clique_bloqueado
                 
                 if cols_tec[i % 9].button(letra, key=f"arena_tec_{letra}", disabled=botao_desabilitado, use_container_width=True):
-                    # Aciona a trava de segurança local de milissegundo antes da requisição ir pro banco
                     st.session_state.clique_bloqueado = True
                     registrar_jogada(letra, jogo)
                     st.rerun()
@@ -374,9 +372,9 @@ def arena_viva():
         for i, r in enumerate(jogadores_faciais[:10]):
             st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
 
-# Se for um jogador comum, renderiza a tela da arena direto aqui
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
+
 
 # ==================================================
 # 5. PAINEL DO ADMIN (TREINAMENTOWLI)
