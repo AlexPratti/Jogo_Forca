@@ -553,17 +553,17 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     reiniciar_arena_completa()
 
 
-
-     # --------------------------------------------------
+    # --------------------------------------------------
     # ABA 1: GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
     # --------------------------------------------------
-    with abas[1]:
+    with abas:
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
             supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
             supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
             st.session_state.podio_liberado = False
+            st.session_state.rodada_terminada = False
             st.rerun()
             
         st.write("")
@@ -588,7 +588,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 2: ABA EXCLUSIVA DO QR CODE GIGANTE
     # --------------------------------------------------
-    with abas[2]:
+    with abas:
         st.markdown(
             f"""
             <div style="background-color: #1e293b; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px dashed #3b82f6;">
@@ -613,13 +613,12 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 3: ABA EXCLUSIVA DO AVATAR VENCEDOR (PÓDIO POR LIBERAÇÃO DO BOTÃO)
     # --------------------------------------------------
-    with abas[3]:
-        # Se o jogo terminou mas o administrador ainda não clicou no botão para liberar
-        if rodada_terminada and not st.session_state.podio_liberado:
+    with abas:
+        # CORREÇÃO DA LINHA 618: Substituído para ler do session_state global
+        if st.session_state.rodada_terminada and not st.session_state.podio_liberado:
             st.warning("Aguardando o Mestre liberar a exibição do Campeão no telão...")
             
-        # Se o botão foi acionado pelo mestre, revela o vencedor em formato gigante!
-        elif rodada_terminada and st.session_state.podio_liberado:
+        elif st.session_state.rodada_terminada and st.session_state.podio_liberado:
             st.markdown("<h1 style='text-align: center; color: #ffb703;'>🏆 PÓDIO DA ARENA DA FORCA 🏆</h1>", unsafe_allow_html=True)
             st.write("")
             
@@ -629,8 +628,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 res_vencedores = []
                 
             if res_vencedores and len(res_vencedores) > 0:
-                col_p_v = "points" if "points" in res_vencedores[0] else "pontos"
-                max_pts_v = res_vencedores[0][col_p_v]
+                col_p_v = "points" if "points" in res_vencedores else "pontos"
+                max_pts_v = res_vencedores[col_p_v]
                 
                 lista_campeoes = [r for r in res_vencedores if r[col_p_v] == max_pts_v]
                 
