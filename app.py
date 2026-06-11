@@ -8,6 +8,7 @@ import urllib.parse
 from io import BytesIO
 from docx import Document
 from supabase import create_client
+import qrcode
 
 # ==================================================
 # 1. CONEXÃO E CONFIGURAÇÃO
@@ -374,9 +375,24 @@ if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
 if st.session_state.jogador == "TREINAMENTOWLI":
     st.title("⚔️ Painel do Mestre - Arena da Forca")
     
-    # Criando as duas abas totalmente independentes
-    aba_jogo, aba_acesso = st.tabs(["🎮 ARENA DO JOGO", "🔑 CONTROLE DE ACESSO & QR CODE"])
+    # Criando as três abas totalmente independentes com a nova aba exclusiva de QR Code
+    aba_jogo, aba_acesso, aba_qrcode = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE"])
     
+    # Puxa a senha gerada para os jogadores comuns
+    try:
+        res_senha_mestre = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
+        senha_atual = res_senha_mestre.data.get('forca_senha_acesso', '----') if res_senha_mestre.data else '----'
+    except Exception:
+        senha_atual = '----'
+        
+    # Captura e constrói dinamicamente a URL correta do Streamlit Cloud
+    try:
+        url_base = st.context.headers.get("Host", "localhost")
+        protocolo = "https://" if "localhost" not in url_base else "http://"
+        url_completa = protocolo + url_base
+    except Exception:
+        url_completa = "https://streamlit.io"
+
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PERGUNTAS E EXIBIÇÃO DA FORCA
     # --------------------------------------------------
@@ -406,13 +422,13 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         
                         res_m = supabase.table("forca_disputa_arena").select("forca_modo_jogo", "forca_senha_acesso").eq("id", 1).single().execute()
                         modo_atual = res_m.data.get('forca_modo_jogo', 'LIVRE') if res_m.data else 'LIVRE'
-                        senha_atual = res_m.data.get('forca_senha_acesso', '1234') if res_m.data else '1234'
+                        senha_atual_b = res_m.data.get('forca_senha_acesso', '1234') if res_m.data else '1234'
 
                         supabase.table("forca_disputa_arena").update({
                             "pergunta": proxima['pergunta'], "palavra": proxima['resposta'],
                             "letras_tentadas": "", "erros": 0, "restantes": valor_banco,
                             "ultimo_jogador": "SISTEMA", "forca_modo_jogo": modo_atual,
-                            "forca_senha_acesso": senha_atual, "forca_proximo_turno": ""
+                            "forca_senha_acesso": senha_atual_b, "forca_proximo_turno": ""
                         }).eq("id", 1).execute()
                         st.rerun()
             
@@ -441,53 +457,9 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     reiniciar_arena_completa()
 
     # --------------------------------------------------
-    # ABA 2: ABA DE ACESSO TOTALMENTE REESTRUTURADA (QR CODE GIGANTE CENTRALIZADO)
+    # ABA 2: GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
     # --------------------------------------------------
     with aba_acesso:
-        # Puxa a senha gerada para os jogadores comuns
-        res_senha_mestre = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
-        senha_atual = res_senha_mestre.data.get('forca_senha_acesso', '----') if res_senha_mestre.data else '----'
-        
-        # Painel Superior de Senha (Tamanho ampliado)
-        st.markdown(
-            f"""
-            <div style="background-color: #1e293b; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px dashed #3b82f6;">
-                <span style="color: #94a3b8; font-size: 16px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Senha para Entrada dos Alunos / Jogadores</span><br>
-                <span style="font-size: 60px; color: #3b82f6; font-weight: bold; font-family: monospace; letter-spacing: 4px;">{senha_atual}</span>
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
-        
-        # Captura e constrói dinamicamente a URL correta do Streamlit Cloud
-        try:
-            url_base = st.context.headers.get("Host", "localhost")
-            protocolo = "https://" if "localhost" not in url_base else "http://"
-            url_completa = protocolo + url_base
-        except Exception:
-            url_completa = "https://streamlit.io"
-        
-        # Codifica o link perfeitamente para evitar quebras na API
-        url_codificada = urllib.parse.quote_plus(url_completa)
-        qr_api_url = f"https://googleapis.com{url_codificada}&choe=UTF-8"
-        
-        # GERAÇÃO DO QR CODE EM TELA CHEIA (Ocupando o espaço central sem colunas para ficar imponente no projetor)
-        st.markdown(
-            f"""
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 30px; background-color: white; border-radius: 15px; margin-bottom: 40px;">
-                <img src="{qr_api_url}" style="width: 70vw; max-width: 500px; height: auto; aspect-ratio: 1/1; box-shadow: 0px 10px 30px rgba(0,0,0,0.15); border-radius: 10px;" />
-                <h2 style="color: #1e293b; font-size: 22px; margin-top: 25px; font-family: sans-serif; font-weight: bold; text-align: center; margin-bottom: 5px;">
-                    📱 ESCANEIE O CÓDIGO ACIMA PARA ENTRAR NO JOGO
-                </h2>
-                <p style="color: #64748b; font-size: 14px; font-family: monospace; margin: 0;">Link da Arena: {url_completa}</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        
-        st.divider()
-        
-        # Painel de controle de gerenciamento de participantes (Abaixo do QR Code Gigante)
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
@@ -503,7 +475,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             st.info("Nenhum competidor conectado na arena neste momento.")
         else:
             for j in res_jogadores.data:
-                c1, c2 = st.columns([4, 1]) # Mantendo proporção segura para nome e botão
+                c1, c2 = st.columns()
                 c1.markdown(f"👤 **{j['jogador']}**")
                 if c2.button("❌ EXPULSAR", key=f"excluir_aba_{j['jogador']}", use_container_width=True):
                     supabase.table("forca_disputa_ranking").delete().eq("jogador", j['jogador']).execute()
@@ -513,3 +485,36 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
                         
                     st.rerun()
+
+    # --------------------------------------------------
+    # ABA 3: NOVA ABA EXCLUSIVA DO QR CODE GIGANTE PARA O PROJETOR
+    # --------------------------------------------------
+    with aba_qrcode:
+        # Título de instruções e Senha bem legíveis no topo da projeção
+        st.markdown(
+            f"""
+            <div style="background-color: #1e293b; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 20px; border: 2px dashed #3b82f6;">
+                <span style="color: #94a3b8; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Chave de Entrada</span><br>
+                <span style="font-size: 70px; color: #3b82f6; font-weight: bold; font-family: monospace; letter-spacing: 6px;">{senha_atual}</span>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+
+        # Geração interna e robusta do QR Code via biblioteca nativa Python
+        qr = qrcode.QRCode(version=1, box_size=10, border=4)
+        qr.add_data(url_completa)
+        qr.make(fit=True)
+        img_qr = qr.make_image(fill_color="black", back_color="white")
+        
+        # Converte a imagem para bytes para que o Streamlit consiga exibir de forma nativa e ultra veloz
+        buf = BytesIO()
+        img_qr.save(buf, format="PNG")
+        byte_im = buf.getvalue()
+
+        # Criação de 3 colunas para centralizar perfeitamente o QR Code gigante na tela do projetor
+        col_esq, col_centro, col_dir = st.columns()
+        with col_centro:
+            st.image(byte_im, width=550, caption="Aponte a câmera do celular para abrir a Arena")
+            
+        st.markdown(f"<p style='text-align: center; color: #64748b; font-family: monospace;'>Endereço da Sala: {url_completa}</p>", unsafe_allow_html=True)
