@@ -257,19 +257,17 @@ def arena_viva():
         return
         
     if not jogo:
-        st.warning("Aguardando o Administrador do Jogo iniciar...")
+        st.warning("Aguardando o Administrator do Jogo iniciar...")
         return
 
     if jogo['pergunta'] != "Aguardando nova pergunta..." and jogo['erros'] < 6:
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # CORREÇÃO: Restaurada a proporção exata [3, 1] do seu código original para evitar a quebra
-    col_jogo, col_rank = st.columns([3, 1])
+    col_jogo, col_rank = st.columns()
 
     with col_jogo:
-        # CORREÇÃO: Restaurada a proporção exata [1, 2] do seu código original para imagem e texto
-        c_img, c_txt = st.columns([1, 2])
+        c_img, c_txt = st.columns()
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -308,8 +306,9 @@ def arena_viva():
                 except Exception:
                     rank_final = []
                 if rank_final:
-                    col_pts = "points" if "points" in rank_final else "pontos"
-                    max_pts = rank_final[col_pts]
+                    # CORREÇÃO DA LINHA 312: Mapeia a coluna de pontos e busca do primeiro elemento [0] da lista
+                    col_pts = "points" if "points" in rank_final[0] else "pontos"
+                    max_pts = rank_final[0][col_pts]
                     vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
                     nomes = " & ".join(vencedores)
                     st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
@@ -358,7 +357,7 @@ def arena_viva():
                     mensagem_turno = f"⏳ **AGUARDE A FILA!** É a vez do jogador: **{proximo_autorizado}**."
                     autorizado_a_jogar = False
 
-        if mensagem_turno:
+        if message_turno if 'message_turno' in locals() else mensagem_turno:
             st.info(mensagem_turno)
 
         # --- TECLADO VIRTUAL OPERANTE ---
@@ -388,7 +387,7 @@ def arena_viva():
                     registrar_jogada(letra, jogo)
                     st.rerun()
         elif not (contagem == 0) and vitoria:
-             st.info("✅ Palavra correta! Aguardando o Administrador...")
+             st.info("✅ Palavra correta! Aguardando o Administrator...")
 
     with col_rank:
         st.markdown("### 🏆 Ranking")
@@ -401,8 +400,7 @@ def arena_viva():
                 num_avatar = r.get("forca_avatar_num", None)
                 nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
                 
-                # CORREÇÃO: Definida a proporção exata [1, 4] para alinhar o avatar com o texto sem erros
-                c_av, c_rk = st.columns([1, 4])
+                c_av, c_rk = st.columns()
                 with c_av:
                     if nome_avatar and os.path.exists(nome_avatar):
                         st.image(nome_avatar, width=28)
@@ -413,10 +411,8 @@ def arena_viva():
         except Exception:
             st.write("Atualizando...")
 
-# Renderiza a arena viva para as telas dos alunos comuns
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
-
 
 # ==================================================
 # 5. PAINEL DO ADMIN (TREINAMENTOWLI) - BLOCO A
