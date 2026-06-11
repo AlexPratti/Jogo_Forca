@@ -52,7 +52,7 @@ def gerar_senha_aleatoria():
     return "".join(random.choice(caracteres) for _ in range(4))
 
 # ==================================================
-# 2. LOGIN E ESTADO (CORRIGIDO: ADMIN ENTRA DIRETO)
+# 2. LOGIN E ESTADO (COM TRAVA DE SEGURANÇA NO ADMIN)
 # ==================================================
 if "jogador" not in st.session_state:
     st.session_state.jogador = None
@@ -63,20 +63,27 @@ if "clique_bloqueado" not in st.session_state:
 if not st.session_state.jogador:
     st.title("⚔️ Arena da Forca")
     
-    # Caixa unificada de seleção de perfil para evitar conflitos de carregamento dinâmico
+    # Seleção de Perfil para Entrada
     perfil = st.radio("Escolha seu perfil para entrar:", ["Jogador", "Mestre do Jogo (Admin)"])
     
     if perfil == "Mestre do Jogo (Admin)":
-        st.info("Acesso exclusivo para o administrador 'TREINAMENTOWLI'.")
+        st.info("Acesso restrito. Insira as credenciais do Mestre para assumir o controle.")
+        # Solicita a credencial secreta do administrador de forma mascarada
+        senha_admin = st.text_input("Digite a chave de acesso do Mestre:", type="password", key="input_senha_admin")
+        
         if st.button("ENTRAR COMO MESTRE"):
-            st.session_state.jogador = "TREINAMENTOWLI"
-            nova_senha = gerar_senha_aleatoria()
-            try:
-                supabase.table("forca_disputa_arena").update({"forca_senha_acesso": nova_senha}).eq("id", 1).execute()
-            except Exception:
-                pass
-            st.rerun()
-            
+            # Validação exata em maiúsculo para evitar problemas com Caps Lock
+            if senha_admin and senha_admin.strip().upper() == "TREINAMENTOWLI":
+                st.session_state.jogador = "TREINAMENTOWLI"
+                nova_senha = gerar_senha_aleatoria()
+                try:
+                    supabase.table("forca_disputa_arena").update({"forca_senha_acesso": nova_senha}).eq("id", 1).execute()
+                except Exception:
+                    pass
+                st.rerun()
+            else:
+                st.error("🔒 Chave de acesso do Mestre incorreta ou negada.")
+                
     else:
         nome = st.text_input("Digite seu nome para entrar na Arena:", key="input_nome")
         senha_digitada = st.text_input("Digite a Senha da Arena (Fornecida pelo Mestre):", type="password", key="input_senha")
@@ -85,6 +92,7 @@ if not st.session_state.jogador:
             if nome and senha_digitada:
                 nome_upper = nome.strip().upper()
                 
+                # Impede que um jogador tente fraudar o ranking usando o nome do admin
                 if nome_upper == "TREINAMENTOWLI":
                     st.error("Para entrar como administrador, selecione a opção 'Mestre do Jogo (Admin)' acima.")
                 else:
@@ -109,6 +117,7 @@ if not st.session_state.jogador:
             else:
                 st.warning("Por favor, preencha o seu nome e a senha da arena.")
     st.stop()
+
 
 # ==================================================
 # 3. LÓGICA DE JOGO
