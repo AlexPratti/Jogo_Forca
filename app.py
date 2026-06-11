@@ -245,12 +245,12 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # RESTAURADO: Proporções exatas do design original
-    col_jogo, col_rank = st.columns()
+    # CORREÇÃO: Restaurada a proporção exata [3, 1] do seu código original para evitar o erro do log
+    col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        # RESTAURADO: Proporções exatas do design original
-        c_img, c_txt = st.columns()
+        # CORREÇÃO: Restaurada a proporção exata [1, 2] do seu código original para a imagem e o texto
+        c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -284,7 +284,7 @@ def arena_viva():
             if (vitoria or erros_atuais >= 6) and contagem == 0:
                 rank_final = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("pontos", desc=True).execute().data
                 if rank_final:
-                    max_pts = rank_final['pontos']
+                    max_pts = rank_final[0]['pontos']
                     vencedores = [r['jogador'] for r in rank_final if r['pontos'] == max_pts]
                     nomes = " & ".join(vencedores)
                     st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
