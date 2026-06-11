@@ -242,7 +242,7 @@ def reiniciar_arena_completa():
 
 
 # ==================================================
-# 4. INTERFACE DA ARENA (CORRIGIDA COM PROPORÇÕES ORIGINAIS)
+# 4. INTERFACE DA ARENA (CORRIGIDA E BLINDADA)
 # ==================================================
 
 @st.fragment(run_every=2)
@@ -268,11 +268,11 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # CORREÇÃO DEFINITIVA: Restaurada a proporção original [3, 1] do seu primeiro script para extinguir o erro
+    # Mantendo a proporção original do seu primeiro script para evitar a quebra
     col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        # CORREÇÃO DEFINITIVA: Restaurada a proporção original [1, 2] do seu primeiro script para boneco e texto
+        # Mantendo a proporção original do seu primeiro script para imagem e texto
         c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -311,9 +311,10 @@ def arena_viva():
                     rank_final = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("points" if "points" in jogo else "pontos", desc=True).execute().data
                 except Exception:
                     rank_final = []
-                if rank_final:
-                    col_pts = "points" if "points" in rank_final else "pontos"
-                    max_pts = rank_final[col_pts]
+                if rank_final and len(rank_final) > 0:
+                    # CORREÇÃO DA LINHA 316: Mapeia a coluna de pontos e busca do primeiro elemento [0] da lista
+                    col_pts = "points" if "points" in rank_final[0] else "pontos"
+                    max_pts = rank_final[0][col_pts]
                     vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
                     nomes = " & ".join(vencedores)
                     st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
@@ -418,7 +419,7 @@ def arena_viva():
                 num_avatar = r.get("forca_avatar_num", None)
                 nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
                 
-                # Proporção 1:4 para manter o alinhamento visual idêntico e sem erros
+                # Proporção 1:4 para manter o alinhamento visual sem erros
                 c_av, c_rk = st.columns([1, 4])
                 with c_av:
                     if nome_avatar and os.path.exists(nome_avatar):
