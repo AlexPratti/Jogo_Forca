@@ -232,10 +232,12 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    col_jogo, col_rank = st.columns()
+    # CORREÇÃO: Restaurada a proporção exata [3, 1] do seu código original
+    col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        c_img, c_txt = st.columns()
+        # CORREÇÃO: Restaurada a proporção exata [1, 2] do seu código original
+        c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -308,12 +310,10 @@ def arena_viva():
         mensagem_turno = ""
         
         if modo_jogo == "TURNOS" and not vitoria and erros_atuais < 6:
-            # Se a coluna de próximo turno estiver vazia (ex: nova pergunta), qualquer um pode começar
             if not proximo_autorizado or proximo_autorizado == "":
                 mensagem_turno = "🔥 **Arena aberta!** Qualquer jogador pode dar o primeiro palpite."
                 autorizado_a_jogar = True
             else:
-                # Se houver um jogador definido, valida estritamente
                 if st.session_state.jogador == proximo_autorizado:
                     mensagem_turno = f"⚔️ **SUA VEZ, {st.session_state.jogador}!** Faça a sua jogada agora."
                     autorizado_a_jogar = True
@@ -347,7 +347,6 @@ def arena_viva():
                 botao_desabilitado = ja_foi or (not autorizado_a_jogar) or st.session_state.clique_bloqueado
                 
                 if cols_tec[i % 9].button(letra, key=f"arena_tec_{letra}", disabled=botao_desabilitado, use_container_width=True):
-                    # Aciona o bloqueio de milissegundo local imediatamente antes da requisição ao banco
                     st.session_state.clique_bloqueado = True
                     registrar_jogada(letra, jogo)
                     st.rerun()
@@ -362,6 +361,7 @@ def arena_viva():
             st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
 
 arena_viva()
+
 # ==================================================
 # 5. PAINEL DO ADMIN (TREINAMENTOWLI)
 # ==================================================
