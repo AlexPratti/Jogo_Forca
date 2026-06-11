@@ -457,9 +457,20 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     except Exception:
         jogo_check = None
 
-    # Montagem estável de abas fixas
+    # Montagem estável de abas fixas horizontais
     nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
     abas = st.tabs(nomes_abas)
+    
+    # INJEÇÃO AUTOMÁTICA: Se o pódio foi liberado pelo botão, este script invisível clica na quarta aba (índice 3) pelo navegador
+    if st.session_state.get('rodada_terminada', False) and st.session_state.get('podio_liberado', False):
+        st.components.v1.html(
+            """
+            <script>
+                window.parent.document.querySelectorAll('button[role="tab"]')[3].click();
+            </script>
+            """,
+            height=0,
+        )
     
     try:
         res_senha_mestre = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
@@ -477,7 +488,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 0: TABULEIRO DA FORCA E CONTROLES DO MESTRE
     # --------------------------------------------------
-    with abas[0]: # CORREÇÃO CRUCIAL: Definido o índice exato 0 para a primeira aba
+    with abas[0]:
         arena_viva()
         
         st.write("")
@@ -495,8 +506,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         st.session_state.fila_perguntas = extrair_dados_do_docx(arquivo)
                         st.success(f"{len(st.session_state.fila_perguntas)} questões carregadas!")
 
-                # REMOVIDO: O botão duplicado foi limpo daqui, pois ele já roda em tempo real dentro do fragmento do jogo!
-
                 st.write("")
                 if st.button("🚀 LANÇAR PRÓXIMA PERGUNTA", use_container_width=True):
                     if st.session_state.fila_perguntas:
@@ -508,7 +517,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         modo_atual = res_m.data.get('forca_modo_jogo', 'LIVRE') if res_m.data else 'LIVRE'
                         senha_atual_b = res_m.data.get('forca_senha_acesso', '1234') if res_m.data else '1234'
 
-                        # Reseta as chaves ao mudar de fase
+                        # Reseta os controles de fase ao avançar
                         st.session_state.podio_liberado = False
                         st.session_state.rodada_terminada = False
 
@@ -545,6 +554,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     st.session_state.podio_liberado = False
                     st.session_state.rodada_terminada = False
                     reiniciar_arena_completa()
+
 
 
         # --------------------------------------------------
