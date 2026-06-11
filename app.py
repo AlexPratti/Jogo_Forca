@@ -124,9 +124,9 @@ if not st.session_state.jogador:
 # 3. LÓGICA DE JOGO
 # ==================================================
 def calcular_proximo_turno(jogador_atual):
-    """Calcula estritamente quem é o próximo na ordem alfabética."""
+    """Calcula estritamente quem é o próximo na ordem alfabética de inscritos."""
     try:
-        # Puxa os jogadores reais ordenados por ordem alfabética
+        # Puxa os jogadores reais ativos no banco ordenados alfabeticamente
         res = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").order("jogador").execute()
         lista_jogadores = [r['jogador'] for r in res.data]
         
@@ -135,12 +135,13 @@ def calcular_proximo_turno(jogador_atual):
         if len(lista_jogadores) == 1:
             return lista_jogadores[0]
             
-        # Determina o próximo jogador de maneira estrita e circular
+        # Determina o próximo jogador de maneira circular estrita
         if jogador_atual in lista_jogadores:
             idx = lista_jogadores.index(jogador_atual)
             idx_proximo = (idx + 1) % len(lista_jogadores)
             return lista_jogadores[idx_proximo]
         else:
+            # Caso o jogador não seja achado, entrega para o primeiro da lista
             return lista_jogadores[0]
     except Exception:
         return ""
@@ -150,6 +151,15 @@ def registrar_jogada(letra, jogo_atual):
     if st.session_state.jogador == "TREINAMENTOWLI":
         return
 
+    # Validação do modo de jogo e do direito de turno direto na origem (Garante o bloqueio imediato)
+    modo_jogo = jogo_atual.get('forca_modo_jogo', "LIVRE")
+    proximo_autorizado = jogo_atual.get('forca_proximo_turno', "")
+    
+    if modo_jogo == "TURNOS" and proximo_autorizado and proximo_autorizado != "":
+        if st.session_state.jogador != proximo_autorizado:
+            st.session_state.clique_bloqueado = False
+            return
+
     try:
         check = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
         if not check.data:
@@ -158,9 +168,6 @@ def registrar_jogada(letra, jogo_atual):
             return
     except Exception:
         pass
-
-    # Bloqueio imediato local para evitar cliques rápidos consecutivos
-    st.session_state.clique_bloqueado = True
 
     lista_antiga = jogo_atual['letras_tentadas']
     tentadas = [l.strip() for l in lista_antiga.split(",") if l.strip()]
@@ -183,7 +190,7 @@ def registrar_jogada(letra, jogo_atual):
     else:
         novos_erros += 1
     
-    # Avança o turno para o próximo jogador da lista alfabética
+    # Avança rigidamente o turno para o próximo jogador da lista alfabética
     proximo = calcular_proximo_turno(st.session_state.jogador)
     
     # Grava as modificações no banco de dados do Supabase
@@ -217,13 +224,14 @@ def reiniciar_arena_completa():
     }).eq("id", 1).execute()
     st.session_state.clique_bloqueado = False
     st.rerun()
+
 # ==================================================
 # 4. INTERFACE DA ARENA
 # ==================================================
 
 @st.fragment(run_every=2)
 def arena_viva():
-    # Destrava o clique local para aceitar a próxima entrada na atualização da tela
+    # Destrava o clique local na renderização para aceitar a próxima entrada legítima
     st.session_state.clique_bloqueado = False
 
     res = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
@@ -237,12 +245,12 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # RESTAURADO: Proporções exatas do design original [3, 1]
-    col_jogo, col_rank = st.columns([3, 1])
+    # RESTAURADO: Proporções exatas do design original
+    col_jogo, col_rank = st.columns()
 
     with col_jogo:
-        # RESTAURADO: Proporções exatas do design original [1, 2]
-        c_img, c_txt = st.columns([1, 2])
+        # RESTAURADO: Proporções exatas do design original
+        c_img, c_txt = st.columns()
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -276,7 +284,7 @@ def arena_viva():
             if (vitoria or erros_atuais >= 6) and contagem == 0:
                 rank_final = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("pontos", desc=True).execute().data
                 if rank_final:
-                    max_pts = rank_final[0]['pontos']
+                    max_pts = rank_final['pontos']
                     vencedores = [r['jogador'] for r in rank_final if r['pontos'] == max_pts]
                     nomes = " & ".join(vencedores)
                     st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
@@ -348,11 +356,11 @@ def arena_viva():
             for i, letra in enumerate(letras_abc):
                 ja_foi = letra in tentadas
                 
-                # Desativa imediatamente se a letra já foi, se o clique local disparou ou se não for a sua vez
+                # Bloqueia o teclado se a letra já foi, se o clique local disparou ou se não for a vez estrita dele
                 botao_desabilitado = ja_foi or (not autorizado_a_jogar) or st.session_state.clique_bloqueado
                 
                 if cols_tec[i % 9].button(letra, key=f"arena_tec_{letra}", disabled=botao_desabilitado, use_container_width=True):
-                    # Aciona a trava local de milissegundo antes de enviar a requisição
+                    # Aciona a trava de segurança local de milissegundo antes da requisição ir pro banco
                     st.session_state.clique_bloqueado = True
                     registrar_jogada(letra, jogo)
                     st.rerun()
@@ -369,6 +377,7 @@ def arena_viva():
 # Se for um jogador comum, renderiza a tela da arena direto aqui
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
+
 # ==================================================
 # 5. PAINEL DO ADMIN (TREINAMENTOWLI)
 # ==================================================
