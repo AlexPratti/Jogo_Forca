@@ -475,9 +475,9 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         url_completa = "https://streamlit.io"
 
     # --------------------------------------------------
-    # ABA 0: GERENCIAMENTO DE PERGUNTAS E EXIBIÇÃO DA FORCA
+    # ABA 0: TABULEIRO DA FORCA E CONTROLES DO MESTRE
     # --------------------------------------------------
-    with abas[0]:
+    with abas[0]: # CORREÇÃO CRUCIAL: Definido o índice exato 0 para a primeira aba
         arena_viva()
         
         st.write("")
@@ -495,13 +495,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         st.session_state.fila_perguntas = extrair_dados_do_docx(arquivo)
                         st.success(f"{len(st.session_state.fila_perguntas)} questões carregadas!")
 
-                # CORREÇÃO DA LINHA 602: Agora lê perfeitamente usando o session_state global mapeado pela arena
-                if st.session_state.rodada_terminada and not st.session_state.podio_liberado:
-                    st.write("")
-                    if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True, key="btn_externo_podio"):
-                        st.session_state.podio_liberado = True
-                        st.toast("Pódio liberado com sucesso na aba 4!")
-                        st.rerun()
+                # REMOVIDO: O botão duplicado foi limpo daqui, pois ele já roda em tempo real dentro do fragmento do jogo!
 
                 st.write("")
                 if st.button("🚀 LANÇAR PRÓXIMA PERGUNTA", use_container_width=True):
@@ -522,7 +516,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                             "pergunta": proxima['pergunta'], "palavra": proxima['resposta'],
                             "letras_tentadas": "", "erros": 0, "restantes": valor_banco,
                             "ultimo_jogador": "SISTEMA", "forca_modo_jogo": modo_atual,
-                            "forca_senha_acesso": senate_atual_b if 'senate_atual_b' in locals() else senha_atual_b, "forca_proximo_turno": ""
+                            "forca_senha_acesso": senha_atual_b, "forca_proximo_turno": ""
                         }).eq("id", 1).execute()
                         st.rerun()
             
@@ -553,10 +547,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     reiniciar_arena_completa()
 
 
-    # --------------------------------------------------
+     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
     # --------------------------------------------------
-    with abas:
+    with abas[1]: # CORREÇÃO CRUCIAL: Definido o índice exato 1 para a segunda aba
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
@@ -588,7 +582,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 2: ABA EXCLUSIVA DO QR CODE GIGANTE
     # --------------------------------------------------
-    with abas:
+    with abas[2]: # CORREÇÃO CRUCIAL: Definido o índice exato 2 para a terceira aba
         st.markdown(
             f"""
             <div style="background-color: #1e293b; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px dashed #3b82f6;">
@@ -611,14 +605,13 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         st.markdown(f"<p style='text-align: center; color: #64748b; font-family: monospace;'>Endereço da Arena: {url_completa}</p>", unsafe_allow_html=True)
 
     # --------------------------------------------------
-    # ABA 3: ABA EXCLUSIVA DO AVATAR VENCEDOR (PÓDIO POR LIBERAÇÃO DO BOTÃO)
+    # ABA 3: ABA EXCLUSIVA DO AVATAR VENCEDOR (PÓDIO GIGANTE)
     # --------------------------------------------------
-    with abas:
-        # CORREÇÃO DA LINHA 618: Substituído para ler do session_state global
-        if st.session_state.rodada_terminada and not st.session_state.podio_liberado:
-            st.warning("Aguardando o Mestre liberar a exibição do Campeão no telão...")
+    with abas[3]: # CORREÇÃO CRUCIAL: Definido o índice exato 3 para a quarta aba
+        if st.session_state.get('rodada_terminada', False) and not st.session_state.podio_liberado:
+            st.warning("Aguardando o Mestre liberar a exibição do Campeão no telão... Clique no botão vermelho na primeira aba.")
             
-        elif st.session_state.rodada_terminada and st.session_state.podio_liberado:
+        elif st.session_state.get('rodada_terminada', False) and st.session_state.podio_liberado:
             st.markdown("<h1 style='text-align: center; color: #ffb703;'>🏆 PÓDIO DA ARENA DA FORCA 🏆</h1>", unsafe_allow_html=True)
             st.write("")
             
