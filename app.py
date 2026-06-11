@@ -242,7 +242,7 @@ def reiniciar_arena_completa():
 
 
 # ==================================================
-# 4. INTERFACE DA ARENA (CORRIGIDA COM BOTÃO EM REALTIME)
+# 4. INTERFACE DA ARENA (CORRIGIDA COM PROPORÇÕES ORIGINAIS)
 # ==================================================
 
 @st.fragment(run_every=2)
@@ -268,12 +268,12 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # CORREÇÃO: Restaurada a proporção original 3:1 do seu primeiro código para evitar a quebra
-    col_jogo, col_rank = st.columns()
+    # CORREÇÃO DEFINITIVA: Restaurada a proporção original [3, 1] do seu primeiro script para extinguir o erro
+    col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        # CORREÇÃO: Restaurada a proporção original 1:2 do seu primeiro código para imagem e texto
-        c_img, c_txt = st.columns()
+        # CORREÇÃO DEFINITIVA: Restaurada a proporção original [1, 2] do seu primeiro script para boneco e texto
+        c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -362,7 +362,6 @@ def arena_viva():
                     mensagem_turno = f"⏳ **AGUARDE A FILA!** É a vez do jogador: **{proximo_autorizado}**."
                     autorizado_a_jogar = False
 
-        # CORREÇÃO: Corrigido o nome da variável de verificação interna
         if mensagem_turno:
             st.info(mensagem_turno)
 
@@ -419,8 +418,8 @@ def arena_viva():
                 num_avatar = r.get("forca_avatar_num", None)
                 nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
                 
-                # CORREÇÃO: Definida a proporção exata para alinhar o avatar com o texto sem erros
-                c_av, c_rk = st.columns()
+                # Proporção 1:4 para manter o alinhamento visual idêntico e sem erros
+                c_av, c_rk = st.columns([1, 4])
                 with c_av:
                     if nome_avatar and os.path.exists(nome_avatar):
                         st.image(nome_avatar, width=28)
@@ -433,6 +432,7 @@ def arena_viva():
 
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
+
 
 
 
