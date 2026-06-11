@@ -52,7 +52,7 @@ def gerar_senha_aleatoria():
     return "".join(random.choice(caracteres) for _ in range(4))
 
 # ==================================================
-# 2. LOGIN E ESTADO (CORRIGIDO E SEPARADO)
+# 2. LOGIN E ESTADO (CORRIGIDO: ADMIN ENTRA DIRETO)
 # ==================================================
 if "jogador" not in st.session_state:
     st.session_state.jogador = None
@@ -86,7 +86,7 @@ if not st.session_state.jogador:
                 nome_upper = nome.strip().upper()
                 
                 if nome_upper == "TREINAMENTOWLI":
-                    st.error("Para entrar como administrador, selecione a opção 'Mestre do Jogo' acima.")
+                    st.error("Para entrar como administrador, selecione a opção 'Mestre do Jogo (Admin)' acima.")
                 else:
                     try:
                         res_arena = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
@@ -102,7 +102,7 @@ if not st.session_state.jogador:
                             supabase.table("forca_disputa_ranking").upsert(
                                 {"jogador": nome_upper, "pontos": 0}, 
                                 on_conflict="jogador"
-                              ).execute()
+                            ).execute()
                         st.rerun()
                     else:
                         st.error("🔑 Senha incorreta. Digite a senha gerada pelo Mestre no telão.")
