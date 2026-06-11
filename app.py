@@ -264,11 +264,9 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # CORREÇÃO: Restaurada a proporção original 3:1 do seu primeiro código para evitar a quebra
     col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        # CORREÇÃO: Restaurada a proporção original 1:2 do seu primeiro código para imagem e texto
         c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -308,13 +306,14 @@ def arena_viva():
                 except Exception:
                     rank_final = []
                 if rank_final:
-                    col_pts = "points" if "points" in rank_final[0] else "pontos"
+                    col_pts = "points" if "points" in rank_final else "pontos"
                     max_pts = rank_final[0][col_pts]
                     vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
                     nomes = " & ".join(vencedores)
                     st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
                 st.error("💀 A ARENA FOI ENCERRADA.")
             else:
+                # CORREÇÃO DA PERGUNTA FINAL: Agora só mostra "PERGUNTA FINAL" se realmente for a última do banco (contagem == 0)
                 prefixo = f"📝 Pergunta {contagem}" if contagem > 0 else "🔥 PERGUNTA FINAL"
                 st.markdown(f"<h3 style='font-size: 24px; margin-bottom: 0px;'>{prefixo}</h3>", unsafe_allow_html=True)
                 
@@ -401,7 +400,6 @@ def arena_viva():
                 num_avatar = r.get("forca_avatar_num", None)
                 nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
                 
-                # CORREÇÃO: Proporção definida 1:4 para evitar quebras no mini avatar
                 c_av, c_rk = st.columns([1, 4])
                 with c_av:
                     if nome_avatar and os.path.exists(nome_avatar):
@@ -417,21 +415,26 @@ if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
 
 
+
 # ==================================================
 # 5. PAINEL DO ADMIN (TREINAMENTOWLI) - BLOCO A
 # ==================================================
 if st.session_state.jogador == "TREINAMENTOWLI":
     st.title("⚔️ Painel do Mestre - Arena da Forca")
     
-    # 1. Busca os dados atuais para verificar se a rodada terminou
+    # Inicializa o estado de controle manual para o pódio se ele não existir
+    if "podio_liberado" not in st.session_state:
+        st.session_state.podio_liberado = False
+    
+    # 1. Busca os dados atuais da arena
     try:
         res_arena_check = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
         jogo_check = res_arena_check.data
     except Exception:
         jogo_check = None
 
-    # Gatilho de fim de jogo
-    arena_encerrada = False
+    # Validação da rodada atual terminada
+    rodada_terminada = False
     if jogo_check:
         erros_check = jogo_check.get('erros', 0)
         tentadas_check = [l.strip() for l in jogo_check['letras_tentadas'].split(",") if l.strip()]
@@ -439,19 +442,12 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         vitoria_check = all((letra == " " or letra in tentadas_check) for letra in palavra_check)
         
         if vitoria_check or erros_check >= 6:
-            arena_encerrada = True
+            rodada_terminada = True
 
-    # 2. Constrói a lista de abas dinamicamente
-    # CORREÇÃO: Se o jogo acabou, colocamos o pódio em primeiro na lista para o Streamlit focar nele automaticamente!
-    if arena_encerrada:
-        nomes_abas = ["🏆 PODER DOS CAMPEÕES", "🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE"]
-    else:
-        nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE"]
-        
-    # Declara o container de abas limpo e compatível com todas as versões do Streamlit
+    # As abas agora voltam a ser fixas em suas posições, mantendo a ordem natural
+    nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
     abas = st.tabs(nomes_abas)
     
-    # Coleta dados de credenciais estáveis para as demais abas
     try:
         res_senha_mestre = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
         senha_atual = res_senha_mestre.data.get('forca_senha_acesso', '----') if res_senha_mestre.data else '----'
@@ -466,10 +462,9 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         url_completa = "https://streamlit.io"
 
     # --------------------------------------------------
-    # ABA DA ARENA DO JOGO (Se o jogo acabou, ela vira o índice 1. Se está ativo, vira índice 0)
+    # ABA 0: GERENCIAMENTO DE PERGUNTAS E EXIBIÇÃO DA FORCA
     # --------------------------------------------------
-    indice_arena = 1 if arena_encerrada else 0
-    with abas[indice_arena]:
+    with abas[0]:
         arena_viva()
         
         st.write("")
@@ -487,15 +482,29 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         st.session_state.fila_perguntas = extrair_dados_do_docx(arquivo)
                         st.success(f"{len(st.session_state.fila_perguntas)} questões carregadas!")
 
+                # Botão do Pódio: Só aparece para o Admin se a rodada tiver chegado ao fim
+                if rodada_terminada and not st.session_state.podio_liberado:
+                    st.write("")
+                    if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True):
+                        st.session_state.podio_liberado = True
+                        st.toast("Pódio liberado com sucesso na aba 4!")
+                        st.rerun()
+
+                st.write("")
                 if st.button("🚀 LANÇAR PRÓXIMA PERGUNTA", use_container_width=True):
                     if st.session_state.fila_perguntas:
                         total_antes = len(st.session_state.fila_perguntas)
                         proxima = st.session_state.fila_perguntas.pop(0)
-                        valor_banco = total_antes if len(st.session_state.fila_perguntas) > 1 else 0
+                        
+                        # CORREÇÃO DA CONTAGEM FINAL: Atribui a contagem real de itens pendentes na fila
+                        valor_banco = len(st.session_state.fila_perguntas)
                         
                         res_m = supabase.table("forca_disputa_arena").select("forca_modo_jogo", "forca_senha_acesso").eq("id", 1).single().execute()
                         modo_atual = res_m.data.get('forca_modo_jogo', 'LIVRE') if res_m.data else 'LIVRE'
                         senha_atual_b = res_m.data.get('forca_senha_acesso', '1234') if res_m.data else '1234'
+
+                        # Reseta a liberação do pódio ao lançar uma nova questão
+                        st.session_state.podio_liberado = False
 
                         supabase.table("forca_disputa_arena").update({
                             "pergunta": proxima['pergunta'], "palavra": proxima['resposta'],
@@ -527,19 +536,20 @@ if st.session_state.jogador == "TREINAMENTOWLI":
 
                 st.write("")
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
+                    st.session_state.podio_liberado = False
                     reiniciar_arena_completa()
 
 
      # --------------------------------------------------
-    # ABA 1 (Índice 1 ou 2): GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
+    # ABA 1: GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
     # --------------------------------------------------
-    indice_acesso = 2 if arena_encerrada else 1
-    with abas[indice_acesso]:
+    with abas[1]:
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
             supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
             supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
+            st.session_state.podio_liberado = False
             st.rerun()
             
         st.write("")
@@ -562,10 +572,9 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     st.rerun()
 
     # --------------------------------------------------
-    # ABA 2 (Índice 2 ou 3): ABA EXCLUSIVA DO QR CODE GIGANTE
+    # ABA 2: ABA EXCLUSIVA DO QR CODE GIGANTE
     # --------------------------------------------------
-    indice_qr = 3 if arena_encerrada else 2
-    with abas[indice_qr]:
+    with abas[2]:
         st.markdown(
             f"""
             <div style="background-color: #1e293b; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px dashed #3b82f6;">
@@ -588,10 +597,15 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         st.markdown(f"<p style='text-align: center; color: #64748b; font-family: monospace;'>Endereço da Arena: {url_completa}</p>", unsafe_allow_html=True)
 
     # --------------------------------------------------
-    # ABA 3 (Índice 0): ABA EXCLUSIVA DO AVATAR VENCEDOR (PÓDIO GIGANTE)
+    # ABA 3: ABA EXCLUSIVA DO AVATAR VENCEDOR (PÓDIO POR LIBERAÇÃO DO BOTÃO)
     # --------------------------------------------------
-    if arena_encerrada:
-        with abas[0]:
+    with abas[3]:
+        # Se o jogo terminou mas o administrador ainda não clicou no botão para liberar
+        if rodada_terminada and not st.session_state.podio_liberado:
+            st.warning("Aguardando o Mestre liberar a exibição do Campeão no telão...")
+            
+        # Se o botão foi acionado pelo mestre, revela o vencedor em formato gigante!
+        elif rodada_terminada and st.session_state.podio_liberado:
             st.markdown("<h1 style='text-align: center; color: #ffb703;'>🏆 PÓDIO DA ARENA DA FORCA 🏆</h1>", unsafe_allow_html=True)
             st.write("")
             
@@ -601,12 +615,9 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 res_vencedores = []
                 
             if res_vencedores and len(res_vencedores) > 0:
-                # CORREÇÃO: Identifica dinamicamente a coluna de pontos do primeiro elemento
                 col_p_v = "points" if "points" in res_vencedores[0] else "pontos"
-                # CORREÇÃO CRUCIAL: Pega os pontos do primeiro jogador da lista ordenado (res_vencedores[0])
                 max_pts_v = res_vencedores[0][col_p_v]
                 
-                # Coleta todos os primeiros colocados em caso de empate
                 lista_campeoes = [r for r in res_vencedores if r[col_p_v] == max_pts_v]
                 
                 col_v_esq, col_v_centro, col_v_dir = st.columns(3)
@@ -630,3 +641,5 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                             """, 
                             unsafe_allow_html=True
                         )
+        else:
+            st.info("O Pódio dos Campeões será montado aqui assim que a Arena da Forca for encerrada.")
