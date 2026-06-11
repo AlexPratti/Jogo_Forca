@@ -415,36 +415,37 @@ if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
 
 
-
 # ==================================================
 # 5. PAINEL DO ADMIN (TREINAMENTOWLI) - BLOCO A
 # ==================================================
 if st.session_state.jogador == "TREINAMENTOWLI":
     st.title("⚔️ Painel do Mestre - Arena da Forca")
     
-    # Inicializa o estado de controle manual para o pódio se ele não existir
     if "podio_liberado" not in st.session_state:
         st.session_state.podio_liberado = False
     
-    # 1. Busca os dados atuais da arena
+    # 1. Força uma busca realtime no banco para o Admin saber o status exato das letras jogadas
     try:
         res_arena_check = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
         jogo_check = res_arena_check.data
     except Exception:
         jogo_check = None
 
-    # Validação da rodada atual terminada
+    # Validação realtime de encerramento da rodada
     rodada_terminada = False
     if jogo_check:
         erros_check = jogo_check.get('erros', 0)
         tentadas_check = [l.strip() for l in jogo_check['letras_tentadas'].split(",") if l.strip()]
         palavra_check = jogo_check['palavra']
+        
+        # Verifica se todas as letras da palavra alvo já foram descobertas pelos alunos
         vitoria_check = all((letra == " " or letra in tentadas_check) for letra in palavra_check)
         
+        # CORREÇÃO: Se atingiu 6 erros OU se a palavra foi adivinhada, a rodada acabou!
         if vitoria_check or erros_check >= 6:
             rodada_terminada = True
 
-    # As abas agora voltam a ser fixas em suas posições, mantendo a ordem natural
+    # Montagem das abas fixas
     nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
     abas = st.tabs(nomes_abas)
     
@@ -482,7 +483,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         st.session_state.fila_perguntas = extrair_dados_do_docx(arquivo)
                         st.success(f"{len(st.session_state.fila_perguntas)} questões carregadas!")
 
-                # Botão do Pódio: Só aparece para o Admin se a rodada tiver chegado ao fim
+                # CORREÇÃO CRUCIAL: O botão agora aparece imediatamente quando a tela detecta o fim da rodada
                 if rodada_terminada and not st.session_state.podio_liberado:
                     st.write("")
                     if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True):
@@ -496,14 +497,14 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         total_antes = len(st.session_state.fila_perguntas)
                         proxima = st.session_state.fila_perguntas.pop(0)
                         
-                        # CORREÇÃO DA CONTAGEM FINAL: Atribui a contagem real de itens pendentes na fila
+                        # Garante que mostre a quantidade exata restante
                         valor_banco = len(st.session_state.fila_perguntas)
                         
                         res_m = supabase.table("forca_disputa_arena").select("forca_modo_jogo", "forca_senha_acesso").eq("id", 1).single().execute()
                         modo_atual = res_m.data.get('forca_modo_jogo', 'LIVRE') if res_m.data else 'LIVRE'
                         senha_atual_b = res_m.data.get('forca_senha_acesso', '1234') if res_m.data else '1234'
 
-                        # Reseta a liberação do pódio ao lançar uma nova questão
+                        # Reseta o pódio ao passar de fase
                         st.session_state.podio_liberado = False
 
                         supabase.table("forca_disputa_arena").update({
@@ -538,7 +539,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
                     st.session_state.podio_liberado = False
                     reiniciar_arena_completa()
-
 
      # --------------------------------------------------
     # ABA 1: GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
