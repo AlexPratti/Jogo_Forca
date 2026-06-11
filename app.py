@@ -547,10 +547,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     reiniciar_arena_completa()
 
 
-     # --------------------------------------------------
+    # --------------------------------------------------
     # ABA 1: GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
     # --------------------------------------------------
-    with abas[1]: # CORREÇÃO CRUCIAL: Definido o índice exato 1 para a segunda aba
+    with abas[1]: # Indexado explicitamente para a segunda aba
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
@@ -582,7 +582,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 2: ABA EXCLUSIVA DO QR CODE GIGANTE
     # --------------------------------------------------
-    with abas[2]: # CORREÇÃO CRUCIAL: Definido o índice exato 2 para a terceira aba
+    with abas[2]: # Indexado explicitamente para a terceira aba
         st.markdown(
             f"""
             <div style="background-color: #1e293b; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px dashed #3b82f6;">
@@ -607,7 +607,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 3: ABA EXCLUSIVA DO AVATAR VENCEDOR (PÓDIO GIGANTE)
     # --------------------------------------------------
-    with abas[3]: # CORREÇÃO CRUCIAL: Definido o índice exato 3 para a quarta aba
+    with abas[3]: # Indexado explicitamente para a quarta aba
         if st.session_state.get('rodada_terminada', False) and not st.session_state.podio_liberado:
             st.warning("Aguardando o Mestre liberar a exibição do Campeão no telão... Clique no botão vermelho na primeira aba.")
             
@@ -621,9 +621,11 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 res_vencedores = []
                 
             if res_vencedores and len(res_vencedores) > 0:
-                col_p_v = "points" if "points" in res_vencedores else "pontos"
-                max_pts_v = res_vencedores[col_p_v]
+                # CORREÇÃO DA LINHA 625: Mapeia dinamicamente e lê da primeira linha [0] da lista ordenada
+                col_p_v = "points" if "points" in res_vencedores[0] else "pontos"
+                max_pts_v = res_vencedores[0][col_p_v]
                 
+                # Filtra os campeões (trata cenários de empates)
                 lista_campeoes = [r for r in res_vencedores if r[col_p_v] == max_pts_v]
                 
                 col_v_esq, col_v_centro, col_v_dir = st.columns(3)
