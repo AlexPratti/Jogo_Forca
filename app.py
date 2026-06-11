@@ -52,7 +52,7 @@ def gerar_senha_aleatoria():
     return "".join(random.choice(caracteres) for _ in range(4))
 
 # ==================================================
-# 2. LOGIN E ESTADO (FLUXO DE SENHA CORRIGIDO)
+# 2. LOGIN E ESTADO (CORRIGIDO E SEPARADO)
 # ==================================================
 if "jogador" not in st.session_state:
     st.session_state.jogador = None
@@ -63,50 +63,53 @@ if "clique_bloqueado" not in st.session_state:
 if not st.session_state.jogador:
     st.title("⚔️ Arena da Forca")
     
-    try:
-        res_arena = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
-        senha_valida = res_arena.data.get('forca_senha_acesso', '1234') if res_arena.data else '1234'
-    except Exception:
-        senha_valida = '1234'
-
-    # Campo de nome usa o on_change para atualizar o estado do formulário imediatamente
-    nome = st.text_input("Digite seu nome para entrar na Arena:", key="input_nome")
-    nome_upper = nome.strip().upper() if nome else ""
+    # Caixa unificada de seleção de perfil para evitar conflitos de carregamento dinâmico
+    perfil = st.radio("Escolha seu perfil para entrar:", ["Jogador", "Mestre do Jogo (Admin)"])
     
-    # CORREÇÃO: O campo de senha agora aparece imediatamente se o nome não for o do Admin
-    senha_digitada = None
-    if nome_upper and nome_upper != "TREINAMENTOWLI":
+    if perfil == "Mestre do Jogo (Admin)":
+        st.info("Acesso exclusivo para o administrador 'TREINAMENTOWLI'.")
+        if st.button("ENTRAR COMO MESTRE"):
+            st.session_state.jogador = "TREINAMENTOWLI"
+            nova_senha = gerar_senha_aleatoria()
+            try:
+                supabase.table("forca_disputa_arena").update({"forca_senha_acesso": nova_senha}).eq("id", 1).execute()
+            except Exception:
+                pass
+            st.rerun()
+            
+    else:
+        nome = st.text_input("Digite seu nome para entrar na Arena:", key="input_nome")
         senha_digitada = st.text_input("Digite a Senha da Arena (Fornecida pelo Mestre):", type="password", key="input_senha")
-
-    if st.button("ENTRAR NA ARENA"):
-        if nome:
-            if nome_upper == "TREINAMENTOWLI":
-                st.session_state.jogador = nome_upper
-                nova_senha = gerar_senha_aleatoria()
-                try:
-                    supabase.table("forca_disputa_arena").update({"forca_senha_acesso": nova_senha}).eq("id", 1).execute()
-                except Exception:
-                    pass
-                st.rerun()
-            else:
-                # Validação imediata sem exibir erros falsos antes do preenchimento
-                if senha_digitada and senha_digitada.strip().upper() == senha_valida.upper():
-                    st.session_state.jogador = nome_upper
-                    check_user = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", nome_upper).execute()
-                    
-                    if check_user.data:
-                        st.toast(f"👋 Bem-vindo de volta, {nome_upper}!")
-                    else:
-                        supabase.table("forca_disputa_ranking").upsert(
-                            {"jogador": nome_upper, "pontos": 0}, 
-                            on_conflict="jogador"
-                        ).execute()
-                    st.rerun()
+        
+        if st.button("ENTRAR NA ARENA"):
+            if nome and senha_digitada:
+                nome_upper = nome.strip().upper()
+                
+                if nome_upper == "TREINAMENTOWLI":
+                    st.error("Para entrar como administrador, selecione a opção 'Mestre do Jogo' acima.")
                 else:
-                    st.error("🔑 Senha incorreta ou vazia. Digite a senha gerada pelo Mestre.")
-        else:
-            st.warning("Por favor, digite um nome.")
+                    try:
+                        res_arena = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
+                        senha_valida = res_arena.data.get('forca_senha_acesso', '1234') if res_arena.data else '1234'
+                    except Exception:
+                        senha_valida = '1234'
+
+                    if senha_digitada.strip().upper() == senha_valida.upper():
+                        st.session_state.jogador = nome_upper
+                        check_user = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", nome_upper).execute()
+                        
+                        if not check_user.data:
+                            supabase.table("forca_disputa_ranking").upsert(
+                                {"jogador": nome_upper, "pontos": 0}, 
+                                on_conflict="jogador"
+                              ).execute()
+                        st.rerun()
+                    else:
+                        st.error("🔑 Senha incorreta. Digite a senha gerada pelo Mestre no telão.")
+            else:
+                st.warning("Por favor, preencha o seu nome e a senha da arena.")
     st.stop()
+
 # ==================================================
 # 3. LÓGICA DE JOGO
 # ==================================================
@@ -369,7 +372,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # ABA 1: GERENCIAMENTO DE PERGUNTAS E EXIBIÇÃO DA FORCA
     # --------------------------------------------------
     with aba_jogo:
-        # A Arena da Forca só roda nesta aba para o mestre, com suas imagens e botões
         arena_viva()
         
         st.write("")
@@ -393,12 +395,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         proxima = st.session_state.fila_perguntas.pop(0)
                         valor_banco = total_antes if len(st.session_state.fila_perguntas) > 1 else 0
                         
-                        # Recupera dados para não alterar regras no meio da partida
                         res_m = supabase.table("forca_disputa_arena").select("forca_modo_jogo", "forca_senha_acesso").eq("id", 1).single().execute()
                         modo_atual = res_m.data.get('forca_modo_jogo', 'LIVRE') if res_m.data else 'LIVRE'
                         senha_atual = res_m.data.get('forca_senha_acesso', '1234') if res_m.data else '1234'
 
-                        # Ao lançar nova pergunta, limpa o próximo turno para abrir a rodada de novo
                         supabase.table("forca_disputa_arena").update({
                             "pergunta": proxima['pergunta'], "palavra": proxima['resposta'],
                             "letras_tentadas": "", "erros": 0, "restantes": valor_banco,
@@ -419,11 +419,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     "Alternar Formato de Jogo:",
                     ["LIVRE", "TURNOS"],
                     index=index_modo,
-                    help="LIVRE: Qualquer um joga livre. TURNOS: Ordem circular estrita obrigatória."
+                    help="LIVRE: Todos jogam livre. TURNOS: Ordem circular estrita obrigatória."
                 )
                 
                 if novo_modo != modo_banco:
-                    # Limpa a trava de turnos para reiniciar o controle da vez no modo novo
                     supabase.table("forca_disputa_arena").update({"forca_modo_jogo": novo_modo, "forca_proximo_turno": ""}).eq("id", 1).execute()
                     st.toast(f"Modo alterado para: {novo_modo}")
                     st.rerun()
@@ -433,10 +432,11 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     reiniciar_arena_completa()
 
     # --------------------------------------------------
-    # ABA 2: ABA DE ACESSO, SENHA, QR CODE GIGANTE E JOGADORES (SEM IMAGENS OU TECLADO)
+    # ABA 2: ABA DE ACESSO, SENHA, QR CODE GIGANTE E JOGADORES
     # --------------------------------------------------
     with aba_acesso:
-        col_credenciais, col_lista_jogadores = st.columns()
+        # CORREÇÃO DA LINHA 439: Passando explicitamente o número 2 nas colunas
+        col_credenciais, col_lista_jogadores = st.columns(2)
         
         with col_credenciais:
             st.markdown("### 🔑 Credenciais da Arena")
@@ -456,21 +456,17 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             
             st.markdown("#### 📱 QR Code de Conexão Rápida")
             
-            # Descobre dinamicamente o link da sua aplicação hospedada
             try:
                 url_base = st.context.headers.get("Host", "localhost")
                 protocolo = "https://" if "localhost" not in url_base else "http://"
-                url_completa = protocolo + url_base
+                url_completa = protocol + url_base
             except Exception:
                 url_completa = "https://streamlit.io"
             
             url_codificada = urllib.parse.quote_plus(url_completa)
-            
-            # MODIFICAÇÃO: QR Code ampliado para 500x500 pixels para exibição em telões e projetores
             qr_api_url = f"https://googleapis.com{url_codificada}&choe=UTF-8"
             
-            # O parâmetro use_container_width=True força o Streamlit a preencher e deixar o QR Code gigante na tela
-            st.image(qr_api_url, caption="Mire a câmera para abrir o endereço do jogo", width=480, use_container_width=False)
+            st.image(qr_api_url, caption="Mire a câmera para abrir o endereço do jogo", width=480)
             st.caption(f"Endereço: `{url_completa}`")
 
         with col_lista_jogadores:
@@ -483,19 +479,17 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             
             st.divider()
             
-            # Lista idêntica à do código original, exibindo quem entrou com botão de exclusão
             res_jogadores = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").order("jogador").execute()
             
             if not res_jogadores.data:
                 st.info("Nenhum competidor na arena neste momento.")
             else:
                 for j in res_jogadores.data:
-                    c1, c2 = st.columns()
+                    c1, c2 = st.columns(2) # CORREÇÃO: Definindo explicitamente o número de subcolunas
                     c1.markdown(f"👤 **{j['jogador']}**")
                     if c2.button("❌", key=f"excluir_aba_{j['jogador']}", use_container_width=True):
                         supabase.table("forca_disputa_ranking").delete().eq("jogador", j['jogador']).execute()
                         
-                        # Se o jogador expulso era o dono da vez, libera o turno de forma limpa
                         res_turno_v = supabase.table("forca_disputa_arena").select("forca_proximo_turno").eq("id", 1).single().execute()
                         if res_turno_v.data and res_turno_v.data.get('forca_proximo_turno') == j['jogador']:
                             supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
