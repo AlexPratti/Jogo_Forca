@@ -576,7 +576,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             unsafe_allow_html=True
         )
 
-        # CORREÇÃO: Definido explicitamente o valor 3 para evitar o erro do Streamlit Cloud
         col_esq, col_centro, col_dir = st.columns(3)
         with col_centro:
             nome_arquivo_qr = "QRCode Forca.png"
@@ -601,13 +600,15 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             except Exception:
                 res_vencedores = []
                 
-            if res_vencedores:
-                col_p_v = "points" if "points" in res_vencedores else "pontos"
-                max_pts_v = res_vencedores[col_p_v]
+            if res_vencedores and len(res_vencedores) > 0:
+                # CORREÇÃO: Identifica dinamicamente a coluna de pontos do primeiro elemento
+                col_p_v = "points" if "points" in res_vencedores[0] else "pontos"
+                # CORREÇÃO CRUCIAL: Pega os pontos do primeiro jogador da lista ordenado (res_vencedores[0])
+                max_pts_v = res_vencedores[0][col_p_v]
                 
+                # Coleta todos os primeiros colocados em caso de empate
                 lista_campeoes = [r for r in res_vencedores if r[col_p_v] == max_pts_v]
                 
-                # CORREÇÃO PREVENTIVA: Definido explicitamente o valor 3 para centralizar o pódio sem erros
                 col_v_esq, col_v_centro, col_v_dir = st.columns(3)
                 
                 with col_v_centro:
