@@ -242,12 +242,16 @@ def reiniciar_arena_completa():
 
 
 # ==================================================
-# 4. INTERFACE DA ARENA (CORRIGIDA E BLINDADA)
+# 4. INTERFACE DA ARENA (CORRIGIDA COM BOTÃO EM REALTIME)
 # ==================================================
 
 @st.fragment(run_every=2)
 def arena_viva():
     st.session_state.clique_bloqueado = False
+
+    # Inicializa o estado de controle manual para o pódio se ele não existir
+    if "podio_liberado" not in st.session_state:
+        st.session_state.podio_liberado = False
 
     try:
         res = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
@@ -264,10 +268,11 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    col_jogo, col_rank = st.columns([3, 1])
+    # Proporção original 3:1 mantida intocada
+    col_jogo, col_rank = st.columns()
 
     with col_jogo:
-        c_img, c_txt = st.columns([1, 2])
+        c_img, c_txt = st.columns()
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -307,13 +312,12 @@ def arena_viva():
                     rank_final = []
                 if rank_final:
                     col_pts = "points" if "points" in rank_final else "pontos"
-                    max_pts = rank_final[0][col_pts]
+                    max_pts = rank_final[col_pts]
                     vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
                     nomes = " & ".join(vencedores)
                     st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
                 st.error("💀 A ARENA FOI ENCERRADA.")
             else:
-                # CORREÇÃO DA PERGUNTA FINAL: Agora só mostra "PERGUNTA FINAL" se realmente for a última do banco (contagem == 0)
                 prefixo = f"📝 Pergunta {contagem}" if contagem > 0 else "🔥 PERGUNTA FINAL"
                 st.markdown(f"<h3 style='font-size: 24px; margin-bottom: 0px;'>{prefixo}</h3>", unsafe_allow_html=True)
                 
@@ -360,6 +364,18 @@ def arena_viva():
         if mensagem_turno:
             st.info(mensagem_turno)
 
+        # --- ADICIONADO: BOTÃO DO PÓDIO EM TEMPO REAL PARA O ADMIN ---
+        rodada_terminada = vitoria or erros_atuais >= 6
+        if rodada_terminada and st.session_state.jogador == "TREINAMENTOWLI" and not st.session_state.podio_liberado:
+            st.write("")
+            if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True, key="btn_realtime_podio"):
+                st.session_state.podio_liberado = True
+                st.toast("Pódio liberado com sucesso na aba 4!")
+                st.context.cookies.clear() if hasattr(st, "context") else None # Limpa buffers para forçar render global
+                # Um leve truque estrutural para forçar as abas de fora a acordarem sem travar o app
+                supabase.table("forca_disputa_arena").update({"ultimo_jogador": "SISTEMA"}).eq("id", 1).execute()
+                st.rerun()
+
         # --- TECLADO VIRTUAL OPERANTE ---
         if not vitoria and erros_atuais < 6:
             if st.session_state.jogador != "TREINAMENTOWLI":
@@ -400,7 +416,7 @@ def arena_viva():
                 num_avatar = r.get("forca_avatar_num", None)
                 nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
                 
-                c_av, c_rk = st.columns([1, 4])
+                c_av, c_rk = st.columns()
                 with c_av:
                     if nome_avatar and os.path.exists(nome_avatar):
                         st.image(nome_avatar, width=28)
@@ -424,28 +440,13 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     if "podio_liberado" not in st.session_state:
         st.session_state.podio_liberado = False
     
-    # 1. Força uma busca realtime no banco para o Admin saber o status exato das letras jogadas
     try:
         res_arena_check = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
         jogo_check = res_arena_check.data
     except Exception:
         jogo_check = None
 
-    # Validação realtime de encerramento da rodada
-    rodada_terminada = False
-    if jogo_check:
-        erros_check = jogo_check.get('erros', 0)
-        tentadas_check = [l.strip() for l in jogo_check['letras_tentadas'].split(",") if l.strip()]
-        palavra_check = jogo_check['palavra']
-        
-        # Verifica se todas as letras da palavra alvo já foram descobertas pelos alunos
-        vitoria_check = all((letra == " " or letra in tentadas_check) for letra in palavra_check)
-        
-        # CORREÇÃO: Se atingiu 6 erros OU se a palavra foi adivinhada, a rodada acabou!
-        if vitoria_check or erros_check >= 6:
-            rodada_terminada = True
-
-    # Montagem das abas fixas
+    # Montagem das abas fixas estáveis
     nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
     abas = st.tabs(nomes_abas)
     
@@ -483,28 +484,18 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         st.session_state.fila_perguntas = extrair_dados_do_docx(arquivo)
                         st.success(f"{len(st.session_state.fila_perguntas)} questões carregadas!")
 
-                # CORREÇÃO CRUCIAL: O botão agora aparece imediatamente quando a tela detecta o fim da rodada
-                if rodada_terminada and not st.session_state.podio_liberado:
-                    st.write("")
-                    if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True):
-                        st.session_state.podio_liberado = True
-                        st.toast("Pódio liberado com sucesso na aba 4!")
-                        st.rerun()
-
                 st.write("")
                 if st.button("🚀 LANÇAR PRÓXIMA PERGUNTA", use_container_width=True):
                     if st.session_state.fila_perguntas:
                         total_antes = len(st.session_state.fila_perguntas)
                         proxima = st.session_state.fila_perguntas.pop(0)
-                        
-                        # Garante que mostre a quantidade exata restante
                         valor_banco = len(st.session_state.fila_perguntas)
                         
                         res_m = supabase.table("forca_disputa_arena").select("forca_modo_jogo", "forca_senha_acesso").eq("id", 1).single().execute()
                         modo_atual = res_m.data.get('forca_modo_jogo', 'LIVRE') if res_m.data else 'LIVRE'
                         senha_atual_b = res_m.data.get('forca_senha_acesso', '1234') if res_m.data else '1234'
 
-                        # Reseta o pódio ao passar de fase
+                        # Reseta a liberação do pódio ao passar de fase
                         st.session_state.podio_liberado = False
 
                         supabase.table("forca_disputa_arena").update({
@@ -539,6 +530,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
                     st.session_state.podio_liberado = False
                     reiniciar_arena_completa()
+
 
      # --------------------------------------------------
     # ABA 1: GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
