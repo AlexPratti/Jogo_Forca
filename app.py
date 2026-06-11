@@ -576,7 +576,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             unsafe_allow_html=True
         )
 
-        col_esq, col_centro, col_dir = st.columns()
+        # CORREÇÃO: Definido explicitamente o valor 3 para evitar o erro do Streamlit Cloud
+        col_esq, col_centro, col_dir = st.columns(3)
         with col_centro:
             nome_arquivo_qr = "QRCode Forca.png"
             if os.path.exists(nome_arquivo_qr):
@@ -591,7 +592,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # ABA 3 (Índice 0): ABA EXCLUSIVA DO AVATAR VENCEDOR (PÓDIO GIGANTE)
     # --------------------------------------------------
     if arena_encerrada:
-        # CORREÇÃO: Força o Pódio a se renderizar estritamente no índice 0 (Primeira Aba)
         with abas[0]:
             st.markdown("<h1 style='text-align: center; color: #ffb703;'>🏆 PÓDIO DA ARENA DA FORCA 🏆</h1>", unsafe_allow_html=True)
             st.write("")
@@ -603,11 +603,12 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 
             if res_vencedores:
                 col_p_v = "points" if "points" in res_vencedores else "pontos"
-                max_pts_v = res_vencedores[0][col_p_v]
+                max_pts_v = res_vencedores[col_p_v]
                 
                 lista_campeoes = [r for r in res_vencedores if r[col_p_v] == max_pts_v]
                 
-                col_v_esq, col_v_centro, col_v_dir = st.columns()
+                # CORREÇÃO PREVENTIVA: Definido explicitamente o valor 3 para centralizar o pódio sem erros
+                col_v_esq, col_v_centro, col_v_dir = st.columns(3)
                 
                 with col_v_centro:
                     for campeao in lista_campeoes:
