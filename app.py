@@ -240,7 +240,7 @@ def registrar_jogada(letra, jogo_atual):
 # ==================================================
 # 4. INTERFACE DA ARENA
 # ==================================================
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 @st.fragment(run_every=2)
 def arena_viva():
@@ -256,10 +256,12 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    col_jogo, col_rank = st.columns()
+    # CORREÇÃO: Restaurada a proporção exata [3, 1] do seu código original para evitar o erro do log
+    col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        c_img, c_txt = st.columns()
+        # CORREÇÃO: Restaurada a proporção exata [1, 2] do seu código original para a imagem e o texto
+        c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -335,10 +337,8 @@ def arena_viva():
                 mensagem_turno = "🔥 **Arena aberta!** Qualquer jogador cadastrado pode fazer o primeiro palpite."
                 autorizado_a_jogar = True
             else:
-                # Calcula os segundos passados desde a definição do turno
                 if timestamp_banco:
                     try:
-                        # Converte a string de timestamp do Supabase para formato datetime com fuso UTC
                         hora_turno = datetime.fromisoformat(timestamp_banco.replace("Z", "+00:00"))
                         agora_utc = datetime.now(timezone.utc)
                         segundos_decorridos = int((agora_utc - hora_turno).total_seconds())
@@ -346,12 +346,10 @@ def arena_viva():
                     except Exception:
                         tempo_restante = 10
                 
-                # SE O TEMPO ESGOTOU: Aciona a punição imediatamente no banco
                 if tempo_restante <= 0:
                     forçar_passagem_turno_por_tempo(proximo_autorizado)
                     st.rerun()
 
-                # Define as mensagens de interface com base no dono do turno
                 if str(st.session_state.jogador).strip() == str(proximo_autorizado).strip():
                     mensagem_turno = f"⚔️ **SUA VEZ, {st.session_state.jogador}!** Seu teclado está ativo. Responda rápido!"
                     autorizado_a_jogar = True
@@ -361,7 +359,6 @@ def arena_viva():
 
         if mensagem_turno:
             st.info(mensagem_turno)
-            # Exibe a barra de progresso visual de tempo se houver um turno ativo
             if modo_jogo == "TURNOS" and proximo_autorizado and proximo_autorizado != "":
                 st.progress(tempo_restante / 10, text=f"⏱️ Tempo restante para a jogada: {tempo_restante} segundos")
 
