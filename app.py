@@ -375,7 +375,7 @@ if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
 if st.session_state.jogador == "TREINAMENTOWLI":
     st.title("⚔️ Painel do Mestre - Arena da Forca")
     
-    # Mantendo as três abas totalmente independentes e organizadas
+    # Criando as três abas totalmente independentes e organizadas
     aba_jogo, aba_acesso, aba_qrcode = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE"])
     
     # Puxa a senha gerada para os jogadores comuns
@@ -385,7 +385,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     except Exception:
         senha_atual = '----'
         
-    # Captura e constrói dinamicamente a URL correta do Streamlit Cloud
+    # Captura a URL para o rodapé informativo
     try:
         url_base = st.context.headers.get("Host", "localhost")
         protocolo = "https://" if "localhost" not in url_base else "http://"
@@ -487,13 +487,13 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     st.rerun()
 
     # --------------------------------------------------
-    # ABA 3: ABA EXCLUSIVA DO QR CODE GIGANTE (API QUICKCHART ALTERNATIVA)
+    # ABA 3: ABA EXCLUSIVA DO QR CODE GIGANTE (NATIVA E SEGUNDO AS REGRAS)
     # --------------------------------------------------
     with aba_qrcode:
-        # Título instrucional e exibição da senha destacada
+        # Exibição da senha em destaque no topo da projeção
         st.markdown(
             f"""
-            <div style="background-color: #1e293b; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 20px; border: 2px dashed #3b82f6;">
+            <div style="background-color: #1e293b; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px dashed #3b82f6;">
                 <span style="color: #94a3b8; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Chave de Entrada</span><br>
                 <span style="font-size: 70px; color: #3b82f6; font-weight: bold; font-family: monospace; letter-spacing: 6px;">{senha_atual}</span>
             </div>
@@ -501,22 +501,22 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             unsafe_allow_html=True
         )
 
-        # Codifica o link perfeitamente para evitar quebras em URLs complexas
-        url_codificada = urllib.parse.quote_plus(url_completa)
+        # Criando colunas puras do Streamlit para centralizar e deixar a imagem gigante
+        col_esq, col_centro, col_dir = st.columns([1, 4, 1])
         
-        # Link gerado usando a API ultra-estável do QuickChart (Tamanho 600x600 pixels)
-        qr_quickchart_url = f"https://quickchart.io{url_codificada}&size=600"
-        
-        # Centralizando e forçando o QR Code a ocupar o maior espaço possível para projeção no telão
-        st.markdown(
-            f"""
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 20px; background-color: white; border-radius: 15px; margin-bottom: 20px;">
-                <img src="{qr_quickchart_url}" style="width: 75vw; max-width: 520px; height: auto; aspect-ratio: 1/1; box-shadow: 0px 8px 25px rgba(0,0,0,0.12); border-radius: 8px;" />
-                <h2 style="color: #1e293b; font-size: 24px; margin-top: 20px; font-family: sans-serif; font-weight: bold; text-align: center; margin-bottom: 5px;">
-                    📱 ESCANEIE O CÓDIGO ACIMA PARA ENTRAR NO JOGO
-                </h2>
-                <p style="color: #64748b; font-size: 14px; font-family: monospace; margin: 0;">Link alternativo: {url_completa}</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        with col_centro:
+            nome_arquivo_qr = "QRCode Forca.png"
+            
+            # Executa a verificação física do arquivo na pasta raiz do repositório
+            if os.path.exists(nome_arquivo_qr):
+                # Exibe de forma nativa e limpa a imagem estática ocupando o espaço máximo configurado
+                st.image(
+                    nome_arquivo_qr, 
+                    caption="Aponte a câmera do celular para abrir a Arena", 
+                    width=600
+                )
+            else:
+                st.error(f"⚠️ O arquivo '{nome_arquivo_qr}' não foi encontrado no seu GitHub. Certifique-se de que o upload foi feito na pasta principal com esse nome exato.")
+
+        st.write("")
+        st.markdown(f"<p style='text-align: center; color: #64748b; font-family: monospace;'>Endereço da Arena: {url_completa}</p>", unsafe_allow_html=True)
