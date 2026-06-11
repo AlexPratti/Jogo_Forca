@@ -257,17 +257,19 @@ def arena_viva():
         return
         
     if not jogo:
-        st.warning("Aguardando o Administrator do Jogo iniciar...")
+        st.warning("Aguardando o Administrador do Jogo iniciar...")
         return
 
     if jogo['pergunta'] != "Aguardando nova pergunta..." and jogo['erros'] < 6:
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    col_jogo, col_rank = st.columns()
+    # CORREÇÃO: Restaurada a proporção original 3:1 do seu primeiro código para evitar a quebra
+    col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        c_img, c_txt = st.columns()
+        # CORREÇÃO: Restaurada a proporção original 1:2 do seu primeiro código para imagem e texto
+        c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -306,7 +308,6 @@ def arena_viva():
                 except Exception:
                     rank_final = []
                 if rank_final:
-                    # CORREÇÃO DA LINHA 312: Mapeia a coluna de pontos e busca do primeiro elemento [0] da lista
                     col_pts = "points" if "points" in rank_final[0] else "pontos"
                     max_pts = rank_final[0][col_pts]
                     vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
@@ -357,7 +358,7 @@ def arena_viva():
                     mensagem_turno = f"⏳ **AGUARDE A FILA!** É a vez do jogador: **{proximo_autorizado}**."
                     autorizado_a_jogar = False
 
-        if message_turno if 'message_turno' in locals() else mensagem_turno:
+        if mensagem_turno:
             st.info(mensagem_turno)
 
         # --- TECLADO VIRTUAL OPERANTE ---
@@ -387,7 +388,7 @@ def arena_viva():
                     registrar_jogada(letra, jogo)
                     st.rerun()
         elif not (contagem == 0) and vitoria:
-             st.info("✅ Palavra correta! Aguardando o Administrator...")
+             st.info("✅ Palavra correta! Aguardando o Administrador...")
 
     with col_rank:
         st.markdown("### 🏆 Ranking")
@@ -400,7 +401,8 @@ def arena_viva():
                 num_avatar = r.get("forca_avatar_num", None)
                 nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
                 
-                c_av, c_rk = st.columns()
+                # CORREÇÃO: Proporção definida 1:4 para evitar quebras no mini avatar
+                c_av, c_rk = st.columns([1, 4])
                 with c_av:
                     if nome_avatar and os.path.exists(nome_avatar):
                         st.image(nome_avatar, width=28)
@@ -413,6 +415,7 @@ def arena_viva():
 
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
+
 
 # ==================================================
 # 5. PAINEL DO ADMIN (TREINAMENTOWLI) - BLOCO A
