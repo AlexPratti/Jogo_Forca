@@ -374,7 +374,7 @@ if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
 if st.session_state.jogador == "TREINAMENTOWLI":
     st.title("⚔️ Painel do Mestre - Arena da Forca")
     
-    # Criando as duas abas separadas e limpas conforme solicitado
+    # Criando as duas abas totalmente independentes
     aba_jogo, aba_acesso = st.tabs(["🎮 ARENA DO JOGO", "🔑 CONTROLE DE ACESSO & QR CODE"])
     
     # --------------------------------------------------
@@ -441,66 +441,75 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     reiniciar_arena_completa()
 
     # --------------------------------------------------
-    # ABA 2: ABA DE ACESSO, SENHA, QR CODE GIGANTE E JOGADORES
+    # ABA 2: ABA DE ACESSO TOTALMENTE REESTRUTURADA (QR CODE GIGANTE CENTRALIZADO)
     # --------------------------------------------------
     with aba_acesso:
-        # CORREÇÃO DA LINHA 439: Passando explicitamente o número 2 nas colunas
-        col_credenciais, col_lista_jogadores = st.columns(2)
+        # Puxa a senha gerada para os jogadores comuns
+        res_senha_mestre = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
+        senha_atual = res_senha_mestre.data.get('forca_senha_acesso', '----') if res_senha_mestre.data else '----'
         
-        with col_credenciais:
-            st.markdown("### 🔑 Credenciais da Arena")
+        # Painel Superior de Senha (Tamanho ampliado)
+        st.markdown(
+            f"""
+            <div style="background-color: #1e293b; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px dashed #3b82f6;">
+                <span style="color: #94a3b8; font-size: 16px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Senha para Entrada dos Alunos / Jogadores</span><br>
+                <span style="font-size: 60px; color: #3b82f6; font-weight: bold; font-family: monospace; letter-spacing: 4px;">{senha_atual}</span>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+        
+        # Captura e constrói dinamicamente a URL correta do Streamlit Cloud
+        try:
+            url_base = st.context.headers.get("Host", "localhost")
+            protocolo = "https://" if "localhost" not in url_base else "http://"
+            url_completa = protocolo + url_base
+        except Exception:
+            url_completa = "https://streamlit.io"
+        
+        # Codifica o link perfeitamente para evitar quebras na API
+        url_codificada = urllib.parse.quote_plus(url_completa)
+        qr_api_url = f"https://googleapis.com{url_codificada}&choe=UTF-8"
+        
+        # GERAÇÃO DO QR CODE EM TELA CHEIA (Ocupando o espaço central sem colunas para ficar imponente no projetor)
+        st.markdown(
+            f"""
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 30px; background-color: white; border-radius: 15px; margin-bottom: 40px;">
+                <img src="{qr_api_url}" style="width: 70vw; max-width: 500px; height: auto; aspect-ratio: 1/1; box-shadow: 0px 10px 30px rgba(0,0,0,0.15); border-radius: 10px;" />
+                <h2 style="color: #1e293b; font-size: 22px; margin-top: 25px; font-family: sans-serif; font-weight: bold; text-align: center; margin-bottom: 5px;">
+                    📱 ESCANEIE O CÓDIGO ACIMA PARA ENTRAR NO JOGO
+                </h2>
+                <p style="color: #64748b; font-size: 14px; font-family: monospace; margin: 0;">Link da Arena: {url_completa}</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        st.divider()
+        
+        # Painel de controle de gerenciamento de participantes (Abaixo do QR Code Gigante)
+        st.markdown("### 👥 Gerenciamento de Participantes na Sala")
+        
+        if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
+            supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
+            supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
+            st.rerun()
             
-            res_senha_mestre = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
-            senha_atual = res_senha_mestre.data.get('forca_senha_acesso', '----') if res_senha_mestre.data else '----'
-            
-            st.markdown(
-                f"""
-                <div style="background-color: #1e293b; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px dashed #3b82f6;">
-                    <span style="color: #94a3b8; font-size: 16px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Senha de Entrada dos Usuários</span><br>
-                    <span style="font-size: 50px; color: #3b82f6; font-weight: bold; font-family: monospace;">{senha_atual}</span>
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )
-            
-            st.markdown("#### 📱 QR Code de Conexão Rápida")
-            
-            try:
-                url_base = st.context.headers.get("Host", "localhost")
-                protocolo = "https://" if "localhost" not in url_base else "http://"
-                url_completa = protocol + url_base
-            except Exception:
-                url_completa = "https://streamlit.io"
-            
-            url_codificada = urllib.parse.quote_plus(url_completa)
-            qr_api_url = f"https://googleapis.com{url_codificada}&choe=UTF-8"
-            
-            st.image(qr_api_url, caption="Mire a câmera para abrir o endereço do jogo", width=480)
-            st.caption(f"Endereço: `{url_completa}`")
-
-        with col_lista_jogadores:
-            st.markdown("### 👥 Gerenciamento de Participantes")
-            
-            if st.button("🗑️ EXPULSAR TODOS OS JOGADORES", use_container_width=True, type="primary"):
-                supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
-                supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
-                st.rerun()
-            
-            st.divider()
-            
-            res_jogadores = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").order("jogador").execute()
-            
-            if not res_jogadores.data:
-                st.info("Nenhum competidor na arena neste momento.")
-            else:
-                for j in res_jogadores.data:
-                    c1, c2 = st.columns(2) # CORREÇÃO: Definindo explicitamente o número de subcolunas
-                    c1.markdown(f"👤 **{j['jogador']}**")
-                    if c2.button("❌", key=f"excluir_aba_{j['jogador']}", use_container_width=True):
-                        supabase.table("forca_disputa_ranking").delete().eq("jogador", j['jogador']).execute()
+        st.write("")
+        
+        res_jogadores = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").order("jogador").execute()
+        
+        if not res_jogadores.data:
+            st.info("Nenhum competidor conectado na arena neste momento.")
+        else:
+            for j in res_jogadores.data:
+                c1, c2 = st.columns([4, 1]) # Mantendo proporção segura para nome e botão
+                c1.markdown(f"👤 **{j['jogador']}**")
+                if c2.button("❌ EXPULSAR", key=f"excluir_aba_{j['jogador']}", use_container_width=True):
+                    supabase.table("forca_disputa_ranking").delete().eq("jogador", j['jogador']).execute()
+                    
+                    res_turno_v = supabase.table("forca_disputa_arena").select("forca_proximo_turno").eq("id", 1).single().execute()
+                    if res_turno_v.data and res_turno_v.data.get('forca_proximo_turno') == j['jogador']:
+                        supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
                         
-                        res_turno_v = supabase.table("forca_disputa_arena").select("forca_proximo_turno").eq("id", 1).single().execute()
-                        if res_turno_v.data and res_turno_v.data.get('forca_proximo_turno') == j['jogador']:
-                            supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
-                            
-                        st.rerun()
+                    st.rerun()
