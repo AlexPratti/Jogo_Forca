@@ -242,16 +242,18 @@ def reiniciar_arena_completa():
 
 
 # ==================================================
-# 4. INTERFACE DA ARENA (CORRIGIDA E BLINDADA)
+# 4. INTERFACE DA ARENA (ATUALIZADA)
 # ==================================================
 
 @st.fragment(run_every=2)
 def arena_viva():
     st.session_state.clique_bloqueado = False
 
-    # Inicializa o estado de controle manual para o pódio se ele não existir
+    # Inicializa os estados de controle global se não existirem
     if "podio_liberado" not in st.session_state:
         st.session_state.podio_liberado = False
+    if "rodada_terminada" not in st.session_state:
+        st.session_state.rodada_terminada = False
 
     try:
         res = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
@@ -268,11 +270,9 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # Mantendo a proporção original do seu primeiro script para evitar a quebra
     col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        # Mantendo a proporção original do seu primeiro script para imagem e texto
         c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -291,6 +291,12 @@ def arena_viva():
             tentadas = [l.strip() for l in jogo['letras_tentadas'].split(",") if l.strip()]
             palavra_alvo = jogo['palavra']
             vitoria = all((letra == " " or letra in tentadas) for letra in palavra_alvo)
+
+            # Define globalmente que a rodada terminou para liberar o botão do Mestre
+            if vitoria or erros_atuais >= 6:
+                st.session_state.rodada_terminada = True
+            else:
+                st.session_state.rodada_terminada = False
 
             if vitoria and erros_atuais < 6:
                 id_palavra_atual = f"vitoria_{palavra_alvo}_{contagem}"
@@ -312,8 +318,7 @@ def arena_viva():
                 except Exception:
                     rank_final = []
                 if rank_final and len(rank_final) > 0:
-                    # CORREÇÃO DA LINHA 316: Mapeia a coluna de pontos e busca do primeiro elemento [0] da lista
-                    col_pts = "points" if "points" in rank_final[0] else "pontos"
+                    col_pts = "points" if "points" in rank_final else "pontos"
                     max_pts = rank_final[0][col_pts]
                     vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
                     nomes = " & ".join(vencedores)
@@ -367,8 +372,7 @@ def arena_viva():
             st.info(mensagem_turno)
 
         # --- BOTÃO DO PÓDIO EM TEMPO REAL PARA O ADMIN ---
-        rodada_terminada = vitoria or erros_atuais >= 6
-        if rodada_terminada and st.session_state.jogador == "TREINAMENTOWLI" and not st.session_state.podio_liberado:
+        if st.session_state.rodada_terminada and st.session_state.jogador == "TREINAMENTOWLI" and not st.session_state.podio_liberado:
             st.write("")
             if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True, key="btn_realtime_podio"):
                 st.session_state.podio_liberado = True
@@ -419,7 +423,6 @@ def arena_viva():
                 num_avatar = r.get("forca_avatar_num", None)
                 nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
                 
-                # Proporção 1:4 para manter o alinhamento visual sem erros
                 c_av, c_rk = st.columns([1, 4])
                 with c_av:
                     if nome_avatar and os.path.exists(nome_avatar):
@@ -445,6 +448,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     
     if "podio_liberado" not in st.session_state:
         st.session_state.podio_liberado = False
+    if "rodada_terminada" not in st.session_state:
+        st.session_state.rodada_terminada = False
     
     try:
         res_arena_check = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
@@ -452,7 +457,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     except Exception:
         jogo_check = None
 
-    # Montagem das abas fixas estáveis
+    # Montagem estável de abas fixas
     nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
     abas = st.tabs(nomes_abas)
     
@@ -490,6 +495,14 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         st.session_state.fila_perguntas = extrair_dados_do_docx(arquivo)
                         st.success(f"{len(st.session_state.fila_perguntas)} questões carregadas!")
 
+                # CORREÇÃO DA LINHA 602: Agora lê perfeitamente usando o session_state global mapeado pela arena
+                if st.session_state.rodada_terminada and not st.session_state.podio_liberado:
+                    st.write("")
+                    if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True, key="btn_externo_podio"):
+                        st.session_state.podio_liberado = True
+                        st.toast("Pódio liberado com sucesso na aba 4!")
+                        st.rerun()
+
                 st.write("")
                 if st.button("🚀 LANÇAR PRÓXIMA PERGUNTA", use_container_width=True):
                     if st.session_state.fila_perguntas:
@@ -501,14 +514,15 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         modo_atual = res_m.data.get('forca_modo_jogo', 'LIVRE') if res_m.data else 'LIVRE'
                         senha_atual_b = res_m.data.get('forca_senha_acesso', '1234') if res_m.data else '1234'
 
-                        # Reseta a liberação do pódio ao passar de fase
+                        # Reseta as chaves ao mudar de fase
                         st.session_state.podio_liberado = False
+                        st.session_state.rodada_terminada = False
 
                         supabase.table("forca_disputa_arena").update({
                             "pergunta": proxima['pergunta'], "palavra": proxima['resposta'],
                             "letras_tentadas": "", "erros": 0, "restantes": valor_banco,
                             "ultimo_jogador": "SISTEMA", "forca_modo_jogo": modo_atual,
-                            "forca_senha_acesso": senha_atual_b, "forca_proximo_turno": ""
+                            "forca_senha_acesso": senate_atual_b if 'senate_atual_b' in locals() else senha_atual_b, "forca_proximo_turno": ""
                         }).eq("id", 1).execute()
                         st.rerun()
             
@@ -535,7 +549,9 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.write("")
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
                     st.session_state.podio_liberado = False
+                    st.session_state.rodada_terminada = False
                     reiniciar_arena_completa()
+
 
 
      # --------------------------------------------------
