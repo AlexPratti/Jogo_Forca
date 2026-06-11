@@ -423,26 +423,26 @@ if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
 if st.session_state.jogador == "TREINAMENTOWLI":
     st.title("⚔️ Painel do Mestre - Arena da Forca")
     
-    # 1. Busca os dados atuais para verificar se a arena terminou
+    # 1. Busca os dados atuais para verificar se a rodada terminou
     try:
         res_arena_check = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
         jogo_check = res_arena_check.data
     except Exception:
         jogo_check = None
 
-    # Validação rigorosa de encerramento seguindo as regras originais do seu app
+    # CORREÇÃO DO GATILHO: A rodada terminou? Se sim, já libera a aba do campeão!
     arena_encerrada = False
     if jogo_check:
         erros_check = jogo_check.get('erros', 0)
-        contagem_check = jogo_check.get('restantes', 0)
         tentadas_check = [l.strip() for l in jogo_check['letras_tentadas'].split(",") if l.strip()]
         palavra_check = jogo_check['palavra']
         vitoria_check = all((letra == " " or letra in tentadas_check) for letra in palavra_check)
         
-        if (vitoria_check or erros_check >= 6) and contagem_check == 0:
+        # Se a palavra foi descoberta OU se bateu 6 erros, o jogo acabou e a aba deve aparecer
+        if vitoria_check or erros_check >= 6:
             arena_encerrada = True
 
-    # 2. Constrói a lista de abas dinamicamente (A aba do campeão só abre se o jogo acabar)
+    # 2. Constrói a lista de abas dinamicamente
     nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE"]
     if arena_encerrada:
         nomes_abas.append("🏆 PODER DOS CAMPEÕES")
@@ -526,6 +526,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.write("")
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
                     reiniciar_arena_completa()
+
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
     # --------------------------------------------------
