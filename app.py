@@ -48,44 +48,40 @@ def extrair_dados_do_docx(arquivo_docx):
         return []
 
 def gerar_senha_aleatoria():
-    # Gera uma senha alfanumérica estável de 4 dígitos em maiúsculo (Ex: K9F2)
     caracteres = string.ascii_uppercase + string.digits
     return "".join(random.choice(caracteres) for _ in range(4))
 
 # ==================================================
-# 2. LOGIN E ESTADO (PRESERVAÇÃO E SEGURANÇA)
+# 2. LOGIN E ESTADO (FLUXO DE SENHA CORRIGIDO)
 # ==================================================
 if "jogador" not in st.session_state:
     st.session_state.jogador = None
 
-# Trava local ultra rápida contra cliques múltiplos indesejados
 if "clique_bloqueado" not in st.session_state:
     st.session_state.clique_bloqueado = False
 
 if not st.session_state.jogador:
     st.title("⚔️ Arena da Forca")
     
-    # Busca a senha contendo o prefixo forca_ no banco de dados
     try:
         res_arena = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
         senha_valida = res_arena.data.get('forca_senha_acesso', '1234') if res_arena.data else '1234'
     except Exception:
         senha_valida = '1234'
 
+    # Campo de nome usa o on_change para atualizar o estado do formulário imediatamente
     nome = st.text_input("Digite seu nome para entrar na Arena:", key="input_nome")
     nome_upper = nome.strip().upper() if nome else ""
     
-    # Exibe o campo de senha apenas para os jogadores comuns
+    # CORREÇÃO: O campo de senha agora aparece imediatamente se o nome não for o do Admin
+    senha_digitada = None
     if nome_upper and nome_upper != "TREINAMENTOWLI":
         senha_digitada = st.text_input("Digite a Senha da Arena (Fornecida pelo Mestre):", type="password", key="input_senha")
-    else:
-        senha_digitada = None
 
     if st.button("ENTRAR NA ARENA"):
         if nome:
             if nome_upper == "TREINAMENTOWLI":
                 st.session_state.jogador = nome_upper
-                # Mestre gera e atualiza a coluna forca_senha_acesso
                 nova_senha = gerar_senha_aleatoria()
                 try:
                     supabase.table("forca_disputa_arena").update({"forca_senha_acesso": nova_senha}).eq("id", 1).execute()
@@ -93,13 +89,13 @@ if not st.session_state.jogador:
                     pass
                 st.rerun()
             else:
-                # Jogador comum valida contra a coluna forca_senha_acesso
+                # Validação imediata sem exibir erros falsos antes do preenchimento
                 if senha_digitada and senha_digitada.strip().upper() == senha_valida.upper():
                     st.session_state.jogador = nome_upper
                     check_user = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", nome_upper).execute()
                     
                     if check_user.data:
-                        st.toast(f"👋 Bem-vindo de volta, {nome_upper}! Seus pontos foram mantidos.")
+                        st.toast(f"👋 Bem-vindo de volta, {nome_upper}!")
                     else:
                         supabase.table("forca_disputa_ranking").upsert(
                             {"jogador": nome_upper, "pontos": 0}, 
@@ -107,7 +103,7 @@ if not st.session_state.jogador:
                         ).execute()
                     st.rerun()
                 else:
-                    st.error("🔑 Senha incorreta ou inválida para esta rodada. Peça o acesso ao Mestre.")
+                    st.error("🔑 Senha incorreta ou vazia. Digite a senha gerada pelo Mestre.")
         else:
             st.warning("Por favor, digite um nome.")
     st.stop()
@@ -115,9 +111,9 @@ if not st.session_state.jogador:
 # 3. LÓGICA DE JOGO
 # ==================================================
 def calcular_proximo_turno(jogador_atual):
-    """Calcula quem é estritamente o próximo jogador na ordem alfabética."""
+    """Calcula estritamente quem é o próximo na ordem alfabética."""
     try:
-        # Busca todos os jogadores participantes ordenados alfabeticamente
+        # Puxa os jogadores reais ordenados por ordem alfabética
         res = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").order("jogador").execute()
         lista_jogadores = [r['jogador'] for r in res.data]
         
@@ -126,7 +122,7 @@ def calcular_proximo_turno(jogador_atual):
         if len(lista_jogadores) == 1:
             return lista_jogadores[0]
             
-        # Encontra o índice do jogador que acabou de jogar e avança de forma circular
+        # Determina o próximo jogador de maneira estrita e circular
         if jogador_atual in lista_jogadores:
             idx = lista_jogadores.index(jogador_atual)
             idx_proximo = (idx + 1) % len(lista_jogadores)
@@ -137,11 +133,10 @@ def calcular_proximo_turno(jogador_atual):
         return ""
 
 def registrar_jogada(letra, jogo_atual):
-    # Proteção para o Admin: Garante que o Admin não seja expulso ou processado como jogador
+    # Proteção: O admin não participa como jogador ativo da rodada
     if st.session_state.jogador == "TREINAMENTOWLI":
         return
 
-    # Proteção de segurança otimizada para os jogadores normais contra quedas de rede
     try:
         check = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
         if not check.data:
@@ -151,14 +146,12 @@ def registrar_jogada(letra, jogo_atual):
     except Exception:
         pass
 
-    # Ativa a trava local instantânea no milissegundo do clique
+    # Bloqueio imediato local para evitar cliques rápidos consecutivos
     st.session_state.clique_bloqueado = True
 
-    # Variáveis de controle extraídas do banco
     lista_antiga = jogo_atual['letras_tentadas']
     tentadas = [l.strip() for l in lista_antiga.split(",") if l.strip()]
     
-    # Se a letra já foi tentada por outra pessoa, cancela a operação
     if letra in tentadas:
         st.session_state.clique_bloqueado = False
         return
@@ -167,7 +160,7 @@ def registrar_jogada(letra, jogo_atual):
     novos_erros = jogo_atual['erros']
     palavra_alvo = jogo_atual['palavra']
     
-    # Lógica de Pontuação por Letra (Mantida idêntica à original)
+    # Lógica de Pontuação por Letra (Idêntica à original)
     if letra in palavra_alvo:
         res_p = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", st.session_state.jogador).single().execute()
         if res_p.data:
@@ -177,10 +170,10 @@ def registrar_jogada(letra, jogo_atual):
     else:
         novos_erros += 1
     
-    # Define quem será o único jogador autorizado na próxima rodada
+    # Avança o turno para o próximo jogador da lista alfabética
     proximo = calcular_proximo_turno(st.session_state.jogador)
     
-    # Atualiza a Arena no Supabase com os novos prefixos forca_
+    # Grava as modificações no banco de dados do Supabase
     supabase.table("forca_disputa_arena").update({
         "letras_tentadas": novas_letras,
         "erros": novos_erros,
@@ -194,7 +187,6 @@ def reiniciar_arena_completa():
         del st.session_state.baloes_disparados
     supabase.table("forca_disputa_ranking").update({"pontos": 0}).neq("jogador", "").execute()
     
-    # Recupera as configurações e senhas atuais para não perdê-las no reset
     modo_atual = "LIVRE"
     senha_atual = "1234"
     try:
@@ -218,7 +210,7 @@ def reiniciar_arena_completa():
 
 @st.fragment(run_every=2)
 def arena_viva():
-    # Garante o reset da trava local a cada nova renderização do fragmento
+    # Destrava o clique local para aceitar a próxima entrada na atualização da tela
     st.session_state.clique_bloqueado = False
 
     res = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
@@ -227,16 +219,16 @@ def arena_viva():
         st.warning("Aguardando o Administrador do Jogo iniciar...")
         return
 
-    # TOCA MÚSICA SE O JOGO ESTIVER ATIVO (Mantido idêntico)
+    # TOCA MÚSICA SE O JOGO ESTIVER ATIVO (Mantido original)
     if jogo['pergunta'] != "Aguardando nova pergunta..." and jogo['erros'] < 6:
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # CORREÇÃO: Restaurada a proporção exata [3, 1] do seu código original
+    # RESTAURADO: Proporções exatas do design original [3, 1]
     col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        # CORREÇÃO: Restaurada a proporção exata [1, 2] do seu código original
+        # RESTAURADO: Proporções exatas do design original [1, 2]
         c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -292,7 +284,7 @@ def arena_viva():
                     unsafe_allow_html=True
                 )
     
-            # Palavra oculta (Mantida original)
+            # Palavra oculta (Tamanho original)
             texto_visual = "".join([f"{l} " if (l == " " or l in tentadas or erros_atuais >= 6) else "_ " for l in palavra_alvo])
             st.markdown(
                 f"""
@@ -305,20 +297,20 @@ def arena_viva():
             
             st.caption(f"Última jogada por: **{ultimo_player}** | Formato: **{modo_jogo}**")
 
-        # --- LÓGICA DE VALIDAÇÃO DE TURNOS EXCLUSIVOS ---
+        # --- LÓGICA DE TURNOS RIGIDAMENTE CONTROLADA ---
         autorizado_a_jogar = True
         mensagem_turno = ""
         
         if modo_jogo == "TURNOS" and not vitoria and erros_atuais < 6:
             if not proximo_autorizado or proximo_autorizado == "":
-                mensagem_turno = "🔥 **Arena aberta!** Qualquer jogador pode dar o primeiro palpite."
+                mensagem_turno = "🔥 **Arena aberta!** Qualquer jogador cadastrado pode fazer o primeiro palpite."
                 autorizado_a_jogar = True
             else:
                 if st.session_state.jogador == proximo_autorizado:
-                    mensagem_turno = f"⚔️ **SUA VEZ, {st.session_state.jogador}!** Faça a sua jogada agora."
+                    mensagem_turno = f"⚔️ **SUA VEZ, {st.session_state.jogador}!** Faça a sua jogada."
                     autorizado_a_jogar = True
                 else:
-                    mensagem_turno = f"⏳ **AGUARDE!** É a vez do jogador: **{proximo_autorizado}**."
+                    mensagem_turno = f"⏳ **AGUARDE TURNO!** O único jogador autorizado agora é: **{proximo_autorizado}**."
                     autorizado_a_jogar = False
 
         if mensagem_turno:
@@ -343,10 +335,11 @@ def arena_viva():
             for i, letra in enumerate(letras_abc):
                 ja_foi = letra in tentadas
                 
-                # Trava rígida: desativa se a letra já foi, se o clique local foi acionado ou se não for o turno dele
+                # Desativa imediatamente se a letra já foi, se o clique local disparou ou se não for a sua vez
                 botao_desabilitado = ja_foi or (not autorizado_a_jogar) or st.session_state.clique_bloqueado
                 
                 if cols_tec[i % 9].button(letra, key=f"arena_tec_{letra}", disabled=botao_desabilitado, use_container_width=True):
+                    # Aciona a trava local de milissegundo antes de enviar a requisição
                     st.session_state.clique_bloqueado = True
                     registrar_jogada(letra, jogo)
                     st.rerun()
@@ -360,22 +353,27 @@ def arena_viva():
         for i, r in enumerate(jogadores_faciais[:10]):
             st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
 
-arena_viva()
-
+# Se for um jogador comum, renderiza a tela da arena direto aqui
+if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
+    arena_viva()
 # ==================================================
 # 5. PAINEL DO ADMIN (TREINAMENTOWLI)
 # ==================================================
 if st.session_state.jogador == "TREINAMENTOWLI":
-    st.divider()
+    st.title("⚔️ Painel do Mestre - Arena da Forca")
     
-    # Criando as duas abas exclusivas solicitadas para o Mestre
-    aba_jogo, aba_acesso = st.tabs(["🎮 JOGO & LANÇAMENTOS", "🔑 CONTROLE DE ACESSO & QR CODE"])
+    # Criando as duas abas separadas e limpas conforme solicitado
+    aba_jogo, aba_acesso = st.tabs(["🎮 ARENA DO JOGO", "🔑 CONTROLE DE ACESSO & QR CODE"])
     
     # --------------------------------------------------
-    # ABA 1: GERENCIAMENTO DE PERGUNTAS E ARENA
+    # ABA 1: GERENCIAMENTO DE PERGUNTAS E EXIBIÇÃO DA FORCA
     # --------------------------------------------------
     with aba_jogo:
-        with st.expander("⚙️ CONTROLE DA ARENA", expanded=True):
+        # A Arena da Forca só roda nesta aba para o mestre, com suas imagens e botões
+        arena_viva()
+        
+        st.write("")
+        with st.expander("⚙️ LANÇAMENTO DE QUESTÕES E CONFIGURAÇÕES", expanded=True):
             if "fila_perguntas" not in st.session_state:
                 st.session_state.fila_perguntas = []
 
@@ -395,11 +393,12 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         proxima = st.session_state.fila_perguntas.pop(0)
                         valor_banco = total_antes if len(st.session_state.fila_perguntas) > 1 else 0
                         
-                        # Garante que a senha e o modo atual não sejam modificados ao passar de pergunta
+                        # Recupera dados para não alterar regras no meio da partida
                         res_m = supabase.table("forca_disputa_arena").select("forca_modo_jogo", "forca_senha_acesso").eq("id", 1).single().execute()
                         modo_atual = res_m.data.get('forca_modo_jogo', 'LIVRE') if res_m.data else 'LIVRE'
                         senha_atual = res_m.data.get('forca_senha_acesso', '1234') if res_m.data else '1234'
 
+                        # Ao lançar nova pergunta, limpa o próximo turno para abrir a rodada de novo
                         supabase.table("forca_disputa_arena").update({
                             "pergunta": proxima['pergunta'], "palavra": proxima['resposta'],
                             "letras_tentadas": "", "erros": 0, "restantes": valor_banco,
@@ -409,10 +408,9 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         st.rerun()
             
             with col_adm2:
-                st.markdown("#### 🔄 Regras do Jogo")
+                st.markdown("#### 🔄 Regras da Arena")
                 st.metric("Na Fila", len(st.session_state.fila_perguntas))
                 
-                # Coleta o modo de jogo atual para renderizar o rádio de forma correta
                 res_arena_modo = supabase.table("forca_disputa_arena").select("forca_modo_jogo").eq("id", 1).single().execute()
                 modo_banco = res_arena_modo.data.get('forca_modo_jogo', 'LIVRE') if res_arena_modo.data else 'LIVRE'
                 
@@ -421,11 +419,11 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     "Alternar Formato de Jogo:",
                     ["LIVRE", "TURNOS"],
                     index=index_modo,
-                    help="LIVRE: Todos jogam soltos. TURNOS: Sistema circular obrigatório alfabético."
+                    help="LIVRE: Qualquer um joga livre. TURNOS: Ordem circular estrita obrigatória."
                 )
                 
                 if novo_modo != modo_banco:
-                    # Limpa a fila de turnos ao trocar de modo para evitar travamentos
+                    # Limpa a trava de turnos para reiniciar o controle da vez no modo novo
                     supabase.table("forca_disputa_arena").update({"forca_modo_jogo": novo_modo, "forca_proximo_turno": ""}).eq("id", 1).execute()
                     st.toast(f"Modo alterado para: {novo_modo}")
                     st.rerun()
@@ -435,71 +433,69 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     reiniciar_arena_completa()
 
     # --------------------------------------------------
-    # ABA 2: ABA DE ACESSO, SENHA, QR CODE E JOGADORES
+    # ABA 2: ABA DE ACESSO, SENHA, QR CODE GIGANTE E JOGADORES (SEM IMAGENS OU TECLADO)
     # --------------------------------------------------
     with aba_acesso:
-        col_credenciais, col_lista_jogadores = st.columns([1, 1])
+        col_credenciais, col_lista_jogadores = st.columns()
         
         with col_credenciais:
             st.markdown("### 🔑 Credenciais da Arena")
             
-            # Captura a senha atualizada gerada no login do administrador
             res_senha_mestre = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
             senha_atual = res_senha_mestre.data.get('forca_senha_acesso', '----') if res_senha_mestre.data else '----'
             
-            # Bloco visual destacado com a senha da rodada (Tamanho 30px)
             st.markdown(
                 f"""
-                <div style="background-color: #1e293b; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px; border: 2px dashed #3b82f6;">
-                    <span style="color: #94a3b8; font-size: 14px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Senha de Entrada</span><br>
-                    <span style="font-size: 40px; color: #3b82f6; font-weight: bold; font-family: monospace;">{senha_atual}</span>
+                <div style="background-color: #1e293b; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px dashed #3b82f6;">
+                    <span style="color: #94a3b8; font-size: 16px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Senha de Entrada dos Usuários</span><br>
+                    <span style="font-size: 50px; color: #3b82f6; font-weight: bold; font-family: monospace;">{senha_atual}</span>
                 </div>
                 """, 
                 unsafe_allow_html=True
             )
             
-            # --- GERADOR DE QR CODE DINÂMICO ---
-            st.markdown("#### 📱 Acesso Rápido por QR Code")
+            st.markdown("#### 📱 QR Code de Conexão Rápida")
             
-            # Coleta automaticamente a URL da aplicação rodando no Streamlit Cloud
+            # Descobre dinamicamente o link da sua aplicação hospedada
             try:
                 url_base = st.context.headers.get("Host", "localhost")
                 protocolo = "https://" if "localhost" not in url_base else "http://"
                 url_completa = protocolo + url_base
             except Exception:
-                url_completa = "https://streamlit.io" # Fallback de segurança
+                url_completa = "https://streamlit.io"
             
-            # Codifica os parâmetros para evitar quebras em URLs complexas
             url_codificada = urllib.parse.quote_plus(url_completa)
+            
+            # MODIFICAÇÃO: QR Code ampliado para 500x500 pixels para exibição em telões e projetores
             qr_api_url = f"https://googleapis.com{url_codificada}&choe=UTF-8"
             
-            st.image(qr_api_url, caption="Aponte a câmera do celular para abrir o jogo", width=250)
-            st.caption(f"Link mapeado: `{url_completa}`")
+            # O parâmetro use_container_width=True força o Streamlit a preencher e deixar o QR Code gigante na tela
+            st.image(qr_api_url, caption="Mire a câmera para abrir o endereço do jogo", width=480, use_container_width=False)
+            st.caption(f"Endereço: `{url_completa}`")
 
         with col_lista_jogadores:
             st.markdown("### 👥 Gerenciamento de Participantes")
             
             if st.button("🗑️ EXPULSAR TODOS OS JOGADORES", use_container_width=True, type="primary"):
                 supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
-                # Zera o controle de turnos do banco de dados também
                 supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
                 st.rerun()
             
             st.divider()
             
-            # Listagem de jogadores com a mesma condição de exclusão individual da interface original
+            # Lista idêntica à do código original, exibindo quem entrou com botão de exclusão
             res_jogadores = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").order("jogador").execute()
             
             if not res_jogadores.data:
-                st.info("Nenhum competidor conectado na arena neste momento.")
+                st.info("Nenhum competidor na arena neste momento.")
             else:
                 for j in res_jogadores.data:
-                    c1, c2 = st.columns([4, 1])
+                    c1, c2 = st.columns()
                     c1.markdown(f"👤 **{j['jogador']}**")
                     if c2.button("❌", key=f"excluir_aba_{j['jogador']}", use_container_width=True):
                         supabase.table("forca_disputa_ranking").delete().eq("jogador", j['jogador']).execute()
                         
-                        # Recalcula e limpa o turno caso o jogador excluído fosse o dono da vez
+                        # Se o jogador expulso era o dono da vez, libera o turno de forma limpa
                         res_turno_v = supabase.table("forca_disputa_arena").select("forca_proximo_turno").eq("id", 1).single().execute()
                         if res_turno_v.data and res_turno_v.data.get('forca_proximo_turno') == j['jogador']:
                             supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
