@@ -530,10 +530,11 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     reiniciar_arena_completa()
 
 
+     # --------------------------------------------------
+    # ABA 1 (Índice 1 ou 2): GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
     # --------------------------------------------------
-    # ABA 1: GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
-    # --------------------------------------------------
-    with abas[1]:
+    indice_acesso = 2 if arena_encerrada else 1
+    with abas[indice_acesso]:
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
@@ -561,9 +562,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     st.rerun()
 
     # --------------------------------------------------
-    # ABA 2: ABA EXCLUSIVA DO QR CODE GIGANTE
+    # ABA 2 (Índice 2 ou 3): ABA EXCLUSIVA DO QR CODE GIGANTE
     # --------------------------------------------------
-    with abas[2]:
+    indice_qr = 3 if arena_encerrada else 2
+    with abas[indice_qr]:
         st.markdown(
             f"""
             <div style="background-color: #1e293b; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px dashed #3b82f6;">
@@ -574,7 +576,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             unsafe_allow_html=True
         )
 
-        col_esq, col_centro, col_dir = st.columns([1, 2, 1])
+        col_esq, col_centro, col_dir = st.columns()
         with col_centro:
             nome_arquivo_qr = "QRCode Forca.png"
             if os.path.exists(nome_arquivo_qr):
@@ -586,10 +588,11 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         st.markdown(f"<p style='text-align: center; color: #64748b; font-family: monospace;'>Endereço da Arena: {url_completa}</p>", unsafe_allow_html=True)
 
     # --------------------------------------------------
-    # ABA 3: ABA EXCLUSIVA DO AVATAR VENCEDOR (PÓDIO GIGANTE)
+    # ABA 3 (Índice 0): ABA EXCLUSIVA DO AVATAR VENCEDOR (PÓDIO GIGANTE)
     # --------------------------------------------------
     if arena_encerrada:
-        with abas[3]:
+        # CORREÇÃO: Força o Pódio a se renderizar estritamente no índice 0 (Primeira Aba)
+        with abas[0]:
             st.markdown("<h1 style='text-align: center; color: #ffb703;'>🏆 PÓDIO DA ARENA DA FORCA 🏆</h1>", unsafe_allow_html=True)
             st.write("")
             
@@ -599,13 +602,12 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 res_vencedores = []
                 
             if res_vencedores:
-                col_p_v = "points" if "points" in res_vencedores[0] else "pontos"
+                col_p_v = "points" if "points" in res_vencedores else "pontos"
                 max_pts_v = res_vencedores[0][col_p_v]
                 
-                # Coleta todos os primeiros colocados (trata cenários de empates)
                 lista_campeoes = [r for r in res_vencedores if r[col_p_v] == max_pts_v]
                 
-                col_v_esq, col_v_centro, col_v_dir = st.columns([1, 2, 1])
+                col_v_esq, col_v_centro, col_v_dir = st.columns()
                 
                 with col_v_centro:
                     for campeao in lista_campeoes:
