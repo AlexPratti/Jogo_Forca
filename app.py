@@ -9,7 +9,6 @@ from io import BytesIO
 from docx import Document
 from supabase import create_client
 
-
 # ==================================================
 # 1. CONEXÃO E CONFIGURAÇÃO
 # ==================================================
@@ -53,7 +52,7 @@ def gerar_senha_aleatoria():
     return "".join(random.choice(caracteres) for _ in range(4))
 
 # ==================================================
-# 2. LOGIN E ESTADO (COM TRAVA DE SEGURANÇA NO ADMIN)
+# 2. LOGIN E ESTADO (ATUALIZADO COM VÍNCULO DE AVATAR)
 # ==================================================
 if "jogador" not in st.session_state:
     st.session_state.jogador = None
@@ -64,16 +63,13 @@ if "clique_bloqueado" not in st.session_state:
 if not st.session_state.jogador:
     st.title("⚔️ Arena da Forca")
     
-    # Seleção de Perfil para Entrada
     perfil = st.radio("Escolha seu perfil para entrar:", ["Jogador", "Mestre do Jogo (Admin)"])
     
     if perfil == "Mestre do Jogo (Admin)":
         st.info("Acesso restrito. Insira as credenciais do Mestre para assumir o controle.")
-        # Solicita a credencial secreta do administrador de forma mascarada
         senha_admin = st.text_input("Digite a chave de acesso do Mestre:", type="password", key="input_senha_admin")
         
         if st.button("ENTRAR COMO MESTRE"):
-            # Validação exata em maiúsculo para evitar problemas com Caps Lock
             if senha_admin and senha_admin.strip().upper() == "TREINAMENTOWLI":
                 st.session_state.jogador = "TREINAMENTOWLI"
                 nova_senha = gerar_senha_aleatoria()
@@ -93,7 +89,6 @@ if not st.session_state.jogador:
             if nome and senha_digitada:
                 nome_upper = nome.strip().upper()
                 
-                # Impede que um jogador tente fraudar o ranking usando o nome do admin
                 if nome_upper == "TREINAMENTOWLI":
                     st.error("Para entrar como administrador, selecione a opção 'Mestre do Jogo (Admin)' acima.")
                 else:
@@ -103,13 +98,23 @@ if not st.session_state.jogador:
                     except Exception:
                         senha_valida = '1234'
 
-                    if senha_digitada.strip().upper() == senha_valida.upper():
+                    if senha_digitada.strip().upper() == sender_valida.upper() if 'sender_valida' in locals() else senha_digitada.strip().upper() == senha_valida.upper():
                         st.session_state.jogador = nome_upper
-                        check_user = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", nome_upper).execute()
+                        check_user = supabase.table("forca_disputa_ranking").select("*").eq("jogador", nome_upper).execute()
                         
-                        if not check_user.data:
+                        if check_user.data:
+                            st.toast(f"👋 Bem-vindo de volta, {nome_upper}!")
+                        else:
+                            # MODIFICAÇÃO: Descobre quantos usuários já entraram para definir o próximo avatar na fila
+                            total_users = supabase.table("forca_disputa_ranking").select("jogador", count="exact").neq("jogador", "TREINAMENTOWLI").execute()
+                            qtd_atual = total_users.count if total_users.count is not None else 0
+                            
+                            # O primeiro vira 1, o segundo 2, etc.
+                            num_avatar = qtd_atual + 1 
+                            
+                            # Registra no banco guardando os pontos e o número do avatar dele
                             supabase.table("forca_disputa_ranking").upsert(
-                                {"jogador": nome_upper, "pontos": 0}, 
+                                {"jogador": nome_upper, "pontos": 0, "forca_avatar_num": num_avatar}, 
                                 on_conflict="jogador"
                             ).execute()
                         st.rerun()
@@ -118,7 +123,6 @@ if not st.session_state.jogador:
             else:
                 st.warning("Por favor, preencha o seu nome e a senha da arena.")
     st.stop()
-
 
 # ==================================================
 # 3. LÓGICA DE JOGO
@@ -238,7 +242,7 @@ def reiniciar_arena_completa():
 
 
 # ==================================================
-# 4. INTERFACE DA ARENA
+# 4. INTERFACE DA ARENA (ATUALIZADA COM EXIBIÇÃO DE AVATARES)
 # ==================================================
 
 @st.fragment(run_every=2)
@@ -260,11 +264,10 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # Separação exata de colunas conforme o seu design original do projeto
-    col_jogo, col_rank = st.columns([3, 1])
+    col_jogo, col_rank = st.columns()
 
     with col_jogo:
-        c_img, c_txt = st.columns([1, 2])
+        c_img, c_txt = st.columns()
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -303,8 +306,8 @@ def arena_viva():
                 except Exception:
                     rank_final = []
                 if rank_final:
-                    col_pts = "points" if "points" in rank_final[0] else "pontos"
-                    max_pts = rank_final[0][col_pts]
+                    col_pts = "points" if "points" in rank_final else "pontos"
+                    max_pts = rank_final[col_pts]
                     vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
                     nomes = " & ".join(vencedores)
                     st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
@@ -343,7 +346,7 @@ def arena_viva():
         
         if modo_jogo == "TURNOS" and not vitoria and erros_atuais < 6:
             if not proximo_autorizado or str(proximo_autorizado).strip() == "":
-                mensagem_turno = "🔥 **Arena aberta!** Qualquer jogador cadastrado pode dar o primeiro palpite."
+                mensagem_turno = "🔥 **Arena aberta!** Qualquer jogador cadastrado pode fazer o primeiro palpite."
                 autorizado_a_jogar = True
             else:
                 if str(st.session_state.jogador).strip() == str(proximo_autorizado).strip():
@@ -376,7 +379,6 @@ def arena_viva():
                 ja_foi = letra in tentadas
                 is_admin = st.session_state.jogador == "TREINAMENTOWLI"
                 
-                # Desativa o botão se a letra já foi, se não for o turno ou se for a visão do admin
                 botao_desabilitado = ja_foi or (not autorizado_a_jogar) or st.session_state.clique_bloqueado or is_admin
                 
                 if cols_tec[i % 9].button(letra, key=f"arena_tec_{letra}", disabled=botao_desabilitado, use_container_width=True):
@@ -391,15 +393,27 @@ def arena_viva():
         try:
             res_rank = supabase.table("forca_disputa_ranking").select("*").order("points" if "points" in jogo else "pontos", desc=True).execute()
             jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "TREINAMENTOWLI"]
+            
             for i, r in enumerate(jogadores_faciais[:10]):
                 col_p = "points" if "points" in r else "pontos"
-                st.write(f"{i+1}º {r['jogador']}: {r[col_p]} pts")
+                num_avatar = r.get("forca_avatar_num", None)
+                nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
+                
+                # Cria uma mini linha organizada: Coluna 1 para imagem do avatar, Coluna 2 para o texto do Placar
+                c_av, c_rk = st.columns()
+                with c_av:
+                    if nome_avatar and os.path.exists(nome_avatar):
+                        st.image(nome_avatar, width=32)
+                    else:
+                        st.markdown("👤") # Ícone genérico caso a imagem falte ou não exista
+                with c_rk:
+                    st.write(f"{i+1}º {r['jogador']}: {r[col_p]} pts")
         except Exception:
             st.write("Atualizando...")
 
-# Renderiza a arena viva de forma automática para as telas de alunos/jogadores legítimos
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
+
 
 
 # ==================================================
