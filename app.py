@@ -256,11 +256,10 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # CORREÇÃO: Restaurada a proporção exata [3, 1] do seu código original para evitar o erro do log
+    # Proporções exatas do design original mapeadas para evitar erros de compilação
     col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        # CORREÇÃO: Restaurada a proporção exata [1, 2] do seu código original para a imagem e o texto
         c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -346,7 +345,8 @@ def arena_viva():
                     except Exception:
                         tempo_restante = 10
                 
-                if tempo_restante <= 0:
+                # Se o tempo acabar e a tela não for a do Admin, roda a punição por tempo
+                if tempo_restante <= 0 and st.session_state.jogador != "TREINAMENTOWLI":
                     forçar_passagem_turno_por_tempo(proximo_autorizado)
                     st.rerun()
 
@@ -364,6 +364,7 @@ def arena_viva():
 
         # --- CONTROLE DO TECLADO ---
         if not vitoria and erros_atuais < 6:
+            # CORREÇÃO CRUCIAL: O Admin ignora esse bloco inteiro de validação para evitar o st.stop() fantasma
             if st.session_state.jogador != "TREINAMENTOWLI":
                 try:
                     valido = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
@@ -381,7 +382,9 @@ def arena_viva():
             for i, letra in enumerate(letras_abc):
                 ja_foi = letra in tentadas
                 
-                botao_desabilitado = ja_foi or (not autorizado_a_jogar) or st.session_state.clique_bloqueado
+                # O Admin não joga na arena, os botões ficam desativados para ele por padrão
+                is_admin = st.session_state.jogador == "TREINAMENTOWLI"
+                botao_desabilitado = ja_foi or (not autorizado_a_jogar) or st.session_state.clique_bloqueado or is_admin
                 
                 if cols_tec[i % 9].button(letra, key=f"arena_tec_{letra}", disabled=botao_desabilitado, use_container_width=True):
                     st.session_state.clique_bloqueado = True
@@ -397,6 +400,7 @@ def arena_viva():
         for i, r in enumerate(jogadores_faciais[:10]):
             st.write(f"{i+1}º {r['jogador']}: {r['pontos']} pts")
 
+# Executa automaticamente para os jogadores de forma direta
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
 
