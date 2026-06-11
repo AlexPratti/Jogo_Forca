@@ -419,22 +419,45 @@ if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
 
 
 # ==================================================
-# 5. PAINEL DO ADMIN (TREINAMENTOWLI)
+# 5. PAINEL DO ADMIN (TREINAMENTOWLI) - BLOCO A
 # ==================================================
 if st.session_state.jogador == "TREINAMENTOWLI":
     st.title("⚔️ Painel do Mestre - Arena da Forca")
     
-    # Criando as três abas totalmente independentes e organizadas
-    aba_jogo, aba_acesso, aba_qrcode = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE"])
+    # 1. Busca os dados atuais para verificar se a arena terminou
+    try:
+        res_arena_check = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
+        jogo_check = res_arena_check.data
+    except Exception:
+        jogo_check = None
+
+    # Validação rigorosa de encerramento seguindo as regras originais do seu app
+    arena_encerrada = False
+    if jogo_check:
+        erros_check = jogo_check.get('erros', 0)
+        contagem_check = jogo_check.get('restantes', 0)
+        tentadas_check = [l.strip() for l in jogo_check['letras_tentadas'].split(",") if l.strip()]
+        palavra_check = jogo_check['palavra']
+        vitoria_check = all((letra == " " or letra in tentadas_check) for letra in palavra_check)
+        
+        if (vitoria_check or erros_check >= 6) and contagem_check == 0:
+            arena_encerrada = True
+
+    # 2. Constrói a lista de abas dinamicamente (A aba do campeão só abre se o jogo acabar)
+    nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE"]
+    if arena_encerrada:
+        nomes_abas.append("🏆 PODER DOS CAMPEÕES")
+        
+    # Declara o container de abas mapeado por índices do Streamlit
+    abas = st.tabs(nomes_abas)
     
-    # Puxa a senha gerada para os jogadores comuns
+    # Coleta dados de credenciais estáveis para as demais abas
     try:
         res_senha_mestre = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
         senha_atual = res_senha_mestre.data.get('forca_senha_acesso', '----') if res_senha_mestre.data else '----'
     except Exception:
         senha_atual = '----'
         
-    # Captura a URL para o rodapé informativo
     try:
         url_base = st.context.headers.get("Host", "localhost")
         protocolo = "https://" if "localhost" not in url_base else "http://"
@@ -443,9 +466,9 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         url_completa = "https://streamlit.io"
 
     # --------------------------------------------------
-    # ABA 1: GERENCIAMENTO DE PERGUNTAS E EXIBIÇÃO DA FORCA
+    # ABA 0: GERENCIAMENTO DE PERGUNTAS E EXIBIÇÃO DA FORCA
     # --------------------------------------------------
-    with aba_jogo:
+    with abas[0]:
         arena_viva()
         
         st.write("")
@@ -504,11 +527,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.write("")
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
                     reiniciar_arena_completa()
-
     # --------------------------------------------------
-    # ABA 2: GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
+    # ABA 1: GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES
     # --------------------------------------------------
-    with aba_acesso:
+    with abas[1]:
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
@@ -536,10 +558,9 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     st.rerun()
 
     # --------------------------------------------------
-    # ABA 3: ABA EXCLUSIVA DO QR CODE GIGANTE (NATIVA E SEGUNDO AS REGRAS)
+    # ABA 2: ABA EXCLUSIVA DO QR CODE GIGANTE
     # --------------------------------------------------
-    with aba_qrcode:
-        # Exibição da senha em destaque no topo da projeção
+    with abas[2]:
         st.markdown(
             f"""
             <div style="background-color: #1e293b; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px dashed #3b82f6;">
@@ -550,22 +571,55 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             unsafe_allow_html=True
         )
 
-        # Criando colunas puras do Streamlit para centralizar e deixar a imagem gigante
-        col_esq, col_centro, col_dir = st.columns([1, 4, 1])
-        
+        col_esq, col_centro, col_dir = st.columns([1, 2, 1])
         with col_centro:
             nome_arquivo_qr = "QRCode Forca.png"
-            
-            # Executa a verificação física do arquivo na pasta raiz do repositório
             if os.path.exists(nome_arquivo_qr):
-                # Exibe de forma nativa e limpa a imagem estática ocupando o espaço máximo configurado
-                st.image(
-                    nome_arquivo_qr, 
-                    caption="Aponte a câmera do celular para abrir a Arena", 
-                    width=600
-                )
+                st.image(nome_arquivo_qr, use_container_width=True)
             else:
-                st.error(f"⚠️ O arquivo '{nome_arquivo_qr}' não foi encontrado no seu GitHub. Certifique-se de que o upload foi feito na pasta principal com esse nome exato.")
+                st.error(f"⚠️ O arquivo '{nome_arquivo_qr}' não foi encontrado no seu GitHub.")
 
         st.write("")
         st.markdown(f"<p style='text-align: center; color: #64748b; font-family: monospace;'>Endereço da Arena: {url_completa}</p>", unsafe_allow_html=True)
+
+    # --------------------------------------------------
+    # ABA 3: ABA EXCLUSIVA DO AVATAR VENCEDOR (PÓDIO GIGANTE)
+    # --------------------------------------------------
+    if arena_encerrada:
+        with abas[3]:
+            st.markdown("<h1 style='text-align: center; color: #ffb703;'>🏆 PÓDIO DA ARENA DA FORCA 🏆</h1>", unsafe_allow_html=True)
+            st.write("")
+            
+            try:
+                res_vencedores = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("points" if "points" in (jogo_check if jogo_check else {}) else "pontos", desc=True).execute().data
+            except Exception:
+                res_vencedores = []
+                
+            if res_vencedores:
+                col_p_v = "points" if "points" in res_vencedores[0] else "pontos"
+                max_pts_v = res_vencedores[0][col_p_v]
+                
+                # Coleta todos os primeiros colocados (trata cenários de empates)
+                lista_campeoes = [r for r in res_vencedores if r[col_p_v] == max_pts_v]
+                
+                col_v_esq, col_v_centro, col_v_dir = st.columns([1, 2, 1])
+                
+                with col_v_centro:
+                    for campeao in lista_campeoes:
+                        num_av_v = campeao.get("forca_avatar_num", None)
+                        arquivo_av_v = f"AV{num_av_v}.png" if num_av_v else None
+                        
+                        if arquivo_av_v and os.path.exists(arquivo_av_v):
+                            st.image(arquivo_av_v, width=380)
+                        else:
+                            st.markdown("<h1 style='text-align: center; font-size: 100px;'>👤</h1>", unsafe_allow_html=True)
+                        
+                        st.markdown(
+                            f"""
+                            <div style="text-align: center; margin-top: 15px; margin-bottom: 30px;">
+                                <h2 style="font-size: 36px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2>
+                                <h3 style="font-size: 24px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_pts_v} PTS</h3>
+                            </div>
+                            """, 
+                            unsafe_allow_html=True
+                        )
