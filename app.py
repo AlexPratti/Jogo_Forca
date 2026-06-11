@@ -73,8 +73,8 @@ if not st.session_state.jogador:
         
         if st.button("ENTRAR COMO MESTRE"):
             # Validação exata em maiúsculo para evitar problemas com Caps Lock
-            if senha_admin and senha_admin.strip().upper() == "TreinamentoWLI":
-                st.session_state.jogador = "TreinamentoWLI"
+            if senha_admin and senha_admin.strip().upper() == "TREINAMENTOWLI":
+                st.session_state.jogador = "TREINAMENTOWLI"
                 nova_senha = gerar_senha_aleatoria()
                 try:
                     supabase.table("forca_disputa_arena").update({"forca_senha_acesso": nova_senha}).eq("id", 1).execute()
@@ -93,7 +93,7 @@ if not st.session_state.jogador:
                 nome_upper = nome.strip().upper()
                 
                 # Impede que um jogador tente fraudar o ranking usando o nome do admin
-                if nome_upper == "TreinamentoWLI":
+                if nome_upper == "TREINAMENTOWLI":
                     st.error("Para entrar como administrador, selecione a opção 'Mestre do Jogo (Admin)' acima.")
                 else:
                     try:
