@@ -234,7 +234,7 @@ def reiniciar_arena_completa():
     st.session_state.clique_bloqueado = False
     st.rerun()
 # ==================================================
-# 4. INTERFACE DA ARENA (ATUALIZADA COM LARGURA TOTAL)
+# 4. INTERFACE DA ARENA (UNIFICADA E ALINHADA)
 # ==================================================
 @st.fragment(run_every=1)
 def arena_viva():
@@ -263,8 +263,7 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # Distribuição interna de espaço entre a imagem da forca (1) e o texto (3)
-    c_img, c_txt = st.columns([1, 3])
+    c_img, c_txt = st.columns()
     erros_atuais = jogo.get('erros', 0)
     ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
     modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -305,7 +304,7 @@ def arena_viva():
             except Exception: rank_final = []
             if rank_final and len(rank_final) > 0:
                 col_pts = "points" if "points" in rank_final else "pontos"
-                max_pts = rank_final[0][col_pts]
+                max_pts = rank_final[col_pts]
                 vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
                 nomes = " & ".join(vencedores)
                 st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
@@ -341,27 +340,26 @@ def arena_viva():
                         col_p_punir = "points" if "points" in res_punido.data else "pontos"
                         pts_punido = res_punido.data[col_p_punir]
                         supabase.table("forca_disputa_ranking").update({col_p_punir: max(0, pts_punido - 5)}).eq("jogador", proximo_autorizado).execute()
-                    except Exception: pass
-                    
-                    novo_proximo = calcular_proximo_turno(proximo_autorizado)
-                    supabase.table("forca_disputa_arena").update({
-                        "forca_proximo_turno": novo_proximo, "forca_timestamp_inicio": time.time(),
-                        "ultimo_jogador": f"SISTEMA (TEMPO DE {proximo_autorizado} ESGOTOU)"
-                    }).eq("id", 1).execute()
-                    st.rerun()
+                except Exception: pass
+                
+                novo_proximo = calcular_proximo_turno(proximo_autorizado)
+                supabase.table("forca_disputa_arena").update({
+                    "forca_proximo_turno": novo_proximo, "forca_timestamp_inicio": time.time(),
+                    "ultimo_jogador": f"SISTEMA (TEMPO DE {proximo_autorizado} ESGOTOU)"
+                }).eq("id", 1).execute()
+                st.rerun()
 
-                st.markdown(f"⏱️ **Tempo restante para a jogada:** `{segundos_restantes}s`")
-                st.progress(max(0.0, min(segundos_restantes / tempo_maximo, 1.0)))
+            st.markdown(f"⏱️ **Tempo restante para a jogada:** `{segundos_restantes}s`")
+            st.progress(max(0.0, min(segundos_restantes / tempo_maximo, 1.0)))
 
-                if str(st.session_state.jogador).strip() == str(proximo_autorizado).strip():
-                    mensagem_turno = f"⚔️ **SUA VEZ, {st.session_state.jogador}!** Seu teclado está ativo para jogar."
-                    autorizado_a_jogar = True
-                else:
-                    mensagem_turno = f"⏳ **AGUARDE A FILA!** É a vez do jogador: **{proximo_autorizado}**."
-                    autorizado_a_jogar = False
+            if str(st.session_state.jogador).strip() == str(proximo_autorizado).strip():
+                mensagem_turno = f"⚔️ **SUA VEZ, {st.session_state.jogador}!** Seu teclado está ativo para jogar."
+                autorizado_a_jogar = True
+            else:
+                mensagem_turno = f"⏳ **AGUARDE A FILA!** É a vez do jogador: **{proximo_autorizado}**."
+                autorizado_a_jogar = False
 
     if mensagem_turno: st.info(mensagem_turno)
-
 
     # --- BOTÃO DO PÓDIO EM TEMPO REAL PARA O ADMIN ---
     if st.session_state.rodada_terminada and st.session_state.jogador == "TREINAMENTOWLI" and not st.session_state.podio_liberado:
@@ -406,7 +404,7 @@ def arena_viva():
     elif not (contagem == 0) and vitoria:
          st.info("✅ Palavra correta! Aguardando o Administrador...")
 
-    # LÓGICA DE EXIBIÇÃO DO RANKING PARA OS JOGADORES
+    # LÓGICA DE EXIBIÇÃO DO RANKING PARA OS JOGADORES (ALINHAMENTO SEGURO)
     if st.session_state.jogador != "TREINAMENTOWLI":
         st.divider()
         st.markdown("### 🏆 Placar dos Competidores")
@@ -431,9 +429,10 @@ def arena_viva():
         except Exception:
             pass
 
-# EXECUÇÃO DA INTERFACE PARA JOGADORES COMUNS
+# ACIONAMENTO GLOBAL DO PLAYER COMUM
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
+
 
 
 # ==================================================
