@@ -450,7 +450,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
     abas = st.tabs(nomes_abas)
     
-    # Executa a automação de clique caso o pódio seja liberado
     if st.session_state.get('rodada_terminada', False) and st.session_state.get('podio_liberado', False):
         st.components.v1.html("<script>window.parent.document.querySelectorAll('button[role=\"tab\"]').click();</script>", height=0)
     
@@ -490,10 +489,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             }).eq("id", 1).execute()
             st.rerun()
 
-    # --------------------------------------------------
-    # ABA 0: TABULEIRO DA FORCA E CONTROLES DO MESTRE
-    # --------------------------------------------------
-    with abas:
+    # CORREÇÃO: Aplicado o índice correto [0] para renderizar o tabuleiro
+    with abas[0]:
         arena_viva()
         st.write("")
         with st.expander("⚙️ LANÇAMENTO DE QUESTÕES E CONFIGURAÇÕES", expanded=True):
@@ -507,15 +504,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         st.session_state.fila_perguntas = extrair_dados_do_docx(arquivo)
                         st.success(f"{len(st.session_state.fila_perguntas)} questões carregadas!")
                 st.write("")
-                
-                # Botão Original Mantido Inalterado
                 if st.button("🚀 LANÇAR PRÓXIMA PERGUNTA", use_container_width=True):
                     avancar_proxima_pergunta()
-                    
-                # NOVO BOTÃO: Atalho "Próxima" com a mesma função, posicionado de forma estratégica no painel
-                if st.button("➡️ Próxima", use_container_width=True, key="btn_atalho_proxima_mestre"):
-                    avancar_proxima_pergunta()
-                    
             with col_adm2:
                 st.markdown("#### 🔄 Regras da Arena")
                 st.metric("Na Fila", len(st.session_state.fila_perguntas))
@@ -538,9 +528,11 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     st.session_state.rodada_terminada = False
                     reiniciar_arena_completa()
 
+
     # --------------------------------------------------
     # ABA 1, 2 e 3: CONTROLE DE SALA, CONEXÃO E RESULTADOS
     # --------------------------------------------------
+ # CORREÇÃO: Aplicado o índice correto [1] para o Controle de Participantes
     with abas[1]: 
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
@@ -562,6 +554,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
                     st.rerun()
 
+    # CORREÇÃO: Aplicado o índice correto [2] para o QR Code
     with abas[2]: 
         st.markdown(f"""<div style="background-color: #1e293b; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px dashed #3b82f6;"><span style="color: #94a3b8; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Chave de Entrada</span><br><span style="font-size: 70px; color: #3b82f6; font-weight: bold; font-family: monospace; letter-spacing: 6px;">{senha_atual}</span></div>""", unsafe_allow_html=True)
         col_esq, col_centro, col_dir = st.columns(3)
@@ -572,6 +565,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         st.write("")
         st.markdown(f"<p style='text-align: center; color: #64748b; font-family: monospace;'>Endereço da Arena: {url_completa}</p>", unsafe_allow_html=True)
 
+    # CORREÇÃO: Aplicado o índice correto [3] para o Poder dos Campeões + Botão Próxima Alinhado à Direita
     with abas[3]: 
         if st.session_state.get('rodada_terminada', False) and not st.session_state.podio_liberado:
             st.warning("Aguardando o Mestre liberar a exibição do Campeão no telão...")
@@ -593,4 +587,12 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         if arquivo_av_v and os.path.exists(arquivo_av_v): st.image(arquivo_av_v, width=380)
                         else: st.markdown("<h1 style='text-align: center; font-size: 100px;'>👤</h1>", unsafe_allow_html=True)
                         st.markdown(f"""<div style="text-align: center; margin-top: 15px; margin-bottom: 30px;"><h2 style="font-size: 36px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2><h3 style="font-size: 24px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_pts_v} PTS</h3></div>""", unsafe_allow_html=True)
-        else: st.info("O Pódio dos Campeões será montado aqui assim que a Arena da Forca for encerrada.")
+        else: 
+            st.info("O Pódio dos Campeões será montado aqui assim que a Arena da Forca for encerrada.")
+
+        # ALINHAMENTO DO BOTÃO À DIREITA: Divide o rodapé da aba em 4 colunas e renderiza o botão na última coluna
+        st.write("")
+        c_p1, c_p2, c_p3, c_p4 = st.columns(4)
+        with c_p4:
+            if st.button("➡️ Próxima", use_container_width=True, key="btn_aba_campeoes_proxima"):
+                avancar_proxima_pergunta()
