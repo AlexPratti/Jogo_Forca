@@ -238,7 +238,6 @@ def reiniciar_arena_completa():
 # ==================================================
 @st.fragment(run_every=1)
 def arena_viva():
-    # BLINDAGEM CRÍTICA: Se a sessão expirou ou o jogador sumiu do estado, para o fragmento
     if "jogador" not in st.session_state or st.session_state.jogador is None:
         return
 
@@ -264,10 +263,10 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    col_jogo, col_rank = st.columns([3, 1])
+    col_jogo, col_rank = st.columns()
 
     with col_jogo:
-        c_img, c_txt = st.columns([1, 2])
+        c_img, c_txt = st.columns()
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -307,8 +306,9 @@ def arena_viva():
                 try: rank_final = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("points" if "points" in jogo else "pontos", desc=True).execute().data
                 except Exception: rank_final = []
                 if rank_final and len(rank_final) > 0:
-                    col_pts = "points" if "points" in rank_final else "pontos"
-                    max_pts = rank_final[col_pts]
+                    col_pts = "points" if "points" in rank_final[0] else "pontos"
+                    # CORREÇÃO: Acessa o índice 0 da lista para extrair a pontuação máxima
+                    max_pts = rank_final[0][col_pts]
                     vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
                     nomes = " & ".join(vencedores)
                     st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
@@ -364,6 +364,7 @@ def arena_viva():
                     autorizado_a_jogar = False
 
         if mensagem_turno: st.info(mensagem_turno)
+
 
 
             
