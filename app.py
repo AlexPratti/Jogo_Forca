@@ -486,7 +486,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             }).eq("id", 1).execute()
             st.rerun()
 
-    # Mantém as abas superiores em 100% da largura da página
     nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
     abas = st.tabs(nomes_abas)
 
@@ -496,12 +495,11 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
-    with abas:
-        # CORREÇÃO DEFINITIVA: Força a coluna do tabuleiro a ter 80% (4) do espaço e a lateral ter 20% (1)
+    with abas[0]:
+        # CORREÇÃO: Passado explicitamente a proporção [4, 1] (80% / 20%) para sanar o TypeError
         col_tabuleiro_mestre, col_menu_mestre = st.columns([4, 1])
         
         with col_tabuleiro_mestre:
-            # Agora a pergunta e a resposta vão se expandir por quase toda a largura da tela
             arena_viva()
             
         with col_menu_mestre:
@@ -520,7 +518,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     num_avatar = r.get("forca_avatar_num", None)
                     nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
                     
-                    c_av, c_rk = st.columns()
+                    c_av, c_rk = st.columns([1, 4])
                     with c_av:
                         if nome_avatar and os.path.exists(nome_avatar): st.image(nome_avatar, width=24)
                         else: st.markdown("👤")
@@ -564,6 +562,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     st.session_state.podio_liberado = False
                     st.session_state.rodada_terminada = False
                     reiniciar_arena_completa()
+
 
 
 
