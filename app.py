@@ -360,6 +360,7 @@ def arena_viva():
                     autorizado_a_jogar = False
 
         if mensagem_turno: st.info(mensagem_turno)
+            
         if st.session_state.rodada_terminada and st.session_state.jogador == "TREINAMENTOWLI" and not st.session_state.podio_liberado:
             st.write("")
             if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True, key="btn_realtime_podio"):
@@ -416,8 +417,92 @@ def arena_viva():
 
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
+
+# ==================================================
+# 5. PAINEL DO ADMIN (TREINAMENTOWLI)
+# ==================================================
+if st.session_state.jogador == "TREINAMENTOWLI":
+    st.title("⚔️ Painel do Mestre - Arena da Forca")
+    if "podio_liberado" not in st.session_state: st.session_state.podio_liberado = False
+    if "rodada_terminada" not in st.session_state: st.session_state.rodada_terminada = False
+    
+    try:
+        res_arena_check = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
+        jogo_check = res_arena_check.data
+    except Exception: jogo_check = None
+
+    nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
+    abas = st.tabs(nomes_abas)
+    
+    if st.session_state.get('rodada_terminada', False) and st.session_state.get('podio_liberado', False):
+        st.components.v1.html("<script>window.parent.document.querySelectorAll('button[role=\"tab\"]')[3].click();</script>", height=0)
+    
+    try:
+        res_senha_mestre = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
+        senha_atual = res_senha_mestre.data.get('forca_senha_acesso', '----') if res_senha_mestre.data else '----'
+    except Exception: senha_atual = '----'
+        
+    try:
+        url_base = st.context.headers.get("Host", "localhost")
+        protocolo = "https://" if "localhost" not in url_base else "http://"
+        url_completa = protocolo + url_base
+    except Exception: url_completa = "https://streamlit.io"
+
+    with abas[0]:
+        arena_viva()
+        st.write("")
+        with st.expander("⚙️ LANÇAMENTO DE QUESTÕES E CONFIGURAÇÕES", expanded=True):
+            if "fila_perguntas" not in st.session_state: st.session_state.fila_perguntas = []
+            col_adm1, col_adm2 = st.columns(2)
+            with col_adm1:
+                st.markdown("#### 📝 Carregar e Lançar")
+                arquivo = st.file_uploader("Arquivo .docx", type=["docx"], key="mestre_upload")
+                if st.button("📥 PROCESSAR ARQUIVO"):
+                    if arquivo:
+                        st.session_state.fila_perguntas = extrair_dados_do_docx(arquivo)
+                        st.success(f"{len(st.session_state.fila_perguntas)} questões carregadas!")
+                st.write("")
+                if st.button("🚀 LANÇAR PRÓXIMA PERGUNTA", use_container_width=True):
+                    if st.session_state.fila_perguntas:
+                        proxima = st.session_state.fila_perguntas.pop(0)
+                        valor_banco = len(st.session_state.fila_perguntas)
+                        res_m = supabase.table("forca_disputa_arena").select("forca_modo_jogo", "forca_senha_acesso", "forca_tempo_maximo").eq("id", 1).single().execute()
+                        modo_atual = res_m.data.get('forca_modo_jogo', 'LIVRE') if res_m.data else 'LIVRE'
+                        senha_atual_b = res_m.data.get('forca_senha_acesso', '1234') if res_m.data else '1234'
+                        tempo_max_b = res_m.data.get('forca_tempo_maximo', 15) if res_m.data else 15
+                        st.session_state.podio_liberado = False
+                        st.session_state.rodada_terminada = False
+                        supabase.table("forca_disputa_arena").update({
+                            "pergunta": proxima['pergunta'], "palavra": proxima['resposta'],
+                            "letras_tentadas": "", "erros": 0, "restantes": valor_banco,
+                            "ultimo_jogador": "SISTEMA", "forca_modo_jogo": modo_atual,
+                            "forca_senha_acesso": senha_atual_b, "forca_proximo_turno": "",
+                            "forca_tempo_maximo": tempo_max_b, "forca_timestamp_inicio": 0.0
+                        }).eq("id", 1).execute()
+                        st.rerun()
+            with col_adm2:
+                st.markdown("#### 🔄 Regras da Arena")
+                st.metric("Na Fila", len(st.session_state.fila_perguntas))
+                res_arena_modo = supabase.table("forca_disputa_arena").select("forca_modo_jogo", "forca_tempo_maximo").eq("id", 1).single().execute()
+                modo_banco = res_arena_modo.data.get('forca_modo_jogo', 'LIVRE') if res_arena_modo.data else 'LIVRE'
+                tempo_banco = res_arena_modo.data.get('forca_tempo_maximo', 15) if res_arena_modo.data else 15
+                novo_tempo_adm = st.number_input("⏱️ Mudar Tempo da Rodada (Segundos):", min_value=5, max_value=120, value=int(tempo_banco), step=1, key="adm_tempo_control")
+                if novo_tempo_adm != tempo_banco:
+                    supabase.table("forca_disputa_arena").update({"forca_tempo_maximo": novo_tempo_adm}).eq("id", 1).execute()
+                    st.rerun()
+                st.write("")
+                index_modo = 0 if modo_banco == "LIVRE" else 1
+                novo_modo = st.radio("Alternar Formato de Jogo:", ["LIVRE", "TURNOS"], index=index_modo)
+                if novo_modo != modo_banco:
+                    supabase.table("forca_disputa_arena").update({"forca_modo_jogo": novo_modo, "forca_proximo_turno": ""}).eq("id", 1).execute()
+                    st.rerun()
+                st.write("")
+                if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
+                    st.session_state.podio_liberado = False
+                    st.session_state.rodada_terminada = False
+                    reiniciar_arena_completa()
     # --------------------------------------------------
-    # ABA 1: GERENCIAMENTO E EXPULSÃO DE PARTICIPANTES (Índice 1)
+    # ABA 1, 2 e 3: CONTROLE DE SALA, CONEXÃO E RESULTADOS
     # --------------------------------------------------
     with abas[1]: 
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
@@ -427,7 +512,6 @@ if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
             st.session_state.podio_liberado = False
             st.session_state.rodada_terminada = False
             st.rerun()
-            
         st.write("")
         res_jogadores = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").order("jogador").execute()
         if res_jogadores.data:
@@ -440,33 +524,25 @@ if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
                     if res_turno_v.data and res_turno_v.data.get('forca_proximo_turno') == j['jogador']:
                         supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
                     st.rerun()
-    # --------------------------------------------------
-    # ABA 2: ABA EXCLUSIVA DO QR CODE GIGANTE (Índice 2)
-    # --------------------------------------------------
+
     with abas[2]: 
         st.markdown(f"""<div style="background-color: #1e293b; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px dashed #3b82f6;"><span style="color: #94a3b8; font-size: 18px; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Chave de Entrada</span><br><span style="font-size: 70px; color: #3b82f6; font-weight: bold; font-family: monospace; letter-spacing: 6px;">{senha_atual}</span></div>""", unsafe_allow_html=True)
         col_esq, col_centro, col_dir = st.columns(3)
         with col_centro:
             nome_arquivo_qr = "QRCode Forca.png"
-            if os.path.exists(nome_arquivo_qr): 
-                st.image(nome_arquivo_qr, use_container_width=True)
-            else: 
-                st.error(f"⚠️ O arquivo '{nome_arquivo_qr}' não foi encontrado no seu GitHub.")
+            if os.path.exists(nome_arquivo_qr): st.image(nome_arquivo_qr, use_container_width=True)
+            else: st.error(f"⚠️ O arquivo '{nome_arquivo_qr}' não foi encontrado no seu GitHub.")
         st.write("")
         st.markdown(f"<p style='text-align: center; color: #64748b; font-family: monospace;'>Endereço da Arena: {url_completa}</p>", unsafe_allow_html=True)
-    # --------------------------------------------------
-    # ABA 3: ABA EXCLUSIVA DO AVATAR VENCEDOR (Índice 3)
-    # --------------------------------------------------
+
     with abas[3]: 
         if st.session_state.get('rodada_terminada', False) and not st.session_state.podio_liberado:
             st.warning("Aguardando o Mestre liberar a exibição do Campeão no telão...")
         elif st.session_state.get('rodada_terminada', False) and st.session_state.podio_liberado:
             st.markdown("<h1 style='text-align: center; color: #ffb703;'>🏆 PÓDIO DA ARENA DA FORCA 🏆</h1>", unsafe_allow_html=True)
             st.write("")
-            try: 
-                res_vencedores = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("points" if "points" in (jogo_check if jogo_check else {}) else "pontos", desc=True).execute().data
-            except Exception: 
-                res_vencedores = []
+            try: res_vencedores = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("points" if "points" in (jogo_check if jogo_check else {}) else "pontos", desc=True).execute().data
+            except Exception: res_vencedores = []
             if res_vencedores and len(res_vencedores) > 0:
                 primeiro_registro = res_vencedores[0]
                 col_p_v = "points" if "points" in primeiro_registro else "pontos"
@@ -477,10 +553,7 @@ if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
                     for campeao in lista_campeoes:
                         num_av_v = campeao.get("forca_avatar_num", None)
                         arquivo_av_v = f"AV{num_av_v}.png" if num_av_v else None
-                        if arquivo_av_v and os.path.exists(arquivo_av_v): 
-                            st.image(arquivo_av_v, width=380)
-                        else: 
-                            st.markdown("<h1 style='text-align: center; font-size: 100px;'>👤</h1>", unsafe_allow_html=True)
+                        if arquivo_av_v and os.path.exists(arquivo_av_v): st.image(arquivo_av_v, width=380)
+                        else: st.markdown("<h1 style='text-align: center; font-size: 100px;'>👤</h1>", unsafe_allow_html=True)
                         st.markdown(f"""<div style="text-align: center; margin-top: 15px; margin-bottom: 30px;"><h2 style="font-size: 36px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2><h3 style="font-size: 24px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_pts_v} PTS</h3></div>""", unsafe_allow_html=True)
-        else: 
-            st.info("O Pódio dos Campeões será montado aqui assim que a Arena da Forca for encerrada.")
+        else: st.info("O Pódio dos Campeões será montado aqui assim que a Arena da Forca for encerrada.")
