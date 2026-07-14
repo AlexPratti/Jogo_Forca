@@ -366,10 +366,7 @@ def arena_viva():
 
         if mensagem_turno: st.info(mensagem_turno)
 
-
-
-
-            
+        # --- BOTÃO DO PÓDIO EM TEMPO REAL PARA O ADMIN ---
         if st.session_state.rodada_terminada and st.session_state.jogador == "TREINAMENTOWLI" and not st.session_state.podio_liberado:
             st.write("")
             if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True, key="btn_realtime_podio"):
@@ -408,24 +405,34 @@ def arena_viva():
         elif not (contagem == 0) and vitoria:
              st.info("✅ Palavra correta! Aguardando o Administrador...")
 
+    # --- RESTAURAÇÃO DO RANKING LATERAL DIREITO ---
     with col_rank:
         st.markdown("### 🏆 Ranking")
         try:
+            # Busca todos os jogadores ordenados por pontuação maior
             res_rank = supabase.table("forca_disputa_ranking").select("*").order("points" if "points" in jogo else "pontos", desc=True).execute()
             jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "TREINAMENTOWLI"]
+            
+            # Renderiza o Top 10 com foto de Avatar e Pontos lado a lado
             for i, r in enumerate(jogadores_faciais[:10]):
                 col_p = "points" if "points" in r else "pontos"
                 num_avatar = r.get("forca_avatar_num", None)
                 nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
-                c_av, c_rk = st.columns()
+                
+                c_av, c_rk = st.columns([1, 4])
                 with c_av:
-                    if nome_avatar and os.path.exists(nome_avatar): st.image(nome_avatar, width=28)
-                    else: st.markdown("👤")
-                with c_rk: st.write(f"{i+1}º {r['jogador']}: {r[col_p]} pts")
-        except Exception: st.write("Atualizando...")
+                    if nome_avatar and os.path.exists(nome_avatar): 
+                        st.image(nome_avatar, width=28)
+                    else: 
+                        st.markdown("👤")
+                with c_rk: 
+                    st.write(f"{i+1}º {r['jogador']}: {r[col_p]} pts")
+        except Exception: 
+            st.write("Sincronizando placar...")
 
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
+
 
 # ==================================================
 # 5. PAINEL DO ADMIN (TREINAMENTOWLI)
