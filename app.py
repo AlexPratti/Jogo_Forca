@@ -260,10 +260,12 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    col_jogo, col_rank = st.columns()
+    # CORREÇÃO: Adicionado o parâmetro [3, 1] que faltava e causava o TypeError
+    col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        c_img, c_txt = st.columns()
+        # CORREÇÃO: Adicionado o parâmetro [1, 2] original para alinhar a imagem e o texto
+        c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -360,6 +362,7 @@ def arena_viva():
                     autorizado_a_jogar = False
 
         if mensagem_turno: st.info(mensagem_turno)
+
             
         if st.session_state.rodada_terminada and st.session_state.jogador == "TREINAMENTOWLI" and not st.session_state.podio_liberado:
             st.write("")
