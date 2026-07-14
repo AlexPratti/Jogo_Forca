@@ -450,8 +450,9 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
     abas = st.tabs(nomes_abas)
     
+    # Executa a automação de clique caso o pódio seja liberado
     if st.session_state.get('rodada_terminada', False) and st.session_state.get('podio_liberado', False):
-        st.components.v1.html("<script>window.parent.document.querySelectorAll('button[role=\"tab\"]')[3].click();</script>", height=0)
+        st.components.v1.html("<script>window.parent.document.querySelectorAll('button[role=\"tab\"]').click();</script>", height=0)
     
     try:
         res_senha_mestre = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
@@ -464,7 +465,35 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         url_completa = protocolo + url_base
     except Exception: url_completa = "https://streamlit.io"
 
-    with abas[0]:
+    # FUNÇÃO REUTILIZÁVEL: Centraliza a lógica de avançar para a próxima pergunta sem duplicar código
+    def avancar_proxima_pergunta():
+        if "fila_perguntas" in st.session_state and st.session_state.fila_perguntas:
+            proxima = st.session_state.fila_perguntas.pop(0)
+            valor_banco = len(st.session_state.fila_perguntas)
+            try:
+                res_m = supabase.table("forca_disputa_arena").select("forca_modo_jogo", "forca_senha_acesso", "forca_tempo_maximo").eq("id", 1).single().execute()
+                modo_atual = res_m.data.get('forca_modo_jogo', 'LIVRE') if res_m.data else 'LIVRE'
+                senha_atual_b = res_m.data.get('forca_senha_acesso', '1234') if res_m.data else '1234'
+                tempo_max_b = res_m.data.get('forca_tempo_maximo', 15) if res_m.data else 15
+            except Exception:
+                modo_atual, senha_atual_b, tempo_max_b = 'LIVRE', '1234', 15
+
+            st.session_state.podio_liberado = False
+            st.session_state.rodada_terminada = False
+            
+            supabase.table("forca_disputa_arena").update({
+                "pergunta": proxima['pergunta'], "palavra": proxima['resposta'],
+                "letras_tentadas": "", "erros": 0, "restantes": valor_banco,
+                "ultimo_jogador": "SISTEMA", "forca_modo_jogo": modo_atual,
+                "forca_senha_acesso": senha_atual_b, "forca_proximo_turno": "",
+                "forca_tempo_maximo": tempo_max_b, "forca_timestamp_inicio": 0.0
+            }).eq("id", 1).execute()
+            st.rerun()
+
+    # --------------------------------------------------
+    # ABA 0: TABULEIRO DA FORCA E CONTROLES DO MESTRE
+    # --------------------------------------------------
+    with abas:
         arena_viva()
         st.write("")
         with st.expander("⚙️ LANÇAMENTO DE QUESTÕES E CONFIGURAÇÕES", expanded=True):
@@ -478,24 +507,15 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         st.session_state.fila_perguntas = extrair_dados_do_docx(arquivo)
                         st.success(f"{len(st.session_state.fila_perguntas)} questões carregadas!")
                 st.write("")
+                
+                # Botão Original Mantido Inalterado
                 if st.button("🚀 LANÇAR PRÓXIMA PERGUNTA", use_container_width=True):
-                    if st.session_state.fila_perguntas:
-                        proxima = st.session_state.fila_perguntas.pop(0)
-                        valor_banco = len(st.session_state.fila_perguntas)
-                        res_m = supabase.table("forca_disputa_arena").select("forca_modo_jogo", "forca_senha_acesso", "forca_tempo_maximo").eq("id", 1).single().execute()
-                        modo_atual = res_m.data.get('forca_modo_jogo', 'LIVRE') if res_m.data else 'LIVRE'
-                        senha_atual_b = res_m.data.get('forca_senha_acesso', '1234') if res_m.data else '1234'
-                        tempo_max_b = res_m.data.get('forca_tempo_maximo', 15) if res_m.data else 15
-                        st.session_state.podio_liberado = False
-                        st.session_state.rodada_terminada = False
-                        supabase.table("forca_disputa_arena").update({
-                            "pergunta": proxima['pergunta'], "palavra": proxima['resposta'],
-                            "letras_tentadas": "", "erros": 0, "restantes": valor_banco,
-                            "ultimo_jogador": "SISTEMA", "forca_modo_jogo": modo_atual,
-                            "forca_senha_acesso": senha_atual_b, "forca_proximo_turno": "",
-                            "forca_tempo_maximo": tempo_max_b, "forca_timestamp_inicio": 0.0
-                        }).eq("id", 1).execute()
-                        st.rerun()
+                    avancar_proxima_pergunta()
+                    
+                # NOVO BOTÃO: Atalho "Próxima" com a mesma função, posicionado de forma estratégica no painel
+                if st.button("➡️ Próxima", use_container_width=True, key="btn_atalho_proxima_mestre"):
+                    avancar_proxima_pergunta()
+                    
             with col_adm2:
                 st.markdown("#### 🔄 Regras da Arena")
                 st.metric("Na Fila", len(st.session_state.fila_perguntas))
@@ -517,6 +537,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     st.session_state.podio_liberado = False
                     st.session_state.rodada_terminada = False
                     reiniciar_arena_completa()
+
     # --------------------------------------------------
     # ABA 1, 2 e 3: CONTROLE DE SALA, CONEXÃO E RESULTADOS
     # --------------------------------------------------
