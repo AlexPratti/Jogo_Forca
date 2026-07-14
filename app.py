@@ -363,7 +363,7 @@ def arena_viva():
     if mensagem_turno: st.info(mensagem_turno)
 
 
-     # --- BOTÃO DO PÓDIO EM TEMPO REAL PARA O ADMIN ---
+    # --- BOTÃO DO PÓDIO EM TEMPO REAL PARA O ADMIN ---
     if st.session_state.rodada_terminada and st.session_state.jogador == "TREINAMENTOWLI" and not st.session_state.podio_liberado:
         st.write("")
         if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True, key="btn_realtime_podio"):
@@ -384,7 +384,7 @@ def arena_viva():
                         st.session_state.jogador = None
                         st.rerun()
                     st.stop()
-                except Exception: pass
+            except Exception: pass
 
         letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
         cols_tec = st.columns(13)
@@ -403,7 +403,7 @@ def arena_viva():
     elif not (contagem == 0) and vitoria:
          st.info("✅ Palavra correta! Aguardando o Administrador...")
 
-    # LÓGICA DE EXIBIÇÃO DO RANKING EXCLUSIVA PARA OS JOGADORES (Fica na parte inferior da tela deles)
+    # LÓGICA DE EXIBIÇÃO DO RANKING PARA OS JOGADORES (CORRIGIDA)
     if st.session_state.jogador != "TREINAMENTOWLI":
         st.divider()
         st.markdown("### 🏆 Placar dos Competidores")
@@ -411,17 +411,18 @@ def arena_viva():
             res_rank = supabase.table("forca_disputa_ranking").select("*").order("points" if "points" in jogo else "pontos", desc=True).execute()
             j_competidores = [r for r in res_rank.data if r['jogador'] != "TREINAMENTOWLI"]
             
-            cols_r_p = st.columns(min(len(j_competidores), 5) if j_competidores else 1)
-            for idx, r in enumerate(j_competidores[:10]):
-                col_p = "points" if "points" in r else "pontos"
-                num_avatar = r.get("forca_avatar_num", None)
-                nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
-                
-                with cols_r_p[idx % 5]:
-                    st.write(f"**{idx+1}º {r['jogador']}**")
-                    if nome_avatar and os.path.exists(nome_avatar): st.image(nome_avatar, width=45)
-                    else: st.markdown("👤")
-                    st.caption(f"{r[col_p]} pts")
+            if j_competidores:
+                cols_r_p = st.columns(min(len(j_competidores), 5))
+                for idx, r in enumerate(j_competidores[:10]):
+                    col_p = "points" if "points" in r else "pontos"
+                    num_avatar = r.get("forca_avatar_num", None)
+                    nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
+                    
+                    with cols_r_p[idx % 5]:
+                        st.write(f"**{idx+1}º {r['jogador']}**")
+                        if nome_avatar and os.path.exists(nome_avatar): st.image(nome_avatar, width=45)
+                        else: st.markdown("👤")
+                        st.caption(f"{r[col_p]} pts")
         except Exception:
             pass
 
