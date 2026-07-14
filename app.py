@@ -486,8 +486,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             }).eq("id", 1).execute()
             st.rerun()
 
-    # CORREÇÃO DA LARGURA DAS COLUNAS: Define explicitamente 75% para as abas e 25% para o menu lateral
-    col_abas_top, col_botao_top = st.columns([3, 1])
+    # Define as duas colunas principais do topo do Mestre
+    col_abas_top, col_botao_top = st.columns([4, 1])
 
     with col_abas_top:
         nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
@@ -496,16 +496,15 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     if st.session_state.get('rodada_terminada', False) and st.session_state.get('podio_liberado', False):
         st.components.v1.html("<script>window.parent.document.querySelectorAll('button[role=\"tab\"]').click();</script>", height=0)
 
-    # RENDERIZAÇÃO DO MENU LATERAL DIREITO (Botão + Placar com Avatares)
+    # RENDERIZAÇÃO FIXA NA COLUNA DIREITA: Botão Próxima + Ranking Lateral abaixo dele
     with col_botao_top:
         st.write("<div style='height: 10px;'></div>", unsafe_allow_html=True)
         if st.button("➡️ Próxima", use_container_width=True, key="btn_top_right_proxima_mestre"):
             avancar_proxima_pergunta()
             
-        st.divider()
+        st.write("")
         st.markdown("### 🏆 Ranking")
         try:
-            # CORREÇÃO DA CORRESPONDÊNCIA DE VARIÁVEL: Modificado de juego_check para jogo_check
             res_rank = supabase.table("forca_disputa_ranking").select("*").order("points" if jogo_check and "points" in jogo_check else "pontos", desc=True).execute()
             jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "TREINAMENTOWLI"]
             
@@ -524,9 +523,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             st.write("Sincronizando placar...")
 
     # --------------------------------------------------
-    # ABA 0: TABULEIRO DA FORCA E CONTROLES DO MESTRE
+    # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
     with abas[0]:
+        # Aqui dentro o Streamlit vai desenhar o tabuleiro da forca e a pergunta
         arena_viva()
         st.write("")
         with st.expander("⚙️ LANÇAMENTO DE QUESTÕES E CONFIGURAÇÕES", expanded=True):
