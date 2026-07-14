@@ -263,10 +263,12 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    col_jogo, col_rank = st.columns()
+    # CORREÇÃO DEFINITIVA: Restaurada a proporção [3, 1] original das colunas para evitar o TypeError
+    col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        c_img, c_txt = st.columns()
+        # CORREÇÃO DEFINITIVA: Restaurada a proporção [1, 2] da imagem da forca e do texto da pergunta
+        c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
         modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -307,7 +309,6 @@ def arena_viva():
                 except Exception: rank_final = []
                 if rank_final and len(rank_final) > 0:
                     col_pts = "points" if "points" in rank_final[0] else "pontos"
-                    # CORREÇÃO: Acessa o índice 0 da lista para extrair a pontuação máxima
                     max_pts = rank_final[0][col_pts]
                     vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
                     nomes = " & ".join(vencedores)
@@ -364,6 +365,7 @@ def arena_viva():
                     autorizado_a_jogar = False
 
         if mensagem_turno: st.info(mensagem_turno)
+
 
 
 
