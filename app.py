@@ -235,13 +235,11 @@ def reiniciar_arena_completa():
     st.rerun()
     
 # ==================================================
-# 4. INTERFACE DA ARENA (UNIFICADA E ALINHADA)
+# 4. INTERFACE DA ARENA (RESTAURADA E SEM TRAVAS)
 # ==================================================
 @st.fragment(run_every=1)
 def arena_viva():
-    if "jogador" not in st.session_state or st.session_state.jogador is None:
-        return
-
+    # Removida a trava de retorno vazio que causava o sumiço do tabuleiro
     st.session_state.clique_bloqueado = False
 
     if "podio_liberado" not in st.session_state:
@@ -264,8 +262,8 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # CORREÇÃO CRÍTICA: Definido o número de colunas (2) para evitar o TypeError de função vazia
-    c_img, c_txt = st.columns(2)
+    # Divide o tabuleiro interno: Imagem (1) e Pergunta/Texto (3)
+    c_img, c_txt = st.columns([1, 3])
     erros_atuais = jogo.get('erros', 0)
     ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
     modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -291,7 +289,7 @@ def arena_viva():
         if vitoria and erros_atuais < 6:
             id_palavra_atual = f"vitoria_{palavra_alvo}_{contagem}"
             if id_palavra_atual not in st.session_state:
-                if st.session_state.jogador == ultimo_player and st.session_state.jogador != "TREINAMENTOWLI":
+                if "jogador" in st.session_state and st.session_state.jogador == ultimo_player and st.session_state.jogador != "TREINAMENTOWLI":
                     try:
                         res_p = supabase.table("forca_disputa_ranking").select("*").eq("jogador", st.session_state.jogador).single().execute()
                         col_pts = "points" if "points" in res_p.data else "pontos"
@@ -306,7 +304,7 @@ def arena_viva():
             except Exception: rank_final = []
             if rank_final and len(rank_final) > 0:
                 col_pts = "points" if "points" in rank_final else "pontos"
-                max_pts = rank_final[col_pts]
+                max_pts = rank_final[0][col_pts]
                 vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
                 nomes = " & ".join(vencedores)
                 st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
@@ -354,7 +352,7 @@ def arena_viva():
             st.markdown(f"⏱️ **Tempo restante para a jogada:** `{segundos_restantes}s`")
             st.progress(max(0.0, min(segundos_restantes / tempo_maximo, 1.0)))
 
-            if str(st.session_state.jogador).strip() == str(proximo_autorizado).strip():
+            if "jogador" in st.session_state and str(st.session_state.jogador).strip() == str(proximo_autorizado).strip():
                 mensagem_turno = f"⚔️ **SUA VEZ, {st.session_state.jogador}!** Seu teclado está ativo para jogar."
                 autorizado_a_jogar = True
             else:
@@ -362,6 +360,7 @@ def arena_viva():
                 autorizado_a_jogar = False
 
     if mensagem_turno: st.info(mensagem_turno)
+
 
 
     # --- BOTÃO DO PÓDIO EM TEMPO REAL PARA O ADMIN ---
@@ -496,10 +495,11 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
     with abas[0]:
-        # CORREÇÃO: Passado explicitamente a proporção [4, 1] (80% / 20%) para sanar o TypeError
+        # AJUSTE DA LARGURA: Dá 4x mais espaço para o jogo (esquerda) e deixa a lateral fininha (direita)
         col_tabuleiro_mestre, col_menu_mestre = st.columns([4, 1])
         
         with col_tabuleiro_mestre:
+            # Invoca o jogo restaurado e em tela cheia na esquerda
             arena_viva()
             
         with col_menu_mestre:
@@ -562,6 +562,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     st.session_state.podio_liberado = False
                     st.session_state.rodada_terminada = False
                     reiniciar_arena_completa()
+
 
 
 
