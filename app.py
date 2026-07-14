@@ -263,8 +263,8 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # REMOVIDO: col_jogo e col_rank horizontais para dar 100% de espaço à pergunta
-    c_img, c_txt = st.columns([1, 4])
+    # Distribuição interna de espaço entre a imagem da forca (1) e o texto (3)
+    c_img, c_txt = st.columns([1, 3])
     erros_atuais = jogo.get('erros', 0)
     ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
     modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -341,29 +341,29 @@ def arena_viva():
                         col_p_punir = "points" if "points" in res_punido.data else "pontos"
                         pts_punido = res_punido.data[col_p_punir]
                         supabase.table("forca_disputa_ranking").update({col_p_punir: max(0, pts_punido - 5)}).eq("jogador", proximo_autorizado).execute()
-                except Exception: pass
-                
-                novo_proximo = calcular_proximo_turno(proximo_autorizado)
-                supabase.table("forca_disputa_arena").update({
-                    "forca_proximo_turno": novo_proximo, "forca_timestamp_inicio": time.time(),
-                    "ultimo_jogador": f"SISTEMA (TEMPO DE {proximo_autorizado} ESGOTOU)"
-                }).eq("id", 1).execute()
-                st.rerun()
+                    except Exception: pass
+                    
+                    novo_proximo = calcular_proximo_turno(proximo_autorizado)
+                    supabase.table("forca_disputa_arena").update({
+                        "forca_proximo_turno": novo_proximo, "forca_timestamp_inicio": time.time(),
+                        "ultimo_jogador": f"SISTEMA (TEMPO DE {proximo_autorizado} ESGOTOU)"
+                    }).eq("id", 1).execute()
+                    st.rerun()
 
-            st.markdown(f"⏱️ **Tempo restante para a jogada:** `{segundos_restantes}s`")
-            st.progress(max(0.0, min(segundos_restantes / tempo_maximo, 1.0)))
+                st.markdown(f"⏱️ **Tempo restante para a jogada:** `{segundos_restantes}s`")
+                st.progress(max(0.0, min(segundos_restantes / tempo_maximo, 1.0)))
 
-            if str(st.session_state.jogador).strip() == str(proximo_autorizado).strip():
-                mensagem_turno = f"⚔️ **SUA VEZ, {st.session_state.jogador}!** Seu teclado está ativo para jogar."
-                autorizado_a_jogar = True
-            else:
-                mensagem_turno = f"⏳ **AGUARDE A FILA!** É a vez do jogador: **{proximo_autorizado}**."
-                autorizado_a_jogar = False
+                if str(st.session_state.jogador).strip() == str(proximo_autorizado).strip():
+                    mensagem_turno = f"⚔️ **SUA VEZ, {st.session_state.jogador}!** Seu teclado está ativo para jogar."
+                    autorizado_a_jogar = True
+                else:
+                    mensagem_turno = f"⏳ **AGUARDE A FILA!** É a vez do jogador: **{proximo_autorizado}**."
+                    autorizado_a_jogar = False
 
     if mensagem_turno: st.info(mensagem_turno)
 
 
-      # --- BOTÃO DO PÓDIO EM TEMPO REAL PARA O ADMIN ---
+     # --- BOTÃO DO PÓDIO EM TEMPO REAL PARA O ADMIN ---
     if st.session_state.rodada_terminada and st.session_state.jogador == "TREINAMENTOWLI" and not st.session_state.podio_liberado:
         st.write("")
         if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True, key="btn_realtime_podio"):
@@ -384,10 +384,10 @@ def arena_viva():
                         st.session_state.jogador = None
                         st.rerun()
                     st.stop()
-            except Exception: pass
+                except Exception: pass
 
         letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
-        cols_tec = st.columns(13) # Expandido para 13 colunas para ocupar melhor a tela larga
+        cols_tec = st.columns(13)
         for i, letra in enumerate(letras_abc):
             ja_foi = letra in tentadas
             is_admin = st.session_state.jogador == "TREINAMENTOWLI"
@@ -399,13 +399,35 @@ def arena_viva():
                     supabase.table("forca_disputa_arena").update({"forca_timestamp_inicio": time.time()}).eq("id", 1).execute()
                 registrar_jogada(letra, jogo)
                 st.rerun()
+                
     elif not (contagem == 0) and vitoria:
          st.info("✅ Palavra correta! Aguardando o Administrador...")
 
-# EXECUÇÃO DO PLAYER COMUM (100% de largura de tela)
+    # LÓGICA DE EXIBIÇÃO DO RANKING EXCLUSIVA PARA OS JOGADORES (Fica na parte inferior da tela deles)
+    if st.session_state.jogador != "TREINAMENTOWLI":
+        st.divider()
+        st.markdown("### 🏆 Placar dos Competidores")
+        try:
+            res_rank = supabase.table("forca_disputa_ranking").select("*").order("points" if "points" in jogo else "pontos", desc=True).execute()
+            j_competidores = [r for r in res_rank.data if r['jogador'] != "TREINAMENTOWLI"]
+            
+            cols_r_p = st.columns(min(len(j_competidores), 5) if j_competidores else 1)
+            for idx, r in enumerate(j_competidores[:10]):
+                col_p = "points" if "points" in r else "pontos"
+                num_avatar = r.get("forca_avatar_num", None)
+                nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
+                
+                with cols_r_p[idx % 5]:
+                    st.write(f"**{idx+1}º {r['jogador']}**")
+                    if nome_avatar and os.path.exists(nome_avatar): st.image(nome_avatar, width=45)
+                    else: st.markdown("👤")
+                    st.caption(f"{r[col_p]} pts")
+        except Exception:
+            pass
+
+# EXECUÇÃO DA INTERFACE PARA JOGADORES COMUNS
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
-
 
 
 # ==================================================
@@ -432,7 +454,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         url_completa = protocolo + url_base
     except Exception: url_completa = "https://streamlit.io"
 
-    # FUNÇÃO REUTILIZÁVEL: Centraliza a lógica de avançar para a próxima pergunta
     def avancar_proxima_pergunta():
         if "fila_perguntas" in st.session_state and st.session_state.fila_perguntas:
             proxima = st.session_state.fila_perguntas.pop(0)
@@ -457,22 +478,42 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             }).eq("id", 1).execute()
             st.rerun()
 
-    # LAYOUT DE TOPO: Divide o topo em 5 partes, usando 4 para as abas e 1 para o botão "Próxima" à direita
-    col_abas_top, col_botao_top = st.columns([4, 1])
+    # CORREÇÃO DA LARGURA DAS COLUNAS: Define explicitamente 75% para as abas e 25% para o menu lateral
+    col_abas_top, col_botao_top = st.columns([3, 1])
 
     with col_abas_top:
         nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
         abas = st.tabs(nomes_abas)
 
-    # Injeção JavaScript de controle das Abas
     if st.session_state.get('rodada_terminada', False) and st.session_state.get('podio_liberado', False):
         st.components.v1.html("<script>window.parent.document.querySelectorAll('button[role=\"tab\"]').click();</script>", height=0)
 
-    # Renderiza o Botão "Próxima" no topo direito ao lado da barra de abas
+    # RENDERIZAÇÃO DO MENU LATERAL DIREITO (Botão + Placar com Avatares)
     with col_botao_top:
-        st.write("<div style='height: 10px;'></div>", unsafe_allow_html=True) # Alinhamento vertical sutil
+        st.write("<div style='height: 10px;'></div>", unsafe_allow_html=True)
         if st.button("➡️ Próxima", use_container_width=True, key="btn_top_right_proxima_mestre"):
             avancar_proxima_pergunta()
+            
+        st.divider()
+        st.markdown("### 🏆 Ranking")
+        try:
+            # CORREÇÃO DA CORRESPONDÊNCIA DE VARIÁVEL: Modificado de juego_check para jogo_check
+            res_rank = supabase.table("forca_disputa_ranking").select("*").order("points" if jogo_check and "points" in jogo_check else "pontos", desc=True).execute()
+            jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "TREINAMENTOWLI"]
+            
+            for i, r in enumerate(jogadores_faciais[:10]):
+                col_p = "points" if "points" in r else "pontos"
+                num_avatar = r.get("forca_avatar_num", None)
+                nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
+                
+                c_av, c_rk = st.columns([1, 4])
+                with c_av:
+                    if nome_avatar and os.path.exists(nome_avatar): st.image(nome_avatar, width=24)
+                    else: st.markdown("👤")
+                with c_rk: 
+                    st.write(f"{i+1}º {r['jogador']}: **{r[col_p]} pts**")
+        except Exception:
+            st.write("Sincronizando placar...")
 
     # --------------------------------------------------
     # ABA 0: TABULEIRO DA FORCA E CONTROLES DO MESTRE
