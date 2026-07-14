@@ -369,8 +369,10 @@ def arena_viva():
         if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True, key="btn_realtime_podio"):
             st.session_state.podio_liberado = True
             st.toast("Pódio liberado com sucesso na aba 4!")
-            try: supabase.table("forca_disputa_arena").update({"ultimo_jogador": "SISTEMA"}).eq("id", 1).execute()
-            except Exception: pass
+            try:
+                supabase.table("forca_disputa_arena").update({"ultimo_jogador": "SISTEMA"}).eq("id", 1).execute()
+            except Exception:
+                pass
             st.rerun()
 
     # --- TECLADO VIRTUAL OPERANTE ---
@@ -384,7 +386,8 @@ def arena_viva():
                         st.session_state.jogador = None
                         st.rerun()
                     st.stop()
-            except Exception: pass
+            except Exception:
+                pass
 
         letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
         cols_tec = st.columns(13)
@@ -403,7 +406,7 @@ def arena_viva():
     elif not (contagem == 0) and vitoria:
          st.info("✅ Palavra correta! Aguardando o Administrador...")
 
-    # LÓGICA DE EXIBIÇÃO DO RANKING PARA OS JOGADORES (CORRIGIDA)
+    # LÓGICA DE EXIBIÇÃO DO RANKING PARA OS JOGADORES
     if st.session_state.jogador != "TREINAMENTOWLI":
         st.divider()
         st.markdown("### 🏆 Placar dos Competidores")
@@ -420,8 +423,10 @@ def arena_viva():
                     
                     with cols_r_p[idx % 5]:
                         st.write(f"**{idx+1}º {r['jogador']}**")
-                        if nome_avatar and os.path.exists(nome_avatar): st.image(nome_avatar, width=45)
-                        else: st.markdown("👤")
+                        if nome_avatar and os.path.exists(nome_avatar):
+                            st.image(nome_avatar, width=45)
+                        else:
+                            st.markdown("👤")
                         st.caption(f"{r[col_p]} pts")
         except Exception:
             pass
