@@ -628,9 +628,4 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         else: 
             st.info("O Pódio dos Campeões será montado aqui assim que a Arena da Forca for encerrada.")
 
-        # ALINHAMENTO DO BOTÃO À DIREITA: Divide o rodapé da aba em 4 colunas e renderiza o botão na última coluna
-        st.write("")
-        c_p1, c_p2, c_p3, c_p4 = st.columns(4)
-        with c_p4:
-            if st.button("➡️ Próxima", use_container_width=True, key="btn_aba_campeoes_proxima"):
-                avancar_proxima_pergunta()
+    
