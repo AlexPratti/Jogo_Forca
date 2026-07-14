@@ -238,6 +238,10 @@ def reiniciar_arena_completa():
 # ==================================================
 @st.fragment(run_every=1)
 def arena_viva():
+    # BLINDAGEM CRÍTICA: Se a sessão expirou ou o jogador sumiu do estado, para o fragmento
+    if "jogador" not in st.session_state or st.session_state.jogador is None:
+        return
+
     st.session_state.clique_bloqueado = False
 
     if "podio_liberado" not in st.session_state:
@@ -260,11 +264,9 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # CORREÇÃO: Adicionado o parâmetro [3, 1] que faltava e causava o TypeError
     col_jogo, col_rank = st.columns([3, 1])
 
     with col_jogo:
-        # CORREÇÃO: Adicionado o parâmetro [1, 2] original para alinhar a imagem e o texto
         c_img, c_txt = st.columns([1, 2])
         erros_atuais = jogo.get('erros', 0)
         ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -306,7 +308,7 @@ def arena_viva():
                 except Exception: rank_final = []
                 if rank_final and len(rank_final) > 0:
                     col_pts = "points" if "points" in rank_final else "pontos"
-                    max_pts = rank_final[0][col_pts]
+                    max_pts = rank_final[col_pts]
                     vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
                     nomes = " & ".join(vencedores)
                     st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
@@ -362,6 +364,7 @@ def arena_viva():
                     autorizado_a_jogar = False
 
         if mensagem_turno: st.info(mensagem_turno)
+
 
             
         if st.session_state.rodada_terminada and st.session_state.jogador == "TREINAMENTOWLI" and not st.session_state.podio_liberado:
