@@ -234,7 +234,7 @@ def reiniciar_arena_completa():
     st.session_state.clique_bloqueado = False
     st.rerun()
 # ==================================================
-# 4. INTERFACE DA ARENA (ATUALIZADA)
+# 4. INTERFACE DA ARENA (ATUALIZADA COM LARGURA TOTAL)
 # ==================================================
 @st.fragment(run_every=1)
 def arena_viva():
@@ -263,175 +263,149 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    # CORREÇÃO DEFINITIVA: Restaurada a proporção [3, 1] original das colunas para evitar o TypeError
-    col_jogo, col_rank = st.columns([3, 1])
-
-    with col_jogo:
-        # CORREÇÃO DEFINITIVA: Restaurada a proporção [1, 2] da imagem da forca e do texto da pergunta
-        c_img, c_txt = st.columns([1, 2])
-        erros_atuais = jogo.get('erros', 0)
-        ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
-        modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
-        proximo_autorizado = jogo.get('forca_proximo_turno', "")
-        
-        tempo_maximo = jogo.get('forca_tempo_maximo', 15)
-        timestamp_inicio = jogo.get('forca_timestamp_inicio', 0.0)
-        
-        with c_img:
-            nome_img = f"erro{erros_atuais}.png"
-            if os.path.exists(nome_img): st.image(nome_img, width=180)
-            else: st.metric("Erros da Equipe", f"{erros_atuais}/6")
-
-        with c_txt:
-            contagem = jogo.get('restantes', 0)
-            tentadas = [l.strip() for l in jogo['letras_tentadas'].split(",") if l.strip()]
-            palavra_alvo = jogo['palavra']
-            vitoria = all((letra == " " or letra in tentadas) for letra in palavra_alvo)
-
-            if vitoria or erros_atuais >= 6: st.session_state.rodada_terminada = True
-            else: st.session_state.rodada_terminada = False
-
-            if vitoria and erros_atuais < 6:
-                id_palavra_atual = f"vitoria_{palavra_alvo}_{contagem}"
-                if id_palavra_atual not in st.session_state:
-                    if st.session_state.jogador == ultimo_player and st.session_state.jogador != "TREINAMENTOWLI":
-                        try:
-                            res_p = supabase.table("forca_disputa_ranking").select("*").eq("jogador", st.session_state.jogador).single().execute()
-                            col_pts = "points" if "points" in res_p.data else "pontos"
-                            pts = res_p.data[col_pts] if res_p.data else 0
-                            supabase.table("forca_disputa_ranking").update({col_pts: pts + 10}).eq("jogador", st.session_state.jogador).execute()
-                            st.toast(f"🏆 +10 pontos por vencer o desafio!")
-                        except Exception: pass
-                    st.session_state[id_palavra_atual] = True
-                    
-            if (vitoria or erros_atuais >= 6) and contagem == 0:
-                try: rank_final = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("points" if "points" in jogo else "pontos", desc=True).execute().data
-                except Exception: rank_final = []
-                if rank_final and len(rank_final) > 0:
-                    col_pts = "points" if "points" in rank_final[0] else "pontos"
-                    max_pts = rank_final[0][col_pts]
-                    vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
-                    nomes = " & ".join(vencedores)
-                    st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
-                st.error("💀 A ARENA FOI ENCERRADA.")
-            else:
-                prefixo = f"📝 Pergunta {contagem}" if contagem > 0 else "🔥 PERGUNTA FINAL"
-                st.markdown(f"<h3 style='font-size: 24px; margin-bottom: 0px;'>{prefixo}</h3>", unsafe_allow_html=True)
-                pergunta_texto = jogo['pergunta']
-                st.markdown(f"""<div style="background-color: #e8f4f8; padding: 15px; border-radius: 5px; border-left: 5px solid #007bff; margin-bottom: 20px;"><span style="font-size: 22px; color: #004085;">❓ <b>VALE 5 pts (letra) / 10 pts (vitória):</b> {pergunta_texto}</span></div>""", unsafe_allow_html=True)
+    # REMOVIDO: col_jogo e col_rank horizontais para dar 100% de espaço à pergunta
+    c_img, c_txt = st.columns([1, 4])
+    erros_atuais = jogo.get('erros', 0)
+    ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
+    modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
+    proximo_autorizado = jogo.get('forca_proximo_turno', "")
     
-            texto_visual = "".join([f"{l} " if (l == " " or l in tentadas or erros_atuais >= 6) else "_ " for l in palavra_alvo])
-            st.markdown(f"""<div style="background-color: #f0f2f6; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 15px;"><code style="font-size: 20px; color: #ff4b4b; font-weight: bold;">{texto_visual}</code></div>""", unsafe_allow_html=True)
-            st.caption(f"Última jogada por: **{ultimo_player}** | Formato: **{modo_jogo}**")
+    tempo_maximo = jogo.get('forca_tempo_maximo', 15)
+    timestamp_inicio = jogo.get('forca_timestamp_inicio', 0.0)
+    
+    with c_img:
+        nome_img = f"erro{erros_atuais}.png"
+        if os.path.exists(nome_img): st.image(nome_img, width=150)
+        else: st.metric("Erros da Equipe", f"{erros_atuais}/6")
 
-        # --- EXIBIÇÃO DE CONTROLE DE QUEM É A VEZ E CRONÔMETRO ---
-        autorizado_a_jogar = True
-        mensagem_turno = ""
-        
-        if modo_jogo == "TURNOS" and not vitoria and erros_atuais < 6:
-            if not proximo_autorizado or str(proximo_autorizado).strip() == "":
-                mensagem_turno = "🔥 **Arena aberta!** Qualquer jogador cadastrado pode fazer o primeiro palpite."
-                autorizado_a_jogar = True
-            else:
-                if timestamp_inicio and timestamp_inicio > 0:
-                    tempo_decorrido = time.time() - timestamp_inicio
-                    segundos_restantes = max(0, int(tempo_maximo - tempo_decorrido))
-                else: segundos_restantes = tempo_maximo
+    with c_txt:
+        contagem = jogo.get('restantes', 0)
+        tentadas = [l.strip() for l in jogo['letras_tentadas'].split(",") if l.strip()]
+        palavra_alvo = jogo['palavra']
+        vitoria = all((letra == " " or letra in tentadas) for letra in palavra_alvo)
 
-                if segundos_restantes <= 0:
+        if vitoria or erros_atuais >= 6: st.session_state.rodada_terminada = True
+        else: st.session_state.rodada_terminada = False
+
+        if vitoria and erros_atuais < 6:
+            id_palavra_atual = f"vitoria_{palavra_alvo}_{contagem}"
+            if id_palavra_atual not in st.session_state:
+                if st.session_state.jogador == ultimo_player and st.session_state.jogador != "TREINAMENTOWLI":
                     try:
-                        res_punido = supabase.table("forca_disputa_ranking").select("*").eq("jogador", proximo_autorizado).single().execute()
-                        if res_punido.data:
-                            col_p_punir = "points" if "points" in res_punido.data else "pontos"
-                            pts_punido = res_punido.data[col_p_punir]
-                            supabase.table("forca_disputa_ranking").update({col_p_punir: max(0, pts_punido - 5)}).eq("jogador", proximo_autorizado).execute()
+                        res_p = supabase.table("forca_disputa_ranking").select("*").eq("jogador", st.session_state.jogador).single().execute()
+                        col_pts = "points" if "points" in res_p.data else "pontos"
+                        pts = res_p.data[col_pts] if res_p.data else 0
+                        supabase.table("forca_disputa_ranking").update({col_pts: pts + 10}).eq("jogador", st.session_state.jogador).execute()
+                        st.toast(f"🏆 +10 pontos por vencer o desafio!")
                     except Exception: pass
-                    
-                    novo_proximo = calcular_proximo_turno(proximo_autorizado)
-                    supabase.table("forca_disputa_arena").update({
-                        "forca_proximo_turno": novo_proximo, "forca_timestamp_inicio": time.time(),
-                        "ultimo_jogador": f"SISTEMA (TEMPO DE {proximo_autorizado} ESGOTOU)"
-                    }).eq("id", 1).execute()
-                    st.rerun()
+                st.session_state[id_palavra_atual] = True
+                
+        if (vitoria or erros_atuais >= 6) and contagem == 0:
+            try: rank_final = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("points" if "points" in jogo else "pontos", desc=True).execute().data
+            except Exception: rank_final = []
+            if rank_final and len(rank_final) > 0:
+                col_pts = "points" if "points" in rank_final else "pontos"
+                max_pts = rank_final[0][col_pts]
+                vencedores = [r['jogador'] for r in rank_final if r[col_pts] == max_pts]
+                nomes = " & ".join(vencedores)
+                st.markdown(f"<h2 style='font-size: 30px;'>🏁 FIM DE JOGO! Vencedor(es): <b>{nomes}</b> com {max_pts} pts</h2>", unsafe_allow_html=True)
+            st.error("💀 A ARENA FOI ENCERRADA.")
+        else:
+            prefixo = f"📝 Pergunta {contagem}" if contagem > 0 else "🔥 PERGUNTA FINAL"
+            st.markdown(f"<h3 style='font-size: 24px; margin-bottom: 0px;'>{prefixo}</h3>", unsafe_allow_html=True)
+            pergunta_texto = jogo['pergunta']
+            st.markdown(f"""<div style="background-color: #e8f4f8; padding: 15px; border-radius: 5px; border-left: 5px solid #007bff; margin-bottom: 20px;"><span style="font-size: 22px; color: #004085;">❓ <b>VALE 5 pts (letra) / 10 pts (vitória):</b> {pergunta_texto}</span></div>""", unsafe_allow_html=True)
 
-                st.markdown(f"⏱️ **Tempo restante para a jogada:** `{segundos_restantes}s`")
-                st.progress(max(0.0, min(segundos_restantes / tempo_maximo, 1.0)))
+        texto_visual = "".join([f"{l} " if (l == " " or l in tentadas or erros_atuais >= 6) else "_ " for l in palavra_alvo])
+        st.markdown(f"""<div style="background-color: #f0f2f6; padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 15px;"><code style="font-size: 20px; color: #ff4b4b; font-weight: bold;">{texto_visual}</code></div>""", unsafe_allow_html=True)
+        st.caption(f"Última jogada por: **{ultimo_player}** | Formato: **{modo_jogo}**")
 
-                if str(st.session_state.jogador).strip() == str(proximo_autorizado).strip():
-                    mensagem_turno = f"⚔️ **SUA VEZ, {st.session_state.jogador}!** Seu teclado está ativo para jogar."
-                    autorizado_a_jogar = True
-                else:
-                    mensagem_turno = f"⏳ **AGUARDE A FILA!** É a vez do jogador: **{proximo_autorizado}**."
-                    autorizado_a_jogar = False
+    # --- EXIBIÇÃO DE CONTROLE DE QUEM É A VEZ E CRONÔMETRO ---
+    autorizado_a_jogar = True
+    mensagem_turno = ""
+    
+    if modo_jogo == "TURNOS" and not vitoria and erros_atuais < 6:
+        if not proximo_autorizado or str(proximo_autorizado).strip() == "":
+            mensagem_turno = "🔥 **Arena aberta!** Qualquer jogador cadastrado pode fazer o primeiro palpite."
+            autorizado_a_jogar = True
+        else:
+            if timestamp_inicio and timestamp_inicio > 0:
+                tempo_decorrido = time.time() - timestamp_inicio
+                segundos_restantes = max(0, int(tempo_maximo - tempo_decorrido))
+            else: segundos_restantes = tempo_maximo
 
-        if mensagem_turno: st.info(mensagem_turno)
-
-        # --- BOTÃO DO PÓDIO EM TEMPO REAL PARA O ADMIN ---
-        if st.session_state.rodada_terminada and st.session_state.jogador == "TREINAMENTOWLI" and not st.session_state.podio_liberado:
-            st.write("")
-            if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True, key="btn_realtime_podio"):
-                st.session_state.podio_liberado = True
-                st.toast("Pódio liberado com sucesso na aba 4!")
-                try: supabase.table("forca_disputa_arena").update({"ultimo_jogador": "SISTEMA"}).eq("id", 1).execute()
+            if segundos_restantes <= 0:
+                try:
+                    res_punido = supabase.table("forca_disputa_ranking").select("*").eq("jogador", proximo_autorizado).single().execute()
+                    if res_punido.data:
+                        col_p_punir = "points" if "points" in res_punido.data else "pontos"
+                        pts_punido = res_punido.data[col_p_punir]
+                        supabase.table("forca_disputa_ranking").update({col_p_punir: max(0, pts_punido - 5)}).eq("jogador", proximo_autorizado).execute()
                 except Exception: pass
+                
+                novo_proximo = calcular_proximo_turno(proximo_autorizado)
+                supabase.table("forca_disputa_arena").update({
+                    "forca_proximo_turno": novo_proximo, "forca_timestamp_inicio": time.time(),
+                    "ultimo_jogador": f"SISTEMA (TEMPO DE {proximo_autorizado} ESGOTOU)"
+                }).eq("id", 1).execute()
                 st.rerun()
 
-        # --- TECLADO VIRTUAL OPERANTE ---
-        if not vitoria and erros_atuais < 6:
-            if st.session_state.jogador != "TREINAMENTOWLI":
-                try:
-                    valido = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
-                    if not valido.data:
-                        st.warning("⚠️ Sua entrada na arena foi revogada pelo Mestre.")
-                        if st.button("SAIR", key="btn_sair_arena"):
-                            st.session_state.jogador = None
-                            st.rerun()
-                        st.stop()
-                except Exception: pass
+            st.markdown(f"⏱️ **Tempo restante para a jogada:** `{segundos_restantes}s`")
+            st.progress(max(0.0, min(segundos_restantes / tempo_maximo, 1.0)))
 
-            letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
-            cols_tec = st.columns(9)
-            for i, letra in enumerate(letras_abc):
-                ja_foi = letra in tentadas
-                is_admin = st.session_state.jogador == "TREINAMENTOWLI"
-                botao_desabilitado = ja_foi or (not autorizado_a_jogar) or st.session_state.clique_bloqueado or is_admin
-                
-                if cols_tec[i % 9].button(letra, key=f"arena_tec_{letra}", disabled=botao_desabilitado, use_container_width=True):
-                    st.session_state.clique_bloqueado = True
-                    if modo_jogo == "TURNOS" and (not proximo_autorizado or str(proximo_autorizado).strip() == ""):
-                        supabase.table("forca_disputa_arena").update({"forca_timestamp_inicio": time.time()}).eq("id", 1).execute()
-                    registrar_jogada(letra, jogo)
-                    st.rerun()
-        elif not (contagem == 0) and vitoria:
-             st.info("✅ Palavra correta! Aguardando o Administrador...")
+            if str(st.session_state.jogador).strip() == str(proximo_autorizado).strip():
+                mensagem_turno = f"⚔️ **SUA VEZ, {st.session_state.jogador}!** Seu teclado está ativo para jogar."
+                autorizado_a_jogar = True
+            else:
+                mensagem_turno = f"⏳ **AGUARDE A FILA!** É a vez do jogador: **{proximo_autorizado}**."
+                autorizado_a_jogar = False
 
-    # --- RESTAURAÇÃO DO RANKING LATERAL DIREITO ---
-    with col_rank:
-        st.markdown("### 🏆 Ranking")
-        try:
-            # Busca todos os jogadores ordenados por pontuação maior
-            res_rank = supabase.table("forca_disputa_ranking").select("*").order("points" if "points" in jogo else "pontos", desc=True).execute()
-            jogadores_faciais = [r for r in res_rank.data if r['jogador'] != "TREINAMENTOWLI"]
+    if mensagem_turno: st.info(mensagem_turno)
+
+
+      # --- BOTÃO DO PÓDIO EM TEMPO REAL PARA O ADMIN ---
+    if st.session_state.rodada_terminada and st.session_state.jogador == "TREINAMENTOWLI" and not st.session_state.podio_liberado:
+        st.write("")
+        if st.button("🏆 LIBERAR PÓDIO FINAL NO TELÃO", type="primary", use_container_width=True, key="btn_realtime_podio"):
+            st.session_state.podio_liberado = True
+            st.toast("Pódio liberado com sucesso na aba 4!")
+            try: supabase.table("forca_disputa_arena").update({"ultimo_jogador": "SISTEMA"}).eq("id", 1).execute()
+            except Exception: pass
+            st.rerun()
+
+    # --- TECLADO VIRTUAL OPERANTE ---
+    if not vitoria and erros_atuais < 6:
+        if st.session_state.jogador != "TREINAMENTOWLI":
+            try:
+                valido = supabase.table("forca_disputa_ranking").select("jogador").eq("jogador", st.session_state.jogador).execute()
+                if not valido.data:
+                    st.warning("⚠️ Sua entrada na arena foi revogada pelo Mestre.")
+                    if st.button("SAIR", key="btn_sair_arena"):
+                        st.session_state.jogador = None
+                        st.rerun()
+                    st.stop()
+            except Exception: pass
+
+        letras_abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
+        cols_tec = st.columns(13) # Expandido para 13 colunas para ocupar melhor a tela larga
+        for i, letra in enumerate(letras_abc):
+            ja_foi = letra in tentadas
+            is_admin = st.session_state.jogador == "TREINAMENTOWLI"
+            botao_desabilitado = ja_foi or (not autorizado_a_jogar) or st.session_state.clique_bloqueado or is_admin
             
-            # Renderiza o Top 10 com foto de Avatar e Pontos lado a lado
-            for i, r in enumerate(jogadores_faciais[:10]):
-                col_p = "points" if "points" in r else "pontos"
-                num_avatar = r.get("forca_avatar_num", None)
-                nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
-                
-                c_av, c_rk = st.columns([1, 4])
-                with c_av:
-                    if nome_avatar and os.path.exists(nome_avatar): 
-                        st.image(nome_avatar, width=28)
-                    else: 
-                        st.markdown("👤")
-                with c_rk: 
-                    st.write(f"{i+1}º {r['jogador']}: {r[col_p]} pts")
-        except Exception: 
-            st.write("Sincronizando placar...")
+            if cols_tec[i % 13].button(letra, key=f"arena_tec_{letra}", disabled=botao_desabilitado, use_container_width=True):
+                st.session_state.clique_bloqueado = True
+                if modo_jogo == "TURNOS" and (not proximo_autorizado or str(proximo_autorizado).strip() == ""):
+                    supabase.table("forca_disputa_arena").update({"forca_timestamp_inicio": time.time()}).eq("id", 1).execute()
+                registrar_jogada(letra, jogo)
+                st.rerun()
+    elif not (contagem == 0) and vitoria:
+         st.info("✅ Palavra correta! Aguardando o Administrador...")
 
+# EXECUÇÃO DO PLAYER COMUM (100% de largura de tela)
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     arena_viva()
+
 
 
 # ==================================================
