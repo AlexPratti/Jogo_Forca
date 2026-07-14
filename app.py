@@ -233,6 +233,7 @@ def reiniciar_arena_completa():
     }).eq("id", 1).execute()
     st.session_state.clique_bloqueado = False
     st.rerun()
+    
 # ==================================================
 # 4. INTERFACE DA ARENA (UNIFICADA E ALINHADA)
 # ==================================================
@@ -263,7 +264,8 @@ def arena_viva():
         if os.path.exists("musica.mp3"):
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
 
-    c_img, c_txt = st.columns()
+    # CORREÇÃO CRÍTICA: Definido o número de colunas (2) para evitar o TypeError de função vazia
+    c_img, c_txt = st.columns(2)
     erros_atuais = jogo.get('erros', 0)
     ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
     modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -360,6 +362,7 @@ def arena_viva():
                 autorizado_a_jogar = False
 
     if mensagem_turno: st.info(mensagem_turno)
+
 
     # --- BOTÃO DO PÓDIO EM TEMPO REAL PARA O ADMIN ---
     if st.session_state.rodada_terminada and st.session_state.jogador == "TREINAMENTOWLI" and not st.session_state.podio_liberado:
