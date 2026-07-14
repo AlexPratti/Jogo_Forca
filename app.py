@@ -486,7 +486,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             }).eq("id", 1).execute()
             st.rerun()
 
-    # CORREÇÃO DE LAYOUT: As abas voltam a ocupar 100% de largura nativa da tela de ponta a ponta
+    # Mantém as abas superiores em 100% da largura da página
     nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
     abas = st.tabs(nomes_abas)
 
@@ -494,18 +494,17 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         st.components.v1.html("<script>window.parent.document.querySelectorAll('button[role=\"tab\"]').click();</script>", height=0)
 
     # --------------------------------------------------
-    # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO (100% LARGURA)
+    # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
-    with abas[0]:
-        # Criamos uma linha divisória interna: Jogo ocupa a esquerda (4 partes) e o menu de botões fica na direita (1 parte)
+    with abas:
+        # CORREÇÃO DEFINITIVA: Força a coluna do tabuleiro a ter 80% (4) do espaço e a lateral ter 20% (1)
         col_tabuleiro_mestre, col_menu_mestre = st.columns([4, 1])
         
         with col_tabuleiro_mestre:
-            # O jogo agora ganha todo o espaço horizontal livre para desenhar a pergunta e resposta sem espremer
+            # Agora a pergunta e a resposta vão se expandir por quase toda a largura da tela
             arena_viva()
             
         with col_menu_mestre:
-            # O botão Próxima e o Ranking ficam organizados de forma limpa na barra lateral direita da aba
             st.write("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             if st.button("➡️ Próxima", use_container_width=True, key="btn_top_right_proxima_mestre"):
                 avancar_proxima_pergunta()
@@ -521,7 +520,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     num_avatar = r.get("forca_avatar_num", None)
                     nome_avatar = f"AV{num_avatar}.png" if num_avatar else None
                     
-                    c_av, c_rk = st.columns([1, 4])
+                    c_av, c_rk = st.columns()
                     with c_av:
                         if nome_avatar and os.path.exists(nome_avatar): st.image(nome_avatar, width=24)
                         else: st.markdown("👤")
