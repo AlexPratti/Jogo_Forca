@@ -447,12 +447,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         jogo_check = res_arena_check.data
     except Exception: jogo_check = None
 
-    nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
-    abas = st.tabs(nomes_abas)
-    
-    if st.session_state.get('rodada_terminada', False) and st.session_state.get('podio_liberado', False):
-        st.components.v1.html("<script>window.parent.document.querySelectorAll('button[role=\"tab\"]').click();</script>", height=0)
-    
     try:
         res_senha_mestre = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
         senha_atual = res_senha_mestre.data.get('forca_senha_acesso', '----') if res_senha_mestre.data else '----'
@@ -464,7 +458,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         url_completa = protocolo + url_base
     except Exception: url_completa = "https://streamlit.io"
 
-    # FUNÇÃO REUTILIZÁVEL: Centraliza a lógica de avançar para a próxima pergunta sem duplicar código
+    # FUNÇÃO REUTILIZÁVEL: Centraliza a lógica de avançar para a próxima pergunta
     def avancar_proxima_pergunta():
         if "fila_perguntas" in st.session_state and st.session_state.fila_perguntas:
             proxima = st.session_state.fila_perguntas.pop(0)
@@ -489,7 +483,26 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             }).eq("id", 1).execute()
             st.rerun()
 
-    # CORREÇÃO: Aplicado o índice correto [0] para renderizar o tabuleiro
+    # LAYOUT DE TOPO: Divide o topo em 5 partes, usando 4 para as abas e 1 para o botão "Próxima" à direita
+    col_abas_top, col_botao_top = st.columns([4, 1])
+
+    with col_abas_top:
+        nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
+        abas = st.tabs(nomes_abas)
+
+    # Injeção JavaScript de controle das Abas
+    if st.session_state.get('rodada_terminada', False) and st.session_state.get('podio_liberado', False):
+        st.components.v1.html("<script>window.parent.document.querySelectorAll('button[role=\"tab\"]').click();</script>", height=0)
+
+    # Renderiza o Botão "Próxima" no topo direito ao lado da barra de abas
+    with col_botao_top:
+        st.write("<div style='height: 10px;'></div>", unsafe_allow_html=True) # Alinhamento vertical sutil
+        if st.button("➡️ Próxima", use_container_width=True, key="btn_top_right_proxima_mestre"):
+            avancar_proxima_pergunta()
+
+    # --------------------------------------------------
+    # ABA 0: TABULEIRO DA FORCA E CONTROLES DO MESTRE
+    # --------------------------------------------------
     with abas[0]:
         arena_viva()
         st.write("")
