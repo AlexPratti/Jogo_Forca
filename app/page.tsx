@@ -182,44 +182,56 @@ export default function ArenaDaForca() {
     }).eq("id", 1);
   };
 
+    const removerAcentos = (texto: string) => {
+    if (!texto) return "";
+    return texto
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .replace(/\s+/g, "");
+  };
+
   const processarWord = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const arquivo = e.target.files[0];
     
-    // Converte o arquivo Word para uma String Base64 para envio seguro na web
-    const leitorArquivo = new FileReader();
-    leitorArquivo.readAsDataURL(arquivo);
+    const leitor = new FileReader();
+    leitor.readAsArrayBuffer(arquivo);
     
-    leitorArquivo.onload = async () => {
-      const resultadoBase64 = leitorArquivo.result as string;
-      if (!resultadoBase64) {
-        alert("Erro ao ler os dados do arquivo localmente.");
-        return;
-      }
+    leitor.onload = async (evento) => {
+      try {
+        const arrayBuffer = evento.target?.result as ArrayBuffer;
+        if (!arrayBuffer) return;
 
-      // Separa o cabeçalho do conteúdo Base64 puro
-      const base64Puro = resultadoBase64.split(",")[1];
+        // Extrai o texto puro de dentro do arquivo .docx usando o mammoth
+        const resultadoMammoth = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+        const textoBruto = resultadoMammoth.value
+          .split("\n")
+          .map(linha => linha.trim())
+          .filter(linha => linha.length > 0);
 
-      // Envia como texto puro para a nossa API Python
-      const response = await fetch("/python-api/upload", {
+        const listaFinal: any[] = [];
+        
+        // Organiza em pares: linha 1 = Pergunta, linha 2 = Resposta
+        for (let i = 0; i < textoBruto.length; i += 2) {
+          if (i + 1 < textoBruto.length) {
+            const pergunta = textoBruto[i];
+            const resposta = removerAcentos(textoBruto[i + 1]);
+            listaFinal.push({ pergunta, resposta });
+          }
+        }
 
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ arquivoBase64: base64Puro })
-      });
-      
-      const resultado = await response.json();
-      if (resultado.success && resultado.questoes && resultado.questoes.length > 0) {
-        setFilaPerguntas(resultado.questoes);
-        alert(`🎉 Sucesso! ${resultado.questoes.length} questões carregadas na fila.`);
-      } else {
-        alert("⚠️ Nenhuma pergunta encontrada ou erro ao processar o arquivo Word.");
+        if (listaFinal.length > 0) {
+          setFilaPerguntas(listaFinal);
+          alert(`🎉 Sucesso! ${listaFinal.length} questões carregadas na fila diretamente no navegador.`);
+        } else {
+          alert("⚠️ Nenhuma pergunta encontrada dentro do arquivo Word. Verifique a formatação.");
+        }
+      } catch (erro) {
+        alert("⚠️ Erro ao ler o arquivo Word. Certifique-se de que é um arquivo .docx válido.");
       }
     };
   };
-
 
 
   const reiniciarArena = async () => {
