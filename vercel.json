@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/upload",
-      "destination": "/app/api/upload/route.py"
+      "source": "/python-api/upload",
+      "destination": "/python-api/upload/route.py"
     }
   ]
 }
