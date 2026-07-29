@@ -186,25 +186,27 @@ export default function ArenaDaForca() {
     if (!e.target.files || e.target.files.length === 0) return;
     const arquivo = e.target.files[0];
     
-    // Lê o arquivo Word (.docx) como dados binários puros (ArrayBuffer)
+    // Converte o arquivo Word para uma String Base64 para envio seguro na web
     const leitorArquivo = new FileReader();
-    leitorArquivo.readAsArrayBuffer(arquivo);
+    leitorArquivo.readAsDataURL(arquivo);
     
     leitorArquivo.onload = async () => {
-      const dadosBinarios = leitorArquivo.result;
-      
-      if (!dadosBinarios) {
+      const resultadoBase64 = leitorArquivo.result as string;
+      if (!resultadoBase64) {
         alert("Erro ao ler os dados do arquivo localmente.");
         return;
       }
 
-      // Envia o binário puro direto no corpo da requisição para a API Python
+      // Separa o cabeçalho do conteúdo Base64 puro
+      const base64Puro = resultadoBase64.split(",")[1];
+
+      // Envia como texto puro para a nossa API Python
       const response = await fetch("/api/upload", {
         method: "POST",
         headers: {
-          "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          "Content-Type": "application/json"
         },
-        body: dadosBinarios
+        body: JSON.stringify({ arquivoBase64: base64Puro })
       });
       
       const resultado = await response.json();
@@ -212,10 +214,11 @@ export default function ArenaDaForca() {
         setFilaPerguntas(resultado.questoes);
         alert(`🎉 Sucesso! ${resultado.questoes.length} questões carregadas na fila.`);
       } else {
-        alert("⚠️ Nenhuma pergunta encontrada ou formato inválido dentro do arquivo Word.");
+        alert("⚠️ Nenhuma pergunta encontrada ou erro ao processar o arquivo Word.");
       }
     };
   };
+
 
 
   const reiniciarArena = async () => {
