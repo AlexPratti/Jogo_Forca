@@ -186,19 +186,37 @@ export default function ArenaDaForca() {
     if (!e.target.files || e.target.files.length === 0) return;
     const arquivo = e.target.files[0];
     
-    const formData = new FormData();
-    formData.append("file", arquivo);
+    // Lê o arquivo Word (.docx) como dados binários puros (ArrayBuffer)
+    const leitorArquivo = new FileReader();
+    leitorArquivo.readAsArrayBuffer(arquivo);
+    
+    leitorArquivo.onload = async () => {
+      const dadosBinarios = leitorArquivo.result;
+      
+      if (!dadosBinarios) {
+        alert("Erro ao ler os dados do arquivo localmente.");
+        return;
+      }
 
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      body: formData
-    });
-    const resultado = await response.json();
-    if (resultado.success && resultado.questoes.length > 0) {
-      setFilaPerguntas(resultado.questoes);
-      alert(`${resultado.questoes.length} questões carregadas com sucesso!`);
-    }
+      // Envia o binário puro direto no corpo da requisição para a API Python
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        },
+        body: dadosBinarios
+      });
+      
+      const resultado = await response.json();
+      if (resultado.success && resultado.questoes && resultado.questoes.length > 0) {
+        setFilaPerguntas(resultado.questoes);
+        alert(`🎉 Sucesso! ${resultado.questoes.length} questões carregadas na fila.`);
+      } else {
+        alert("⚠️ Nenhuma pergunta encontrada ou formato inválido dentro do arquivo Word.");
+      }
+    };
   };
+
 
   const reiniciarArena = async () => {
     await supabase.from("forca_disputa_ranking").update({ pontos: 0 }).not("jogador", "eq", "TREINAMENTOWLI");
