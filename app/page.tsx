@@ -443,7 +443,8 @@ export default function ArenaDaForca() {
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-xl space-y-6">
           <div>
             <h3 className="text-lg font-bold mb-2">📥 Upload de Perguntas (.docx)</h3>
-            <input type="file" accept=".docx" onChange={processarWord} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-sm" />
+            <input type="file" accept=".csv" onChange={processarCSV} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-sm" />
+
           </div>
           <div className="border-t border-slate-800 pt-4">
             <h3 className="text-lg font-bold mb-2">🔄 Formato de Jogo</h3>
