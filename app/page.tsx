@@ -182,56 +182,72 @@ export default function ArenaDaForca() {
     }).eq("id", 1);
   };
 
-    const removerAcentos = (texto: string) => {
+   const removerAcentos = (texto: string) => {
     if (!texto) return "";
     return texto
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toUpperCase()
+      .trim()
       .replace(/\s+/g, "");
   };
 
-  const processarWord = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const processarCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const arquivo = e.target.files[0];
     
     const leitor = new FileReader();
-    leitor.readAsArrayBuffer(arquivo);
+    // Lê o arquivo como texto puro (configurado para aceitar acentos em português)
+    leitor.readAsText(arquivo, "UTF-8");
     
     leitor.onload = async (evento) => {
       try {
-        const arrayBuffer = evento.target?.result as ArrayBuffer;
-        if (!arrayBuffer) return;
+        const textoBruto = evento.target?.result as string;
+        if (!textoBruto) return;
 
-        // Extrai o texto puro de dentro do arquivo .docx usando o mammoth
-        const resultadoMammoth = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-        const textoBruto = resultadoMammoth.value
-          .split("\n")
-          .map(linha => linha.trim())
-          .filter(linha => linha.length > 0);
-
+        // Quebra o arquivo em linhas
+        const linhas = textoBruto.split("\n");
         const listaFinal: any[] = [];
-        
-        // Organiza em pares: linha 1 = Pergunta, linha 2 = Resposta
-        for (let i = 0; i < textoBruto.length; i += 2) {
-          if (i + 1 < textoBruto.length) {
-            const pergunta = textoBruto[i];
-            const resposta = removerAcentos(textoBruto[i + 1]);
-            listaFinal.push({ pergunta, resposta });
+
+        for (let linha of linhas) {
+          const conteudo = linha.trim();
+          if (!conteudo) continue;
+
+          // Separa a pergunta da resposta pelo ponto e vírgula (;)
+          const partes = conteudo.split(";");
+          if (partes.length >= 2) {
+            const pergunta = partes[0].trim();
+            const resposta = removerAcentos(partes[1]);
+            
+            if (pergunta && resposta) {
+              listaFinal.push({ pergunta, resposta });
+            }
           }
         }
 
         if (listaFinal.length > 0) {
-          setFilaPerguntas(listaFinal);
-          alert(`🎉 Sucesso! ${listaFinal.length} questões carregadas na fila diretamente no navegador.`);
+          // Grava todas as perguntas direto no Supabase
+          const { error } = await supabase.from("forca_disputa_questoes").insert(listaFinal);
+          
+          if (error) {
+            alert("Erro ao salvar as perguntas no banco de dados.");
+            return;
+          }
+
+          // Atualiza o contador de restantes no painel ativo da arena
+          const { count } = await supabase.from("forca_disputa_questoes").select("*", { count: "exact", head: true });
+          await supabase.from("forca_disputa_arena").update({ restantes: count || 0 }).eq("id", 1);
+
+          alert(`🎉 Sucesso! ${listaFinal.length} questões gravadas permanentemente no Supabase.`);
         } else {
-          alert("⚠️ Nenhuma pergunta encontrada dentro do arquivo Word. Verifique a formatação.");
+          alert("⚠️ Formato incorreto. Certifique-se de usar ponto e vírgula (;) para separar a pergunta da resposta.");
         }
       } catch (erro) {
-        alert("⚠️ Erro ao ler o arquivo Word. Certifique-se de que é um arquivo .docx válido.");
+        alert("⚠️ Erro ao processar o arquivo CSV.");
       }
     };
   };
+
 
 
   const reiniciarArena = async () => {
