@@ -11,6 +11,7 @@ def remover_acentos(texto):
 
 def extrair_dados_do_docx(conteudo_arquivo):
     try:
+        # Lê o binário de forma robusta e segura
         doc = Document(BytesIO(conteudo_arquivo))
         texto_bruto = []
         for p in doc.paragraphs:
@@ -30,19 +31,37 @@ def extrair_dados_do_docx(conteudo_arquivo):
                 lista_final.append({"pergunta": pergunta, "resposta": resposta})
         return lista_final
     except Exception as e:
+        # Caso ocorra qualquer erro de parse, o Python reporta no console
+        print(f"Erro no processamento do Docx: {str(e)}")
         return []
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length)
-        
-        questoes = extrair_dados_do_docx(post_data)
-        
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            
+            # Extrai os dados baseado no ArrayBuffer recebido
+            questoes = extrair_dados_do_docx(post_data)
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            response = {"success": True, "questoes": questoes}
+            self.wfile.write(json.dumps(response).encode('utf-8'))
+        except Exception as e:
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
+        return
+
+    def do_OPTIONS(self):
         self.send_response(200)
-        self.send_header('Content-type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
-        
-        response = {"success": True, "questoes": questoes}
-        self.wfile.write(json.dumps(response).encode('utf-8'))
         return
