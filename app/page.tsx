@@ -382,7 +382,9 @@ export default function ArenaDaForca() {
               <p className="text-slate-300 font-medium">❓ {jogo?.pergunta}</p>
             </div>
             <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 text-center font-mono text-2xl font-bold tracking-widest text-red-400">{jogo?.palavra}</div>
-            <button onClick={() => avancarPergunta()} className="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 p-3 rounded-lg font-bold transition">🚀 LANÇAR PRÓXIMA PERGUNTA ({filaPerguntas.length} na fila)</button>
+            <button onClick={() => avancarPergunta()} className="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 p-3 rounded-lg font-bold transition">
+              🚀 LANÇAR PRÓXIMA PERGUNTA ({jogo?.restantes || 0} na fila do banco)
+            </button>
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -398,6 +400,7 @@ export default function ArenaDaForca() {
           </div>
         </div>
       )}
+
       {abaAtiva === 1 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-2xl">
           <div className="flex justify-between items-center mb-6">
