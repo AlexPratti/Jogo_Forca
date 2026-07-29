@@ -201,7 +201,8 @@ export default function ArenaDaForca() {
       const base64Puro = resultadoBase64.split(",")[1];
 
       // Envia como texto puro para a nossa API Python
-      const response = await fetch("/api/upload", {
+      const response = await fetch("/python-api/upload", {
+
         method: "POST",
         headers: {
           "Content-Type": "application/json"
