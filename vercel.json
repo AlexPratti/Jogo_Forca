@@ -1,8 +1,2 @@
-{
-  "rewrites": [
-    {
-      "source": "/python-api/upload",
-      "destination": "/python-api/upload/route.py"
-    }
-  ]
-}
+{}
+
