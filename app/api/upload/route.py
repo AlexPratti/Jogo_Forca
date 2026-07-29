@@ -1,5 +1,6 @@
 import json
 import unicodedata
+import base64
 from http.server import BaseHTTPRequestHandler
 from io import BytesIO
 from docx import Document
@@ -11,7 +12,6 @@ def remover_acentos(texto):
 
 def extrair_dados_do_docx(conteudo_arquivo):
     try:
-        # Lê o binário de forma robusta e segura
         doc = Document(BytesIO(conteudo_arquivo))
         texto_bruto = []
         for p in doc.paragraphs:
@@ -31,7 +31,6 @@ def extrair_dados_do_docx(conteudo_arquivo):
                 lista_final.append({"pergunta": pergunta, "resposta": resposta})
         return lista_final
     except Exception as e:
-        # Caso ocorra qualquer erro de parse, o Python reporta no console
         print(f"Erro no processamento do Docx: {str(e)}")
         return []
 
@@ -41,8 +40,15 @@ class handler(BaseHTTPRequestHandler):
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             
-            # Extrai os dados baseado no ArrayBuffer recebido
-            questoes = extrair_dados_do_docx(post_data)
+            # Carrega o JSON enviado pelo Next.js
+            dados_json = json.loads(post_data.decode('utf-8'))
+            base64_string = dados_json.get('arquivoBase64', '')
+            
+            # Converte o texto Base64 de volta para os bytes reais do arquivo Word
+            bytes_arquivo = base64.b64decode(base64_string)
+            
+            # Extrai as perguntas
+            questoes = extrair_dados_do_docx(bytes_arquivo)
             
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
