@@ -1,13 +1,8 @@
 {
-  "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "package.json",
-      "use": "@vercel/next"
-    },
-    {
-      "src": "app/api/upload/route.py",
-      "use": "@vercel/python"
+      "source": "/api/upload",
+      "destination": "/app/api/upload/route.py"
     }
   ]
 }
