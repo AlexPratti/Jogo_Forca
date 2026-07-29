@@ -199,7 +199,8 @@ export default function ArenaDaForca() {
 
   const processarWord = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    const arquivo = e.target.files[0];
+    const arquivo = e.target.files?.[0];
+
     
     // Envia o arquivo para a API Route em Python que criamos na Vercel
     const response = await fetch("/api/upload", {
