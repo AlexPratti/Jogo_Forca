@@ -238,7 +238,7 @@ export default function ArenaDaForca() {
       )}
       {abaAtiva === 2 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-xl space-y-6">
-          <div><h3 className="text-lg font-bold mb-2">📥 Upload de Perguntas (.txt)</h3><input type="file" accept=".txt" onChange={processarTexto} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-sm" /></div>
+          <div><h3 className="text-lg font-bold mb-2">📥 Upload de Perguntas (.txt)</h3><input type="file" accept=".txt, text/plain" onChange={processarTexto} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-sm" /></div>
           <div><h3 className="text-lg font-bold mb-2">🔄 Formato</h3><div className="flex gap-4">{["LIVRE", "TURNOS"].map(m => <button key={m} onClick={async () => await supabase.from("forca_disputa_arena").update({ forca_modo_jogo: m, forca_proximo_turno: "" }).limit(1)} className={`flex-1 p-3 rounded-lg font-bold border ${jogo?.forca_modo_jogo === m ? "bg-blue-600 text-white" : "bg-slate-950 text-slate-400"}`}>{m}</button>)}</div></div>
           <button onClick={reiniciarArena} className="w-full bg-slate-950 border border-red-900 text-red-500 p-3 rounded-lg font-bold">🔄 REINICIAR ARENA COMPLETA</button>
         </div>
