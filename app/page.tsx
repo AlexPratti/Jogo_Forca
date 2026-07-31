@@ -14,9 +14,11 @@ export default function ArenaDaForca() {
   const [ranking, setRanking] = useState<any[]>([]);
   const [tempoRestante, setTempoRestante] = useState(15);
   const [abaAtiva, setAbaAtiva] = useState(0);
+
   useEffect(() => {
-    supabase.from("forca_disputa_arena").select("*").eq("id", 1).single().then(({ data }) => { if (data) setJogo(data); });
+    supabase.from("forca_disputa_arena").select("*").limit(1).single().then(({ data }) => { if (data) setJogo(data); });
     supabase.from("forca_disputa_ranking").select("*").order("pontos", { ascending: false }).then(({ data }) => { if (data) setRanking(data); });
+    
     const canalArena = supabase.channel("mudancas_arena").on("postgres_changes", { event: "UPDATE", schema: "public", table: "forca_disputa_arena" }, (p) => setJogo(p.new)).subscribe();
     const canalRanking = supabase.channel("mudancas_ranking").on("postgres_changes", { event: "*", schema: "public", table: "forca_disputa_ranking" }, () => {
       supabase.from("forca_disputa_ranking").select("*").order("pontos", { ascending: false }).then(({ data }) => { if (data) setRanking(data); });
@@ -40,7 +42,7 @@ export default function ArenaDaForca() {
     const { data: pData } = await supabase.from("forca_disputa_ranking").select("pontos").eq("jogador", punido).single();
     if (pData) await supabase.from("forca_disputa_ranking").update({ pontos: Math.max(0, pData.pontos - 5) }).eq("jogador", punido);
     const proximo = await calcularProximoTurno(punido);
-    await supabase.from("forca_disputa_arena").update({ forca_proximo_turno: proximo, forca_timestamp_inicio: Math.floor(Date.now() / 1000), ultimo_jogador: `SISTEMA (TEMPO DE ${punido} ESGOTOU)` }).eq("id", 1);
+    await supabase.from("forca_disputa_arena").update({ forca_proximo_turno: proximo, forca_timestamp_inicio: Math.floor(Date.now() / 1000), ultimo_jogador: `SISTEMA (TEMPO DE ${punido} ESGOTOU)` }).limit(1);
   };
 
   const calcularProximoTurno = async (atual: string) => {
@@ -55,37 +57,23 @@ export default function ArenaDaForca() {
     if (perfil === "Mestre") {
       if (senhaInput.toUpperCase() === "TREINAMENTOWLI") {
         setJogador("TREINAMENTOWLI");
-        // Gera uma senha limpa e sem espaços
         const novaSenha = Math.random().toString(36).substring(2, 6).toUpperCase().trim();
-        await supabase.from("forca_disputa_arena").update({ forca_senha_acesso: novaSenha }).eq("id", 1);
-      } else {
-        setErroLogin("Chave de acesso do Mestre incorreta.");
-      }
+        await supabase.from("forca_disputa_arena").update({ forca_senha_acesso: novaSenha }).limit(1);
+      } else setErroLogin("Chave de acesso incorreta.");
     } else {
-      if (!nomeInput || !senhaInput) {
-        setErroLogin("Preencha seu nome e a senha da arena.");
-        return;
-      }
-      const nomeUpper = nomeInput.trim().toUpperCase();
-      const senhaLimpa = senhaInput.trim().toUpperCase();
-
-      // Busca a senha atual registrada diretamente na tabela do banco
-      const { data: arena } = await supabase.from("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single();
+      if (!nomeInput || !senhaInput) return setErroLogin("Preencha todos os campos.");
+      const nUpper = nomeInput.trim().toUpperCase();
+      const sLimpa = senhaInput.trim().toUpperCase();
       
-      if (arena && arena.forca_senha_acesso && senhaLimpa === arena.forca_senha_acesso.trim().toUpperCase()) {
-        setJogador(nomeUpper);
-        const { data: check } = await supabase.from("forca_disputa_ranking").select("*").eq("jogador", nomeUpper);
-        if (!check || check.length === 0) {
+      const { data: arena } = await supabase.from("forca_disputa_arena").select("forca_senha_acesso").limit(1).single();
+      if (arena && arena.forca_senha_acesso && sLimpa === arena.forca_senha_acesso.trim().toUpperCase()) {
+        setJogador(nUpper);
+        const { data: c } = await supabase.from("forca_disputa_ranking").select("*").eq("jogador", nUpper);
+        if (!c || c.length === 0) {
           const { count } = await supabase.from("forca_disputa_ranking").select("*", { count: "exact" }).not("jogador", "eq", "TREINAMENTOWLI");
-          await supabase.from("forca_disputa_ranking").upsert({
-            jogador: nomeUpper,
-            pontos: 0,
-            forca_avatar_num: (count || 0) + 1
-          });
+          await supabase.from("forca_disputa_ranking").upsert({ jogador: nUpper, pontos: 0, forca_avatar_num: (count || 0) + 1 });
         }
-      } else {
-        setErroLogin("Senha incorreta. Veja a senha gerada pelo Mestre no telão.");
-      }
+      } else setErroLogin("Senha incorreta.");
     }
   };
 
@@ -100,17 +88,16 @@ export default function ArenaDaForca() {
     const { data: pData } = await supabase.from("forca_disputa_ranking").select("pontos").eq("jogador", jogador).single();
     let ptsAtuais = pData ? pData.pontos : 0;
     if (palavraAlvo.includes(letra)) await supabase.from("forca_disputa_ranking").update({ pontos: ptsAtuais + 5 }).eq("jogador", jogador);
-    else { novosErros += 1; if (jogo.forca_modo_jogo === "TURNOS") await supabase.from("forca_disputa_ranking").update({ pontos: Math.max(0, ptsAtuais - 5) }).eq("jogador", __ => jogador); }
+    else { novosErros += 1; if (jogo.forca_modo_jogo === "TURNOS") await supabase.from("forca_disputa_ranking").update({ pontos: Math.max(0, ptsAtuais - 5) }).eq("jogador", jogador); }
     const proximo = await calcularProximoTurno(jogador);
     const vitoria = palavraAlvo.split("").every((l: string) => l === " " || [...tentadas, letra].includes(l));
     if (vitoria) await supabase.from("forca_disputa_ranking").update({ pontos: ptsAtuais + 15 }).eq("jogador", jogador);
-    await supabase.from("forca_disputa_arena").update({ letras_tentadas: novasLetras, erros: novosErros, ultimo_jogador: jogador, forca_proximo_turno: vitoria ? "" : proximo, forca_timestamp_inicio: Math.floor(Date.now() / 1000) }).eq("id", 1);
+    await supabase.from("forca_disputa_arena").update({ letras_tentadas: novasLetras, erros: novosErros, ultimo_jogador: jogador, forca_proximo_turno: vitoria ? "" : proximo, forca_timestamp_inicio: Math.floor(Date.now() / 1000) }).limit(1);
   };
-
   const processarTexto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const leitor = new FileReader();
-    leitor.readAsText(e.target.files[0], "UTF-8");
+    leitor.readAsText(e.target.files, "UTF-8");
     leitor.onload = async (evento) => {
       try {
         const textoBruto = evento.target?.result as string;
@@ -125,21 +112,12 @@ export default function ArenaDaForca() {
           }
         }
         if (listaFinal.length > 0) {
-          // 1. APAGA AS PERGUNTAS ANTIGAS DO BANCO DE DADOS ANTES DE SUBIR AS NOVAS
           await supabase.from("forca_disputa_questoes").delete().neq("id", 0);
-
-          // 2. INSERE AS PERGUNTAS DO ARQUIVO NOVO
           const { error } = await supabase.from("forca_disputa_questoes").insert(listaFinal);
-          if (error) {
-            alert("Erro ao salvar no banco de dados.");
-            return;
-          }
+          if (error) return alert("Erro ao salvar no banco de dados.");
 
-          // 3. ATUALIZA O CONTADOR DO PAINEL PRINCIPAL
           const { count } = await supabase.from("forca_disputa_questoes").select("*", { count: "exact", head: true });
-          await supabase.from("forca_disputa_arena").update({ restantes: count || 0 }).eq("id", 1);
-
-          // 4. ATUALIZA O ESTADO DO COMPONENTE EM TEMPO REAL (EVITA DESLOGAR)
+          await supabase.from("forca_disputa_arena").update({ restantes: count || 0 }).limit(1);
           if (jogo) setJogo({ ...jogo, restantes: count || 0 });
 
           alert(`🎉 Sucesso! As perguntas antigas foram apagadas e ${listaFinal.length} novas questões foram carregadas.`);
@@ -148,55 +126,19 @@ export default function ArenaDaForca() {
     };
   };
 
-    const avancarPergunta = async () => {
-    // Busca a pergunta mais antiga da fila no banco
-    const { data: questoes } = await supabase.from("forca_disputa_questoes").select("*").order("id", { ascending: true }).limit(1);
-
-    if (!questoes || questoes.length === 0) {
-      return alert("⚠️ Não há perguntas na fila! Carregue um arquivo .txt primeiro.");
-    }
-
-    // Pega o primeiro item real da lista retornada pelo Supabase
-    const proximaQuestao = questoes[0];
-
-    // Deleta essa pergunta da fila para ela não se repetir
-    await supabase.from("forca_disputa_questoes").delete().eq("id", proximaQuestao.id);
-
-    // Conta quantas ainda restam no banco de dados
+  const avancarPergunta = async () => {
+    const { data: q } = await supabase.from("forca_disputa_questoes").select("*").order("id", { ascending: true }).limit(1);
+    if (!q || q.length === 0) return alert("⚠️ Não há perguntas na fila! Carregue um arquivo .txt primeiro.");
+    await supabase.from("forca_disputa_questoes").delete().eq("id", q.id);
     const { count } = await supabase.from("forca_disputa_questoes").select("*", { count: "exact", head: true });
-
-    // Envia os dados para a arena e ESCONDE a palavra limpando as letras tentadas e erros!
-    await supabase.from("forca_disputa_arena").update({
-      pergunta: proximaQuestao.pergunta,
-      palavra: proximaQuestao.resposta, // Salva a palavra certa no banco de controle
-      letras_tentadas: "",             // Limpa as letras antigas para o jogo começar do zero!
-      erros: 0,                        // Zera os erros da rodada anterior
-      restantes: count || 0,
-      ultimo_jogador: "SISTEMA",
-      forca_proximo_turno: "",
-      forca_timestamp_inicio: 0
-    }).eq("id", 1);
-
-    // Atualiza a tela do mestre na hora com os novos dados limpos
-    if (jogo) {
-      setJogo({
-        ...jogo,
-        pergunta: proximaQuestao.pergunta,
-        palavra: proximaQuestao.resposta,
-        letras_tentadas: "",
-        erros: 0,
-        restantes: count || 0
-      });
-    }
+    await supabase.from("forca_disputa_arena").update({ pergunta: q.pergunta, palavra: q.resposta, letras_tentadas: "", erros: 0, restantes: count || 0, ultimo_jogador: "SISTEMA", forca_proximo_turno: "", forca_timestamp_inicio: 0 }).limit(1);
   };
-
 
   const reiniciarArena = async () => {
     await supabase.from("forca_disputa_questoes").delete().neq("id", 0);
     await supabase.from("forca_disputa_ranking").update({ pontos: 0 }).not("jogador", "eq", "TREINAMENTOWLI");
-    await supabase.from("forca_disputa_arena").update({ pergunta: "Aguardando nova pergunta...", palavra: "ARENA", letras_tentadas: "", erros: 0, restantes: 0, ultimo_jogador: "SISTEMA", forca_proximo_turno: "" }).eq("id", 1);
+    await supabase.from("forca_disputa_arena").update({ pergunta: "Aguardando nova pergunta...", palavra: "ARENA", letras_tentadas: "", erros: 0, restantes: 0, ultimo_jogador: "SISTEMA", forca_proximo_turno: "" }).limit(1);
   };
-
   if (!jogador) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4">
@@ -218,6 +160,7 @@ export default function ArenaDaForca() {
       </div>
     );
   }
+
   if (jogador !== "TREINAMENTOWLI") {
     const tentadas = jogo?.letras_tentadas ? jogo.letras_tentadas.split(",") : [];
     const erros = jogo?.erros || 0;
@@ -249,14 +192,12 @@ export default function ArenaDaForca() {
             {jogo?.forca_modo_jogo === "TURNOS" && <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center"><div className="text-3xl font-mono font-bold text-amber-500">{tempoRestante}s</div></div>}
           </div>
         </div>
-
         <div className="mt-8 bg-slate-900 border border-slate-800 rounded-xl p-6">
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">🏆 Placar dos Competidores</h3>
+          <h3 className="text-xl font-bold mb-4">🏆 Placar dos Competidores</h3>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
             {ranking.filter((r: any) => r.jogador !== "TREINAMENTOWLI").slice(0, 10).map((r: any, i: number) => (
               <div key={r.jogador} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex flex-col items-center">
-                <span className="text-xs font-bold text-slate-500 mb-1">{i + 1}º Lugar</span>
-                <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-lg mb-1">👤</div>
+                <span className="text-xs text-slate-500 mb-1">{i + 1}º Lugar</span>
                 <span className="font-bold text-sm truncate max-w-full text-center">{r.jogador}</span>
                 <span className="text-xs text-blue-400">{r.pontos} pts</span>
               </div>
@@ -281,7 +222,9 @@ export default function ArenaDaForca() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-xl p-6">
             <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 mb-4"><p className="text-slate-300">❓ {jogo?.pergunta}</p></div>
-            <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 text-center font-mono text-2xl font-bold text-red-400 mb-4">{jogo?.palavra}</div>
+            <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 text-center font-mono text-2xl font-bold text-red-400 mb-4">
+              {jogo?.palavra?.split("").map((l: string) => (jogo?.letras_tentadas?.split(",").includes(l) || jogo?.erros >= 6 ? l : "_")).join(" ")}
+            </div>
             <button onClick={avancarPergunta} className="w-full bg-emerald-600 p-3 rounded-lg font-bold">🚀 LANÇAR PRÓXIMA ({jogo?.restantes || 0} na fila)</button>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -293,7 +236,7 @@ export default function ArenaDaForca() {
       )}
       {abaAtiva === 1 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-2xl">
-          <button onClick={async () => { await supabase.from("forca_disputa_ranking").delete().not("jogador", "eq", "TREINAMENTOWLI"); await supabase.from("forca_disputa_arena").update({ forca_proximo_turno: "" }).eq("id", 1); }} className="bg-red-600 w-full p-2 rounded-lg font-medium text-sm mb-4">🗑️ EXPULSAR TODOS</button>
+          <button onClick={async () => { await supabase.from("forca_disputa_ranking").delete().not("jogador", "eq", "TREINAMENTOWLI"); await supabase.from("forca_disputa_arena").update({ forca_proximo_turno: "" }).limit(1); }} className="bg-red-600 w-full p-2 rounded-lg font-medium text-sm mb-4">🗑️ EXPULSAR TODOS</button>
           {ranking.filter((r: any) => r.jogador !== "TREINAMENTOWLI").map((r: any) => (
             <div key={r.jogador} className="flex justify-between items-center bg-slate-950 p-3 rounded-lg border border-slate-800 mb-1"><span>👤 {r.jogador}</span><button onClick={async () => await supabase.from("forca_disputa_ranking").delete().eq("jogador", r.jogador)} className="bg-red-950 text-red-400 px-3 py-1 rounded-md text-xs">EXPULSAR</button></div>
           ))}
@@ -302,7 +245,7 @@ export default function ArenaDaForca() {
       {abaAtiva === 2 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-xl space-y-6">
           <div><h3 className="text-lg font-bold mb-2">📥 Upload de Perguntas (.txt)</h3><input type="file" accept=".txt" onChange={processarTexto} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-sm" /></div>
-          <div><h3 className="text-lg font-bold mb-2">🔄 Formato</h3><div className="flex gap-4">{["LIVRE", "TURNOS"].map(m => <button key={m} onClick={async () => await supabase.from("forca_disputa_arena").update({ forca_modo_jogo: m, forca_proximo_turno: "" }).eq("id", 1)} className={`flex-1 p-3 rounded-lg font-bold border ${jogo?.forca_modo_jogo === m ? "bg-blue-600 text-white" : "bg-slate-950 text-slate-400"}`}>{m}</button>)}</div></div>
+          <div><h3 className="text-lg font-bold mb-2">🔄 Formato</h3><div className="flex gap-4">{["LIVRE", "TURNOS"].map(m => <button key={m} onClick={async () => await supabase.from("forca_disputa_arena").update({ forca_modo_jogo: m, forca_proximo_turno: "" }).limit(1)} className={`flex-1 p-3 rounded-lg font-bold border ${jogo?.forca_modo_jogo === m ? "bg-blue-600 text-white" : "bg-slate-950 text-slate-400"}`}>{m}</button>)}</div></div>
           <button onClick={reiniciarArena} className="w-full bg-slate-950 border border-red-900 text-red-500 p-3 rounded-lg font-bold">🔄 REINICIAR ARENA COMPLETA</button>
         </div>
       )}
