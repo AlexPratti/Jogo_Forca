@@ -106,15 +106,29 @@ export default function ArenaDaForca() {
           }
         }
         if (listaFinal.length > 0) {
-          await supabase.from("forca_disputa_questoes").insert(listaFinal);
+          // 1. APAGA AS PERGUNTAS ANTIGAS DO BANCO DE DADOS ANTES DE SUBIR AS NOVAS
+          await supabase.from("forca_disputa_questoes").delete().neq("id", 0);
+
+          // 2. INSERE AS PERGUNTAS DO ARQUIVO NOVO
+          const { error } = await supabase.from("forca_disputa_questoes").insert(listaFinal);
+          if (error) {
+            alert("Erro ao salvar no banco de dados.");
+            return;
+          }
+
+          // 3. ATUALIZA O CONTADOR DO PAINEL PRINCIPAL
           const { count } = await supabase.from("forca_disputa_questoes").select("*", { count: "exact", head: true });
           await supabase.from("forca_disputa_arena").update({ restantes: count || 0 }).eq("id", 1);
-          alert(`🎉 Sucesso! ${listaFinal.length} questões carregadas via Texto.`);
-          window.location.reload(); // Força a tela a ler o banco atualizado na hora!
+
+          // 4. ATUALIZA O ESTADO DO COMPONENTE EM TEMPO REAL (EVITA DESLOGAR)
+          if (jogo) setJogo({ ...jogo, restantes: count || 0 });
+
+          alert(`🎉 Sucesso! As perguntas antigas foram apagadas e ${listaFinal.length} novas questões foram carregadas.`);
         } else alert("⚠️ Nenhuma pergunta encontrada.");
       } catch { alert("⚠️ Erro ao ler o arquivo de perguntas."); }
     };
   };
+
   const avancarPergunta = async () => {
     const { data: q } = await supabase.from("forca_disputa_questoes").select("*").order("id", { ascending: true }).limit(1);
     if (!q || q.length === 0) return alert("⚠️ Não há perguntas na fila! Carregue um arquivo .txt primeiro.");
