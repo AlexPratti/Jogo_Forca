@@ -12,10 +12,8 @@ export default function ArenaDaForca() {
 
   const [jogo, setJogo] = useState<any>(null);
   const [ranking, setRanking] = useState<any[]>([]);
-  const [filaPerguntas, setFilaPerguntas] = useState<any[]>([]);
   const [tempoRestante, setTempoRestante] = useState(15);
   const [abaAtiva, setAbaAtiva] = useState(0);
-
   useEffect(() => {
     supabase.from("forca_disputa_arena").select("*").eq("id", 1).single().then(({ data }) => {
       if (data) setJogo(data);
@@ -64,7 +62,6 @@ export default function ArenaDaForca() {
 
     return () => clearInterval(intervalo);
   }, [jogo, jogador]);
-
   const lidarWithTimeout = async (punido: string) => {
     const { data: pData } = await supabase.from("forca_disputa_ranking").select("pontos").eq("jogador", punido).single();
     if (pData) {
@@ -120,7 +117,6 @@ export default function ArenaDaForca() {
       }
     }
   };
-
   const registrarJogada = async (letra: string) => {
     if (!jogo || !jogador || jogador === "TREINAMENTOWLI") return;
 
@@ -158,31 +154,13 @@ export default function ArenaDaForca() {
     await supabase.from("forca_disputa_arena").update({
       letras_tentadas: novasLetras,
       erros: novosErros,
-      ultimo_jogador: _ => jogador,
+      ultimo_jogador: jogador,
       forca_proximo_turno: vitoria ? "" : proximo,
       forca_timestamp_inicio: Math.floor(Date.now() / 1000)
     }).eq("id", 1);
   };
 
-  const avancarPergunta = async () => {
-    if (filaPerguntas.length === 0) return;
-    const proxima = filaPerguntas[0];
-    const novaFila = filaPerguntas.slice(1);
-    setFilaPerguntas(novaFila);
-
-    await supabase.from("forca_disputa_arena").update({
-      pergunta: proxima.pergunta,
-      palavra: proxima.resposta,
-      letras_tentadas: "",
-      erros: 0,
-      restantes: novaFila.length,
-      ultimo_jogador: "SISTEMA",
-      forca_proximo_turno: "",
-      forca_timestamp_inicio: 0
-    }).eq("id", 1);
-  };
-
-   const removerAcentos = (texto: string) => {
+  const removerAcentos = (texto: string) => {
     if (!texto) return "";
     return texto
       .normalize("NFD")
@@ -197,7 +175,6 @@ export default function ArenaDaForca() {
     const arquivo = e.target.files[0];
     
     const leitor = new FileReader();
-    // Lê o arquivo como texto puro (configurado para aceitar acentos em português)
     leitor.readAsText(arquivo, "UTF-8");
     
     leitor.onload = async (evento) => {
@@ -205,7 +182,6 @@ export default function ArenaDaForca() {
         const textoBruto = evento.target?.result as string;
         if (!textoBruto) return;
 
-        // Quebra o arquivo em linhas
         const linhas = textoBruto.split("\n");
         const listaFinal: any[] = [];
 
@@ -213,7 +189,6 @@ export default function ArenaDaForca() {
           const conteudo = linha.trim();
           if (!conteudo) continue;
 
-          // Separa a pergunta da resposta pelo ponto e vírgula (;)
           const partes = conteudo.split(";");
           if (partes.length >= 2) {
             const pergunta = partes[0].trim();
@@ -226,31 +201,51 @@ export default function ArenaDaForca() {
         }
 
         if (listaFinal.length > 0) {
-          // Grava todas as perguntas direto no Supabase
           const { error } = await supabase.from("forca_disputa_questoes").insert(listaFinal);
-          
           if (error) {
-            alert("Erro ao salvar as perguntas no banco de dados.");
+            alert("Erro ao salvar no banco de dados.");
             return;
           }
 
-          // Atualiza o contador de restantes no painel ativo da arena
           const { count } = await supabase.from("forca_disputa_questoes").select("*", { count: "exact", head: true });
           await supabase.from("forca_disputa_arena").update({ restantes: count || 0 }).eq("id", 1);
 
           alert(`🎉 Sucesso! ${listaFinal.length} questões gravadas permanentemente no Supabase.`);
         } else {
-          alert("⚠️ Formato incorreto. Certifique-se de usar ponto e vírgula (;) para separar a pergunta da resposta.");
+          alert("⚠️ Formato incorreto. Use ponto e vírgula (;) para separar pergunta da resposta.");
         }
       } catch (erro) {
         alert("⚠️ Erro ao processar o arquivo CSV.");
       }
     };
   };
+  const avancarPergunta = async () => {
+    const { data: questoes } = await supabase.from("forca_disputa_questoes").select("*").order("id", { ascending: true }).limit(1);
 
+    if (!questoes || questoes.length === 0) {
+      alert("⚠️ Não hay perguntas na fila! Faça o upload de um arquivo .csv primeiro.");
+      return;
+    }
 
+    const proxima = questoes[0];
+    await supabase.from("forca_disputa_questoes").delete().eq("id", proxima.id);
+
+    const { count } = await supabase.from("forca_disputa_questoes").select("*", { count: "exact", head: true });
+
+    await supabase.from("forca_disputa_arena").update({
+      pergunta: proxima.pergunta,
+      palavra: proxima.resposta,
+      letras_tentadas: "",
+      erros: 0,
+      restantes: count || 0,
+      ultimo_jogador: "SISTEMA",
+      forca_proximo_turno: "",
+      forca_timestamp_inicio: 0
+    }).eq("id", 1);
+  };
 
   const reiniciarArena = async () => {
+    await supabase.from("forca_disputa_questoes").delete().neq("id", 0);
     await supabase.from("forca_disputa_ranking").update({ pontos: 0 }).not("jogador", "eq", "TREINAMENTOWLI");
     await supabase.from("forca_disputa_arena").update({
       pergunta: "Aguardando nova pergunta...",
@@ -263,20 +258,16 @@ export default function ArenaDaForca() {
     }).eq("id", 1);
   };
 
-    // --- RENDERIZAÇÃO DA TELA DE LOGIN ---
   if (!jogador) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4">
         <div className="bg-slate-900 border border-slate-800 p-8 rounded-xl max-w-md w-full shadow-2xl">
           <h1 className="text-3xl font-bold text-center mb-6">⚔️ Arena da Forca</h1>
-          
           <div className="flex gap-4 mb-6 bg-slate-950 p-1 rounded-lg border border-slate-800">
             <button className={`flex-1 py-2 rounded-md font-medium transition ${perfil === "Jogador" ? "bg-blue-600 text-white" : "text-slate-400"}`} onClick={() => setPerfil("Jogador")}>Jogador</button>
             <button className={`flex-1 py-2 rounded-md font-medium transition ${perfil === "Mestre" ? "bg-blue-600 text-white" : "text-slate-400"}`} onClick={() => setPerfil("Mestre")}>Mestre (Admin)</button>
           </div>
-
           {erroLogin && <div className="bg-red-950/50 border border-red-800 text-red-400 p-3 rounded-lg text-sm mb-4">{erroLogin}</div>}
-
           {perfil === "Jogador" ? (
             <div className="space-y-4">
               <div>
@@ -294,13 +285,11 @@ export default function ArenaDaForca() {
               <input type="password" className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg focus:outline-none focus:border-blue-500" value={senhaInput} onChange={e => setSenhaInput(e.target.value)} />
             </div>
           )}
-
           <button onClick={realizarLogin} className="w-full mt-6 bg-blue-600 hover:bg-blue-500 p-3 rounded-lg font-bold transition shadow-lg shadow-blue-950">ENTRAR NA ARENA</button>
         </div>
       </div>
     );
   }
-  // --- INTERFACE DO JOGADOR COMUM ---
   if (jogador !== "TREINAMENTOWLI") {
     const tentadas = jogo?.letras_tentadas ? jogo.letras_tentadas.split(",") : [];
     const erros = jogo?.erros || 0;
@@ -328,6 +317,7 @@ export default function ArenaDaForca() {
                 {palavra.split("").map((l: string) => (l === " " ? "  " : tentadas.includes(l) || erros >= 6 ? l : "_")).join("")}
               </div>
             </div>
+
             {!vitoria && erros < 6 ? (
               <div className="grid grid-cols-7 sm:grid-cols-13 gap-2">
                 {"ABCDEFGHIJKLMNOPQRSTUVWXYZ-".split("").map(letra => {
@@ -360,6 +350,7 @@ export default function ArenaDaForca() {
             )}
           </div>
         </div>
+
         <div className="mt-8 bg-slate-900 border border-slate-800 rounded-xl p-6">
           <h3 className="text-xl font-bold mb-4 flex items-center gap-2">🏆 Placar dos Competidores</h3>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
@@ -376,7 +367,6 @@ export default function ArenaDaForca() {
       </div>
     );
   }
-
   return (
     <div className="min-h-screen bg-slate-950 text-white p-6">
       <header className="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
@@ -389,6 +379,7 @@ export default function ArenaDaForca() {
           <button key={aba} className={`px-4 py-2 font-medium transition border-b-2 -mb-[2px] ${abaAtiva === index ? "border-blue-500 text-blue-400" : "border-transparent text-slate-400 hover:text-slate-200"}`} onClick={() => setAbaAtiva(index)}>{aba}</button>
         ))}
       </div>
+
       {abaAtiva === 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -398,9 +389,7 @@ export default function ArenaDaForca() {
               <p className="text-slate-300 font-medium">❓ {jogo?.pergunta}</p>
             </div>
             <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 text-center font-mono text-2xl font-bold tracking-widest text-red-400">{jogo?.palavra}</div>
-            <button onClick={() => avancarPergunta()} className="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 p-3 rounded-lg font-bold transition">
-              🚀 LANÇAR PRÓXIMA PERGUNTA ({jogo?.restantes || 0} na fila do banco)
-            </button>
+            <button onClick={() => avancarPergunta()} className="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 p-3 rounded-lg font-bold transition">🚀 LANÇAR PRÓXIMA PERGUNTA ({jogo?.restantes || 0} na fila do banco)</button>
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -442,9 +431,8 @@ export default function ArenaDaForca() {
       {abaAtiva === 2 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-xl space-y-6">
           <div>
-            <h3 className="text-lg font-bold mb-2">📥 Upload de Perguntas (.docx)</h3>
+            <h3 className="text-lg font-bold mb-2">📥 Upload de Perguntas (.csv)</h3>
             <input type="file" accept=".csv" onChange={processarCSV} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-sm" />
-
           </div>
           <div className="border-t border-slate-800 pt-4">
             <h3 className="text-lg font-bold mb-2">🔄 Formato de Jogo</h3>
@@ -462,5 +450,3 @@ export default function ArenaDaForca() {
     </div>
   );
 }
-
-  
