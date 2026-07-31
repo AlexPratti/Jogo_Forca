@@ -110,6 +110,7 @@ export default function ArenaDaForca() {
           const { count } = await supabase.from("forca_disputa_questoes").select("*", { count: "exact", head: true });
           await supabase.from("forca_disputa_arena").update({ restantes: count || 0 }).eq("id", 1);
           alert(`🎉 Sucesso! ${listaFinal.length} questões carregadas via Texto.`);
+          window.location.reload(); // Força a tela a ler o banco atualizado na hora!
         } else alert("⚠️ Nenhuma pergunta encontrada.");
       } catch { alert("⚠️ Erro ao ler o arquivo de perguntas."); }
     };
