@@ -96,7 +96,7 @@ export default function ArenaDaForca() {
       try {
         const textoBruto = evento.target?.result as string;
         if (!textoBruto) return;
-        const linhas = textoBruto.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+        const linhas = textoBruto.replace(/\r/g, "").split("\n").map(l => l.trim()).filter(l => l.length > 0);
         const listaFinal: any[] = [];
         
         for (let i = 0; i < linhas.length; i += 2) {
