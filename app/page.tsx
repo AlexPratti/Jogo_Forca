@@ -129,13 +129,48 @@ export default function ArenaDaForca() {
     };
   };
 
-  const avancarPergunta = async () => {
-    const { data: q } = await supabase.from("forca_disputa_questoes").select("*").order("id", { ascending: true }).limit(1);
-    if (!q || q.length === 0) return alert("⚠️ Não há perguntas na fila! Carregue um arquivo .txt primeiro.");
-    await supabase.from("forca_disputa_questoes").delete().eq("id", q[0].id);
+    const avancarPergunta = async () => {
+    // Busca a pergunta mais antiga da fila no banco
+    const { data: questoes } = await supabase.from("forca_disputa_questoes").select("*").order("id", { ascending: true }).limit(1);
+
+    if (!questoes || questoes.length === 0) {
+      return alert("⚠️ Não há perguntas na fila! Carregue um arquivo .txt primeiro.");
+    }
+
+    // Pega o primeiro item real da lista retornada pelo Supabase
+    const proximaQuestao = questoes[0];
+
+    // Deleta essa pergunta da fila para ela não se repetir
+    await supabase.from("forca_disputa_questoes").delete().eq("id", proximaQuestao.id);
+
+    // Conta quantas ainda restam no banco de dados
     const { count } = await supabase.from("forca_disputa_questoes").select("*", { count: "exact", head: true });
-    await supabase.from("forca_disputa_arena").update({ pergunta: q[0].pergunta, palavra: q[0].resposta, letras_tentadas: "", erros: 0, restantes: count || 0, ultimo_jogador: "SISTEMA", forca_proximo_turno: "", forca_timestamp_inicio: 0 }).eq("id", 1);
+
+    // Envia os dados para a arena e ESCONDE a palavra limpando as letras tentadas e erros!
+    await supabase.from("forca_disputa_arena").update({
+      pergunta: proximaQuestao.pergunta,
+      palavra: proximaQuestao.resposta, // Salva a palavra certa no banco de controle
+      letras_tentadas: "",             // Limpa as letras antigas para o jogo começar do zero!
+      erros: 0,                        // Zera os erros da rodada anterior
+      restantes: count || 0,
+      ultimo_jogador: "SISTEMA",
+      forca_proximo_turno: "",
+      forca_timestamp_inicio: 0
+    }).eq("id", 1);
+
+    // Atualiza a tela do mestre na hora com os novos dados limpos
+    if (jogo) {
+      setJogo({
+        ...jogo,
+        pergunta: proximaQuestao.pergunta,
+        palavra: proximaQuestao.resposta,
+        letras_tentadas: "",
+        erros: 0,
+        restantes: count || 0
+      });
+    }
   };
+
 
   const reiniciarArena = async () => {
     await supabase.from("forca_disputa_questoes").delete().neq("id", 0);
