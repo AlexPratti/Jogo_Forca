@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "./lib/supabase";
+import "./globals.css";
 
 export default function ArenaDaForca() {
   const [perfil, setPerfil] = useState<"Jogador" | "Mestre">("Jogador");
@@ -54,22 +55,40 @@ export default function ArenaDaForca() {
     if (perfil === "Mestre") {
       if (senhaInput.toUpperCase() === "TREINAMENTOWLI") {
         setJogador("TREINAMENTOWLI");
-        await supabase.from("forca_disputa_arena").update({ forca_senha_acesso: Math.random().toString(36).substring(2, 6).toUpperCase() }).eq("id", 1);
-      } else setErroLogin("Chave de acesso incorreta.");
+        // Gera uma senha limpa e sem espaços
+        const novaSenha = Math.random().toString(36).substring(2, 6).toUpperCase().trim();
+        await supabase.from("forca_disputa_arena").update({ forca_senha_acesso: novaSenha }).eq("id", 1);
+      } else {
+        setErroLogin("Chave de acesso do Mestre incorreta.");
+      }
     } else {
-      if (!nomeInput || !senhaInput) return setErroLogin("Preencha todos os campos.");
-      const nUpper = nomeInput.trim().toUpperCase();
+      if (!nomeInput || !senhaInput) {
+        setErroLogin("Preencha seu nome e a senha da arena.");
+        return;
+      }
+      const nomeUpper = nomeInput.trim().toUpperCase();
+      const senhaLimpa = senhaInput.trim().toUpperCase();
+
+      // Busca a senha atual registrada diretamente na tabela do banco
       const { data: arena } = await supabase.from("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single();
-      if (arena && senhaInput.toUpperCase() === arena.forca_senha_acesso.toUpperCase()) {
-        setJogador(nUpper);
-        const { data: c } = await supabase.from("forca_disputa_ranking").select("*").eq("jogador", nUpper);
-        if (!c || c.length === 0) {
+      
+      if (arena && arena.forca_senha_acesso && senhaLimpa === arena.forca_senha_acesso.trim().toUpperCase()) {
+        setJogador(nomeUpper);
+        const { data: check } = await supabase.from("forca_disputa_ranking").select("*").eq("jogador", nomeUpper);
+        if (!check || check.length === 0) {
           const { count } = await supabase.from("forca_disputa_ranking").select("*", { count: "exact" }).not("jogador", "eq", "TREINAMENTOWLI");
-          await supabase.from("forca_disputa_ranking").upsert({ jogador: nUpper, pontos: 0, forca_avatar_num: (count || 0) + 1 });
+          await supabase.from("forca_disputa_ranking").upsert({
+            jogador: nomeUpper,
+            pontos: 0,
+            forca_avatar_num: (count || 0) + 1
+          });
         }
-      } else setErroLogin("Senha incorreta.");
+      } else {
+        setErroLogin("Senha incorreta. Veja a senha gerada pelo Mestre no telão.");
+      }
     }
   };
+
   const registrarJogada = async (letra: string) => {
     if (!jogo || !jogador || jogador === "TREINAMENTOWLI") return;
     if (jogo.forca_modo_jogo === "TURNOS" && jogo.forca_proximo_turno && jogo.forca_proximo_turno !== jogador) return;
