@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "./lib/supabase";
-import mammoth from "mammoth";
 
 export default function ArenaDaForca() {
   const [perfil, setPerfil] = useState<"Jogador" | "Mestre">("Jogador");
@@ -82,47 +81,47 @@ export default function ArenaDaForca() {
     const { data: pData } = await supabase.from("forca_disputa_ranking").select("pontos").eq("jogador", jogador).single();
     let ptsAtuais = pData ? pData.pontos : 0;
     if (palavraAlvo.includes(letra)) await supabase.from("forca_disputa_ranking").update({ pontos: ptsAtuais + 5 }).eq("jogador", jogador);
-    else { novosErros += 1; if (jogo.forca_modo_jogo === "TURNOS") await supabase.from("forca_disputa_ranking").update({ pontos: Math.max(0, ptsAtuais - 5) }).eq("jogador", jogador); }
+    else { novosErros += 1; if (jogo.forca_modo_jogo === "TURNOS") await supabase.from("forca_disputa_ranking").update({ pontos: Math.max(0, ptsAtuais - 5) }).eq("jogador", __ => jogador); }
     const proximo = await calcularProximoTurno(jogador);
     const vitoria = palavraAlvo.split("").every((l: string) => l === " " || [...tentadas, letra].includes(l));
     if (vitoria) await supabase.from("forca_disputa_ranking").update({ pontos: ptsAtuais + 15 }).eq("jogador", jogador);
     await supabase.from("forca_disputa_arena").update({ letras_tentadas: novasLetras, erros: novosErros, ultimo_jogador: jogador, forca_proximo_turno: vitoria ? "" : proximo, forca_timestamp_inicio: Math.floor(Date.now() / 1000) }).eq("id", 1);
   };
 
-  const processarWord = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const processarTexto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const leitor = new FileReader();
-    leitor.readAsArrayBuffer(e.target.files[0]);
+    leitor.readAsText(e.target.files[0], "UTF-8");
     leitor.onload = async (evento) => {
       try {
-        const arrayBuffer = evento.target?.result as ArrayBuffer;
-        if (!arrayBuffer) return;
-        const resMammoth = await mammoth.extractRawText({ arrayBuffer });
-        const textoBruto = resMammoth.value.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+        const textoBruto = evento.target?.result as string;
+        if (!textoBruto) return;
+        const linhas = textoBruto.split("\n").map(l => l.trim()).filter(l => l.length > 0);
         const listaFinal: any[] = [];
-        for (let i = 0; i < textoBruto.length; i += 2) {
-          if (i + 1 < textoBruto.length) {
-            const respLimpa = textoBruto[i + 1].normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim().replace(/\s+/g, "");
-            listaFinal.push({ pergunta: textoBruto[i], resposta: respLimpa });
+        
+        for (let i = 0; i < linhas.length; i += 2) {
+          if (i + 1 < linhas.length) {
+            const respLimpa = linhas[i + 1].normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim().replace(/\s+/g, "");
+            listaFinal.push({ pergunta: linhas[i], resposta: respLimpa });
           }
         }
         if (listaFinal.length > 0) {
           await supabase.from("forca_disputa_questoes").insert(listaFinal);
           const { count } = await supabase.from("forca_disputa_questoes").select("*", { count: "exact", head: true });
           await supabase.from("forca_disputa_arena").update({ restantes: count || 0 }).eq("id", 1);
-          alert(`🎉 Sucesso! ${listaFinal.length} questões carregadas no Supabase.`);
+          alert(`🎉 Sucesso! ${listaFinal.length} questões carregadas via Texto.`);
         } else alert("⚠️ Nenhuma pergunta encontrada.");
-      } catch { alert("⚠️ Erro ao ler o arquivo Word."); }
+      } catch { alert("⚠️ Erro ao ler o arquivo de perguntas."); }
     };
   };
-
   const avancarPergunta = async () => {
     const { data: q } = await supabase.from("forca_disputa_questoes").select("*").order("id", { ascending: true }).limit(1);
-    if (!q || q.length === 0) return alert("⚠️ Não há perguntas na fila! Carregue um arquivo .docx primeiro.");
+    if (!q || q.length === 0) return alert("⚠️ Não há perguntas na fila! Carregue um arquivo .txt primeiro.");
     await supabase.from("forca_disputa_questoes").delete().eq("id", q[0].id);
     const { count } = await supabase.from("forca_disputa_questoes").select("*", { count: "exact", head: true });
     await supabase.from("forca_disputa_arena").update({ pergunta: q[0].pergunta, palavra: q[0].resposta, letras_tentadas: "", erros: 0, restantes: count || 0, ultimo_jogador: "SISTEMA", forca_proximo_turno: "", forca_timestamp_inicio: 0 }).eq("id", 1);
   };
+
   const reiniciarArena = async () => {
     await supabase.from("forca_disputa_questoes").delete().neq("id", 0);
     await supabase.from("forca_disputa_ranking").update({ pontos: 0 }).not("jogador", "eq", "TREINAMENTOWLI");
@@ -181,6 +180,20 @@ export default function ArenaDaForca() {
             {jogo?.forca_modo_jogo === "TURNOS" && <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center"><div className="text-3xl font-mono font-bold text-amber-500">{tempoRestante}s</div></div>}
           </div>
         </div>
+
+        <div className="mt-8 bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">🏆 Placar dos Competidores</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            {ranking.filter((r: any) => r.jogador !== "TREINAMENTOWLI").slice(0, 10).map((r: any, i: number) => (
+              <div key={r.jogador} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex flex-col items-center">
+                <span className="text-xs font-bold text-slate-500 mb-1">{i + 1}º Lugar</span>
+                <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-lg mb-1">👤</div>
+                <span className="font-bold text-sm truncate max-w-full text-center">{r.jogador}</span>
+                <span className="text-xs text-blue-400">{r.pontos} pts</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -219,7 +232,7 @@ export default function ArenaDaForca() {
       )}
       {abaAtiva === 2 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-xl space-y-6">
-          <div><h3 className="text-lg font-bold mb-2">📥 Upload de Perguntas (.docx)</h3><input type="file" accept=".docx" onChange={processarWord} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-sm" /></div>
+          <div><h3 className="text-lg font-bold mb-2">📥 Upload de Perguntas (.txt)</h3><input type="file" accept=".txt" onChange={processarTexto} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-lg text-sm" /></div>
           <div><h3 className="text-lg font-bold mb-2">🔄 Formato</h3><div className="flex gap-4">{["LIVRE", "TURNOS"].map(m => <button key={m} onClick={async () => await supabase.from("forca_disputa_arena").update({ forca_modo_jogo: m, forca_proximo_turno: "" }).eq("id", 1)} className={`flex-1 p-3 rounded-lg font-bold border ${jogo?.forca_modo_jogo === m ? "bg-blue-600 text-white" : "bg-slate-950 text-slate-400"}`}>{m}</button>)}</div></div>
           <button onClick={reiniciarArena} className="w-full bg-slate-950 border border-red-900 text-red-500 p-3 rounded-lg font-bold">🔄 REINICIAR ARENA COMPLETA</button>
         </div>
