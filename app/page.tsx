@@ -94,7 +94,6 @@ export default function ArenaDaForca() {
     if (vitoria) await supabase.from("forca_disputa_ranking").update({ pontos: ptsAtuais + 15 }).eq("jogador", jogador);
     await supabase.from("forca_disputa_arena").update({ letras_tentadas: novasLetras, erros: novosErros, ultimo_jogador: jogador, forca_proximo_turno: vitoria ? "" : proximo, forca_timestamp_inicio: Math.floor(Date.now() / 1000) }).limit(1);
   };
-
   const processarTexto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const leitor = new FileReader();
@@ -140,6 +139,7 @@ export default function ArenaDaForca() {
     await supabase.from("forca_disputa_ranking").update({ pontos: 0 }).not("jogador", "eq", "TREINAMENTOWLI");
     await supabase.from("forca_disputa_arena").update({ pergunta: "Aguardando nova pergunta...", palavra: "ARENA", letras_tentadas: "", erros: 0, restantes: 0, ultimo_jogador: "SISTEMA", forca_proximo_turno: "" }).limit(1);
   };
+
   if (!jogador) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4">
@@ -161,7 +161,6 @@ export default function ArenaDaForca() {
       </div>
     );
   }
-
   if (jogador !== "TREINAMENTOWLI") {
     const tentadas = jogo?.letras_tentadas ? jogo.letras_tentadas.split(",") : [];
     const erros = jogo?.erros || 0;
@@ -208,6 +207,7 @@ export default function ArenaDaForca() {
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white p-6">
       <header className="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
