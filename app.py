@@ -545,11 +545,16 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.markdown("#### 🔄 Regras da Arena")
                 st.metric("Na Fila", len(st.session_state.fila_perguntas))
                 
-                res_arena_dados = supabase.table("forca_disputa_arena").select("*").limit(1).single().execute()
-                res_arena_modo = res_arena_dados
+                # Busca os dados retornando uma lista comum em vez de travar no .single()
+                res_arena_dados = supabase.table("forca_disputa_arena").select("*").execute()
+                
+                # Se a lista não estiver vazia, pega o primeiro registro. Se estiver vazia, cria um dicionário padrão.
+                dados_arena = res_arena_dados.data[0] if (res_arena_dados.data and len(res_arena_dados.data) > 0) else {}
+                
+                # Extrai as informações usando o .get() de forma 100% segura
+                modo_banco = dados_arena.get('forca_modo_jogo', 'LIVRE')
+                tempo_banco = dados_arena.get('forca_tempo_maximo', 15)
 
-                modo_banco = res_arena_modo.data.get('forca_modo_jogo', 'LIVRE') if res_arena_modo.data else 'LIVRE'
-                tempo_banco = res_arena_modo.data.get('forca_tempo_maximo', 15) if res_arena_modo.data else 15
                 novo_tempo_adm = st.number_input("⏱️ Mudar Tempo da Rodada (Segundos):", min_value=5, max_value=120, value=int(tempo_banco), step=1, key="adm_tempo_control")
                 if novo_tempo_adm != tempo_banco:
                     supabase.table("forca_disputa_arena").update({"forca_tempo_maximo": novo_tempo_adm}).eq("id", 1).execute()
