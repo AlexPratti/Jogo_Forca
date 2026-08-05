@@ -544,7 +544,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             with col_adm2:
                 st.markdown("#### 🔄 Regras da Arena")
                 st.metric("Na Fila", len(st.session_state.fila_perguntas))
-                res_arena_modo = supabase.table("forca_disputa_arena").select("forca_modo_jogo", "forca_tempo_maximo").eq("id", 1).single().execute()
+                
+                res_arena_dados = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
+                res_arena_modo = res_arena_dados
+
                 modo_banco = res_arena_modo.data.get('forca_modo_jogo', 'LIVRE') if res_arena_modo.data else 'LIVRE'
                 tempo_banco = res_arena_modo.data.get('forca_tempo_maximo', 15) if res_arena_modo.data else 15
                 novo_tempo_adm = st.number_input("⏱️ Mudar Tempo da Rodada (Segundos):", min_value=5, max_value=120, value=int(tempo_banco), step=1, key="adm_tempo_control")
