@@ -545,7 +545,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.markdown("#### 🔄 Regras da Arena")
                 st.metric("Na Fila", len(st.session_state.fila_perguntas))
                 
-                res_arena_dados = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
+                res_arena_dados = supabase.table("forca_disputa_arena").select("*").limit(1).single().execute()
                 res_arena_modo = res_arena_dados
 
                 modo_banco = res_arena_modo.data.get('forca_modo_jogo', 'LIVRE') if res_arena_modo.data else 'LIVRE'
