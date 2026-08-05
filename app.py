@@ -557,7 +557,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     tempo_banco = 15
 
 
-                                novo_tempo_adm = st.number_input("⏱️ Mudar Tempo da Rodada (Segundos):", min_value=5, max_value=120, value=int(tempo_banco), step=1, key="adm_tempo_control")
+                    novo_tempo_adm = st.number_input("⏱️ Mudar Tempo da Rodada (Segundos):", min_value=5, max_value=120, value=int(tempo_banco), step=1, key="adm_tempo_control")
                 if novo_tempo_adm != tempo_banco:
                     try:
                         supabase.table("forca_disputa_arena").update({"forca_tempo_maximo": novo_tempo_adm}).eq("id", 1).execute()
