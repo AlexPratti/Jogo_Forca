@@ -400,8 +400,21 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     novo_t = st.number_input("Tempo limite (s):", min_value=5, max_value=120, value=int(jogo_check.get('forca_tempo_maximo', 15)))
                     if novo_t != jogo_check.get('forca_tempo_maximo'):
                         supabase.table("forca_disputa_arena").update({"forca_tempo_maximo": novo_t}).eq("id", 1).execute()
+                        st.rerun()
+                
+                st.write("")
+                modo_banco = jogo_check.get('forca_modo_jogo', 'LIVRE') if jogo_check else 'LIVRE'
+                index_modo = 0 if modo_banco == "LIVRE" else 1
+                novo_modo = st.radio("Alternar Formato de Jogo:", ["LIVRE", "TURNOS"], index=index_modo)
+                
+                if novo_modo != modo_banco:
+                    supabase.table("forca_disputa_arena").update({"forca_modo_jogo": novo_modo, "forca_proximo_turno": ""}).eq("id", 1).execute()
+                    st.rerun()
+                
+                st.write("")
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
                     reiniciar_arena_completa()
+
 
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PARTICIPANTES
