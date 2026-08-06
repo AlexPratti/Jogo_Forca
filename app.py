@@ -544,36 +544,20 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             with col_adm2:
                 st.markdown("#### 🔄 Regras da Arena")
                 st.metric("Na Fila", len(st.session_state.fila_perguntas))
-                
-                                # BLINDAGEM TOTAL: Tenta ler o banco. Se der erro de RLS ou Tabela, usa a memória local!
-                try:
-                    res_arena_dados = supabase.table("forca_disputa_arena").select("*").execute()
-                    dados_arena = res_arena_dados.data if (res_arena_dados.data and len(res_arena_dados.data) > 0) else {}
-                    modo_banco = dados_arena.get('forca_modo_jogo', 'LIVRE')
-                    tempo_banco = dados_arena.get('forca_tempo_maximo', 15)
-                except Exception as e:
-                    # Se o banco der erro, o jogo adota o padrão e NÃO trava a tela!
-                    modo_banco = 'LIVRE'
-                    tempo_banco = 15
-
-
-                    novo_tempo_adm = st.number_input("⏱️ Mudar Tempo da Rodada (Segundos):", min_value=5, max_value=120, value=int(tempo_banco), step=1, key="adm_tempo_control")
+                res_arena_modo = supabase.table("forca_disputa_arena").select("forca_modo_jogo", "forca_tempo_maximo").eq("id", 1).single().execute()
+                modo_banco = res_arena_modo.data.get('forca_modo_jogo', 'LIVRE') if res_arena_modo.data else 'LIVRE'
+                tempo_banco = res_arena_modo.data.get('forca_tempo_maximo', 15) if res_arena_modo.data else 15
+                novo_tempo_adm = st.number_input("⏱️ Mudar Tempo da Rodada (Segundos):", min_value=5, max_value=120, value=int(tempo_banco), step=1, key="adm_tempo_control")
                 if novo_tempo_adm != tempo_banco:
-                    try:
-                        supabase.table("forca_disputa_arena").update({"forca_tempo_maximo": novo_tempo_adm}).eq("id", 1).execute()
-                    except:
-                        pass # ignora o erro se o banco estiver travado
+                    supabase.table("forca_disputa_arena").update({"forca_tempo_maximo": novo_tempo_adm}).eq("id", 1).execute()
                     st.rerun()
                 st.write("")
                 index_modo = 0 if modo_banco == "LIVRE" else 1
                 novo_modo = st.radio("Alternar Formato de Jogo:", ["LIVRE", "TURNOS"], index=index_modo)
                 if novo_modo != modo_banco:
-                    try:
-                        supabase.table("forca_disputa_arena").update({"forca_modo_jogo": novo_modo, "forca_proximo_turno": ""}).eq("id", 1).execute()
-                    except:
-                        pass # ignora o erro se o banco estiver travado
+                    supabase.table("forca_disputa_arena").update({"forca_modo_jogo": novo_modo, "forca_proximo_turno": ""}).eq("id", 1).execute()
                     st.rerun()
-
+                st.write("")
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
                     st.session_state.podio_liberado = False
                     st.session_state.rodada_terminada = False
