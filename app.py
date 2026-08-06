@@ -459,9 +459,11 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         col_esq_qr, col_cen_qr, col_dir_qr = st.columns([1, 2, 1])
         with col_cen_qr:
             if os.path.exists("QRCode Forca.png"):
-                st.image("QRCode Forca.png", use_container_width=True)
+                # ALTERADO: use_container_width removido e adicionado um tamanho fixo menor
+                st.image("QRCode Forca.png", width=250) 
             else:
                 st.error("⚠️ O arquivo 'QRCode Forca.png' não foi localizado no diretório atual.")
+
 
     # --------------------------------------------------
     # ABA 3: PODER DOS CAMPEÕES (PÓDIO FINAL)
