@@ -361,30 +361,24 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 0: ARENA DO JOGO (VISÃO DO MESTRE)
     # --------------------------------------------------
-    with abas[0]:
+     with abas[0]:
         col_tab, col_menu = st.columns([4, 1])
         with col_tab:
             arena_viva()
-    with col_menu:
-    if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"):
-        avancar_proxima_pergunta()
-    st.divider()
-    st.markdown("### 🏆 Ranking")
-    try:
+        with col_menu:
+        if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): avancar_proxima_pergunta()
+        st.divider()
+        st.markdown("### 🏆 Ranking")
+        try:
         res_rank = supabase.table("forca_disputa_ranking").select("*").execute().data
         if res_rank:
-            res_rank_ordenado = sorted(res_rank, key=lambda x: x.get('pontos', x.get('points', 0)), reverse=True)
-            jogadores_filtrados = [r for r in res_rank_ordenado if r.get('jogador') != "TREINAMENTOWLI"]
-            for i, r in enumerate(jogadores_filtrados[:10]):
-                pontos_jogador = r.get('pontos', r.get('points', 0))
-                st.write(f"{i+1}º {r['jogador']}: **{pontos_jogador} pts**")
-        else:
-            st.write("Nenhum competidor na arena.")
-    except Exception:
-        st.write("Sincronizando placar...")
-
-
-
+            res_rank_ord = sorted(res_rank, key=lambda x: x.get('pontos', x.get('points', 0)), reverse=True)
+            jogadores_f = [r for r in res_rank_ord if r.get('jogador') != "TREINAMENTOWLI"]
+            for i, r in enumerate(jogadores_f[:10]):
+                pts = r.get('pontos', r.get('points', 0))
+                st.write(f"{i+1}º {r['jogador']}: **{pts} pts**")
+        else: st.write("Nenhum competidor na arena.")
+    except Exception: st.write("Sincronizando placar...")
 
         st.divider()
         with st.expander("⚙️ CONFIGURAÇÃO DE QUESTÕES", expanded=True):
