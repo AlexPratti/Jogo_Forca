@@ -291,7 +291,9 @@ def arena_viva():
         cols_tec = st.columns(13)
         for i, letra in enumerate(letras_abc):
             ja_foi = letra in tentadas
-            is_admin = st.session_state.jogador == "TREINAMENTOWLI"
+            # O .get() retorna None se a variável sumir, impedindo o app de quebrar
+            is_admin = st.session_state.get("jogador") == "TREINAMENTOWLI"
+
             disabled = ja_foi or (not autorizado_a_jogar) or st.session_state.clique_bloqueado or is_admin
             
             if cols_tec[i % 13].button(letra, key=f"btn_letra_{letra}", disabled=disabled, use_container_width=True):
