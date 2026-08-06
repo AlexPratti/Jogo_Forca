@@ -192,20 +192,22 @@ def reiniciar_arena_completa():
 @st.fragment(run_every=1)
 def arena_viva():
     st.session_state.clique_bloqueado = False
-    if "podio_liberado" not in st.session_state: 
-        st.session_state.podio_liberado = False
-    if "rodada_terminada" not in st.session_state: 
-        st.session_state.rodada_terminada = False
+    if "podio_liberado" not in st.session_state: st.session_state.podio_liberado = False
+    if "rodada_terminada" not in st.session_state: st.session_state.rodada_terminada = False
 
     try:
-        jogo = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute().data
-    except Exception:
-        st.warning("Buscando dados da arena...")
+        # Buscamos o registro e guardamos o resultado bruto
+        resposta_banco = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
+        jogo = resposta_banco.data
+    except Exception as erro_conexao:
+        # CORREÇÃO: Mostra o erro real na tela caso falhe
+        st.warning(f"Erro de Conexão com a Arena: {erro_conexao}")
         return
         
     if not jogo:
-        st.warning("Aguardando inicialização do painel...")
+        st.warning("A linha com ID = 1 não foi encontrada na tabela forca_disputa_arena.")
         return
+
 
     # Execução controlada de áudio para evitar bugs de loop
     if jogo['pergunta'] != "Aguardando nova pergunta..." and jogo['erros'] < 6:
