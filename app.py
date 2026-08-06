@@ -402,21 +402,38 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PARTICIPANTES
     # --------------------------------------------------
-    with abas[1]:
+    with abas[1]: 
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
             supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
             supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
+            st.session_state.podio_liberado = False
+            st.session_state.rodada_terminada = False
             st.rerun()
+        st.write("")
+        
+        try:
+            # CORREÇÃO: Removemos o .order("jogador") da consulta do banco para não dar APIError
+            res_jogadores = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").execute()
             
-        res_j = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").order("jogador").execute().data
-        if res_j:
-            for j in res_j:
-                c1, c2 = st.columns(2)
-                c1.markdown(f"__👤 {j['jogador']}__")
-                if c2.button("❌ EXPULSAR", key=f"excluir_{j['jogador']}", use_container_width=True):
-                    supabase.table("forca_disputa_ranking").delete().eq("jogador", j['jogador']).execute()
-                    st.rerun()
+            if res_jogadores.data:
+                # Ordenamos a lista alfabeticamente direto no Python de forma segura
+                jogadores_ordenados = sorted(res_jogadores.data, key=lambda x: x['jogador'])
+                
+                for j in jogadores_ordenados:
+                    c1, c2 = st.columns(2)
+                    c1.markdown(f"👤 **{j['jogador']}**")
+                    if c2.button("❌ EXPULSAR", key=f"excluir_aba_{j['jogador']}", use_container_width=True):
+                        supabase.table("forca_disputa_ranking").delete().eq("jogador", j['jogador']).execute()
+                        res_turno_v = supabase.table("forca_disputa_arena").select("forca_proximo_turno").eq("id", 1).single().execute()
+                        if res_turno_v.data and res_turno_v.data.get('forca_proximo_turno') == j['jogador']:
+                            supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
+                        st.rerun()
+            else:
+                st.write("Nenhum jogador na arena no momento.")
+        except Exception:
+            st.error("Erro ao carregar a lista de participantes do banco.")
+
     # --------------------------------------------------
     # ABA 2: CONEXÃO VIA QR CODE
     # --------------------------------------------------
