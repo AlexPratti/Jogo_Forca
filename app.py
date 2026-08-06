@@ -460,7 +460,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         with col_cen_qr:
             if os.path.exists("QRCode Forca.png"):
                 # ALTERADO: use_container_width removido e adicionado um tamanho fixo menor
-                st.image("QRCode Forca.png", width=250) 
+                st.image("QRCode Forca.png", width=450) 
             else:
                 st.error("⚠️ O arquivo 'QRCode Forca.png' não foi localizado no diretório atual.")
 
