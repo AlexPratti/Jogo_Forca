@@ -366,18 +366,18 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         with col_tab:
             arena_viva()
         with col_menu:
-        if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): avancar_proxima_pergunta()
-        st.divider()
-        st.markdown("### 🏆 Ranking")
-        try:
-        res_rank = supabase.table("forca_disputa_ranking").select("*").execute().data
-        if res_rank:
-            res_rank_ord = sorted(res_rank, key=lambda x: x.get('pontos', x.get('points', 0)), reverse=True)
-            jogadores_f = [r for r in res_rank_ord if r.get('jogador') != "TREINAMENTOWLI"]
-            for i, r in enumerate(jogadores_f[:10]):
-                pts = r.get('pontos', r.get('points', 0))
-                st.write(f"{i+1}º {r['jogador']}: **{pts} pts**")
-        else: st.write("Nenhum competidor na arena.")
+            if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): avancar_proxima_pergunta()
+            st.divider()
+            st.markdown("### 🏆 Ranking")
+            try:
+            res_rank = supabase.table("forca_disputa_ranking").select("*").execute().data
+            if res_rank:
+                res_rank_ord = sorted(res_rank, key=lambda x: x.get('pontos', x.get('points', 0)), reverse=True)
+                jogadores_f = [r for r in res_rank_ord if r.get('jogador') != "TREINAMENTOWLI"]
+                for i, r in enumerate(jogadores_f[:10]):
+                    pts = r.get('pontos', r.get('points', 0))
+                    st.write(f"{i+1}º {r['jogador']}: **{pts} pts**")
+            else: st.write("Nenhum competidor na arena.")
     except Exception: st.write("Sincronizando placar...")
 
         st.divider()
