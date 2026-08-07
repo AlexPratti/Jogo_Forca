@@ -346,7 +346,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             
             vitoria_check = all((letra == " " or letra in tentadas_check) for letra in palavra_check)
             
-            # ATIVAÇÃO REAL: A rodada final só é decretada se o jogo acabou E não há mais perguntas na fila
+            # Ativa o pódio quando o desafio terminar E não houver mais perguntas na fila
             if (vitoria_check or erros_check >= 6) and contagem_restante == 0:
                 st.session_state.rodada_terminada = True
             else:
@@ -385,7 +385,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # Força o clique automático na quarta aba do navegador assim que liberado
     if st.session_state.get('rodada_terminada', False) and st.session_state.get('podio_liberado', False):
         st.components.v1.html(
-            "<script>window.parent.document.querySelectorAll('button[role=\"tab\"]')[3].click();</script>", 
+            "<script>window.parent.document.querySelectorAll('button[role=\"tab\"]').click();</script>", 
             height=0
         )
 
@@ -470,7 +470,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             else:
                 st.error("⚠️ O arquivo 'QRCode Forca.png' não foi localizado no diretório atual.")
 
-    # --- ABA 3: PODER DOS CAMPEÕES (PÓDIO ESCALONADO IMUNE A CORTES) ---
+    # --- ABA 3: PODER DOS CAMPEÕES (PÓDIO ESCALONADO SEGURO) ---
     with abas[3]:
         if st.session_state.get('rodada_terminada', False) and not st.session_state.podio_liberado:
             if st.button("🏆 LIBERAR EXIBIÇÃO DOS CAMPEÕES NO TELÃO", type="primary", use_container_width=True, key="btn_mestre_liberar_podio"):
@@ -490,13 +490,14 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     qtd_colunas = min(total_jogadores, 3)
                     cols_podio = st.columns(qtd_colunas)
                     
-                    # CORREÇÃO CRÍTICA: Lógica matemática em texto puro (Imune aos filtros do chat AI)
-                    ordem_posicoes = list(range(qtd_colunas))
+                    # MAPEAMENTO DE TEXTO IMUNE AO FILTRO DE NUMERAÇÃO DO CHAT
                     if qtd_colunas == 3:
-                        ordem_posicoes = [1, 0, 2] # 2º na esquerda, 1º no centro, 3º na direita
+                        ordem_posicoes = [1, 0, 2]
                     elif qtd_colunas == 2:
-                        ordem_posicoes = [0, 1] # 1º na esquerda, 2º na direita
-                        
+                        ordem_posicoes = [0, 1]
+                    else:
+                        ordem_posicoes = [0]
+                    
                     for idx_coluna, idx_ranking in enumerate(ordem_posicoes):
                         if idx_ranking < total_jogadores:
                             jogador_dados = ranking_completo[idx_ranking]
@@ -505,7 +506,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                             avatar_num = jogador_dados.get("forca_avatar_num", None)
                             arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
                             
-                            # Escalonamento rígido proporcional solicitado: 1º > 2º > 3º
+                            # Configura proporções exatas: 1º > 2º > 3º
                             if idx_ranking == 0:
                                 label_colocacao = "👑 1º LUGAR"
                                 cor_texto = "#10b981"
