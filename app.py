@@ -342,6 +342,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
 
     def avancar_proxima_pergunta():
         if "fila_perguntas" in st.session_state and st.session_state.fila_perguntas:
+            st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
+            st.session_state.tocando_musica = True
             proxima = st.session_state.fila_perguntas.pop(0)
             try:
                 supabase.table("forca_disputa_arena").update({
