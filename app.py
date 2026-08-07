@@ -443,7 +443,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
                     reiniciar_arena_completa()
     # --- ABA 1: GERENCIAMENTO DE PARTICIPANTES ---
-    with abas:
+    with abas[1]:
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
             supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
@@ -460,7 +460,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     st.rerun()
 
     # --- ABA 2: CONEXÃO VIA QR CODE ---
-    with abas:
+    with abas[2]:
         st.markdown(f"<h1 style='text-align:center; color:#3b82f6; font-family:monospace;'>Chave: {senha_atual}</h1>", unsafe_allow_html=True)
         col_esq_qr, col_cen_qr, col_dir_qr = st.columns(3)
         with col_cen_qr:
@@ -470,7 +470,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.error("⚠️ O arquivo 'QRCode Forca.png' não foi localizado no diretório atual.")
 
     # --- ABA 3: PODER DOS CAMPEÕES (PÓDIO ESCALONADO AUTOMÁTICO) ---
-    with abas:
+    with abas[3]:
         if st.session_state.get('rodada_terminada', False) and not st.session_state.podio_liberado:
             if st.button("🏆 LIBERAR EXIBIÇÃO DOS CAMPEÕES NO TELÃO", type="primary", use_container_width=True, key="btn_mestre_liberar_podio"):
                 st.session_state.podio_liberado = True
@@ -491,7 +491,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     qtd_colunas = 3 if total_jogadores >= 3 else total_jogadores
                     cols_podio = st.columns(qtd_colunas)
                     
-                    # FÓRMULA ANTIFILTRO: Calcula as posições sem usar listas estáticas de colchetes
+                    # Organiza as posições sem usar listas estáticas para o pódio em escada
                     for idx_coluna in range(qtd_colunas):
                         # Se houver 3 jogadores, organiza: 2º Lugar (coluna 0), 1º Lugar (coluna 1), 3º Lugar (coluna 2)
                         if qtd_colunas == 3:
