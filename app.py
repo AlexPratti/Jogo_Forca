@@ -216,7 +216,7 @@ def arena_viva():
             st.session_state.tocando_musica = True
 
     
-    if contagem > 0:
+    if contagem == 0:
         st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
         st.session_state.tocando_musica = True
         
