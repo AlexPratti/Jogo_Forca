@@ -326,19 +326,32 @@ def arena_viva():
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     st.title("⚔️ Arena da Forca")
     arena_viva()
+
 # ==================================================
 # 5. PAINEL ADM (FORA DO CONTEXTO DE FRAGMENTO)
 # ==================================================
 if st.session_state.jogador == "TREINAMENTOWLI":
     st.title("⚔️ Painel do Mestre - Arena da Forca")
     
+    # --- SINCRONIZAÇÃO GERAL DE ESTADOS (CORRIGIDA) ---
     try:
         jogo_check = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute().data
         senha_atual = jogo_check.get('forca_senha_acesso', '----') if jogo_check else '----'
+        
+        if jogo_check:
+            tentadas_check = [l.strip() for l in jogo_check.get('letras_tentadas', '').split(",") if l.strip()]
+            palavra_check = jogo_check.get('palavra', 'ARENA')
+            erros_check = jogo_check.get('erros', 0)
+            
+            vitoria_check = all((letra == " " or letra in tentadas_check) for letra in palavra_check)
+            st.session_state.rodada_terminada = bool(vitoria_check or erros_check >= 6)
     except Exception:
         jogo_check, senha_atual = None, '----'
         
     url_completa = "https://streamlit.io"
+
+    if "podio_liberado" not in st.session_state: 
+        st.session_state.podio_liberado = False
 
     def avancar_proxima_pergunta():
         if "fila_perguntas" in st.session_state and st.session_state.fila_perguntas:
@@ -360,17 +373,24 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             st.session_state.rodada_terminada = False
             st.rerun()
 
+    # Criação das Abas
     abas = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"])
 
-    # --------------------------------------------------
-    # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
-    # --------------------------------------------------
+    # Script reativo para focar na Aba 3 automaticamente na tela do Mestre
+    if st.session_state.get('rodada_terminada', False) and st.session_state.get('podio_liberado', False):
+        st.components.v1.html(
+            "<script>window.parent.document.querySelectorAll('button[role=\"tab\"]').click();</script>", 
+            height=0
+        )
+
+    # --- ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO ---
     with abas[0]:
-        col_tab, col_menu = st.columns([4, 1])
+        col_tab, col_menu = st.columns()
         with col_tab:
             arena_viva()
         with col_menu:
-            if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): avancar_proxima_pergunta()
+            if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"):
+                avancar_proxima_pergunta()
             st.divider()
             st.markdown("### 🏆 Ranking")
             try:
@@ -381,12 +401,15 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     for i, r in enumerate(jogadores_f[:10]):
                         pts = r.get('pontos', r.get('points', 0))
                         st.write(f"{i+1}º {r['jogador']}: **{pts} pts**")
-                else: st.write("Nenhum competidor na arena.")
-            except Exception: st.write("Sincronizando placar...")
+                else: 
+                    st.write("Nenhum competidor na arena.")
+            except Exception: 
+                st.write("Sincronizando placar...")
 
         st.divider()
         with st.expander("⚙️ CONFIGURAÇÃO DE QUESTÕES", expanded=True):
-            if "fila_perguntas" not in st.session_state: st.session_state.fila_perguntas = []
+            if "fila_perguntas" not in st.session_state: 
+                st.session_state.fila_perguntas = []
             c1, c2 = st.columns(2)
             with c1:
                 arquivo = st.file_uploader("Arquivo .docx", type=["docx"], key="uploader_doc")
@@ -414,75 +437,38 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.write("")
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
                     reiniciar_arena_completa()
-
-
-    # --------------------------------------------------
-    # ABA 1: GERENCIAMENTO DE PARTICIPANTES
-    # --------------------------------------------------
-    with abas[1]: 
+    # --- ABA 1: GERENCIAMENTO DE PARTICIPANTES ---
+    with abas[1]:
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
             supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
             supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
-            st.session_state.podio_liberado = False
-            st.session_state.rodada_terminada = False
             st.rerun()
-        st.write("")
-        
-        try:
-            # CORREÇÃO: Removemos o .order("jogador") da consulta do banco para não dar APIError
-            res_jogadores = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").execute()
             
-            if res_jogadores.data:
-                # Ordenamos a lista alfabeticamente direto no Python de forma segura
-                jogadores_ordenados = sorted(res_jogadores.data, key=lambda x: x['jogador'])
-                
-                for j in jogadores_ordenados:
-                    c1, c2 = st.columns(2)
-                    c1.markdown(f"👤 **{j['jogador']}**")
-                    if c2.button("❌ EXPULSAR", key=f"excluir_aba_{j['jogador']}", use_container_width=True):
-                        supabase.table("forca_disputa_ranking").delete().eq("jogador", j['jogador']).execute()
-                        res_turno_v = supabase.table("forca_disputa_arena").select("forca_proximo_turno").eq("id", 1).single().execute()
-                        if res_turno_v.data and res_turno_v.data.get('forca_proximo_turno') == j['jogador']:
-                            supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
-                        st.rerun()
-            else:
-                st.write("Nenhum jogador na arena no momento.")
-        except Exception:
-            st.error("Erro ao carregar a lista de participantes do banco.")
+        res_j = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").execute().data
+        if res_j:
+            for j in res_j:
+                c1, c2 = st.columns(2)
+                c1.markdown(f"__👤 {j['jogador']}__")
+                if c2.button("❌ EXPULSAR", key=f"excluir_{j['jogador']}", use_container_width=True):
+                    supabase.table("forca_disputa_ranking").delete().eq("jogador", j['jogador']).execute()
+                    st.rerun()
 
-    # --------------------------------------------------
-    # ABA 2: CONEXÃO VIA QR CODE
-    # --------------------------------------------------
+    # --- ABA 2: CONEXÃO VIA QR CODE ---
     with abas[2]:
         st.markdown(f"<h1 style='text-align:center; color:#3b82f6; font-family:monospace;'>Chave: {senha_atual}</h1>", unsafe_allow_html=True)
-        col_esq_qr, col_cen_qr, col_dir_qr = st.columns([1, 2, 1])
+        col_esq_qr, col_cen_qr, col_dir_qr = st.columns(3)
         with col_cen_qr:
             if os.path.exists("QRCode Forca.png"):
-                # ALTERADO: use_container_width removido e adicionado um tamanho fixo menor
-                st.image("QRCode Forca.png", width=550) 
+                st.image("QRCode Forca.png", use_container_width=True)
             else:
                 st.error("⚠️ O arquivo 'QRCode Forca.png' não foi localizado no diretório atual.")
 
-
-    # --------------------------------------------------
-    # ABA 3: PODER DOS CAMPEÕES (PÓDIO FINAL DINÂMICO)
-    # --------------------------------------------------
-    with abas[3]: 
-        # Força o navegador a focar nesta aba se o pódio estiver liberado e a rodada terminada
-        if st.session_state.get('rodada_terminada', False) and st.session_state.get('podio_liberado', False):
-            st.components.v1.html(
-                "<script>window.parent.document.querySelectorAll('button[role=\"tab\"]')[3].click();</script>", 
-                height=0
-            )
-
+    # --- ABA 3: PODER DOS CAMPEÕES (PÓDIO ESCALONADO CONFORME REQUISITOS) ---
+    with abas[3]:
         if st.session_state.get('rodada_terminada', False) and not st.session_state.podio_liberado:
             if st.button("🏆 LIBERAR EXIBIÇÃO DOS CAMPEÕES NO TELÃO", type="primary", use_container_width=True, key="btn_mestre_liberar_podio"):
                 st.session_state.podio_liberado = True
-                try:
-                    supabase.table("forca_disputa_arena").update({"ultimo_jogador": "SISTEMA"}).eq("id", 1).execute()
-                except Exception:
-                    pass
                 st.rerun()
                 
         elif st.session_state.get('rodada_terminada', False) and st.session_state.podio_liberado:
@@ -490,23 +476,25 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             st.write("")
             
             try:
-                # Busca todos os jogadores participantes
                 res_v = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").execute().data
-                
                 if res_v:
-                    # Ordena o ranking por pontos (maior para o menor) direto no Python de forma segura
+                    # Ordena do maior para o menor no Python de forma estável
                     ranking_completo = sorted(res_v, key=lambda x: x.get('pontos', x.get('points', 0)), reverse=True)
                     total_jogadores = len(ranking_completo)
                     
-                    # Cria colunas simétricas baseadas na quantidade de jogadores na sala (máximo 3)
+                    # Define colunas estritas dinamicamente (máximo 3)
                     qtd_colunas = min(total_jogadores, 3)
                     cols_podio = st.columns(qtd_colunas)
                     
-                    # Ordem de exibição visual clássica de pódio: 2º Lugar (Esquerda), 1º Lugar (Centro), 3º Lugar (Direita)
-                    # Caso mude para mapeamento sequencial linear comum, o laço respeita a quantidade disponível
-                    ordem_posicoes = [0, 1, 2] if qtd_colunas == 3 else list(range(qtd_colunas))
+                    # Mapeia a ordem visual clássica de pódio baseado em quantas colunas existem
+                    if qtd_colunas == 3:
+                        ordem_posicoes = [1, 0, 2] # 2º Lugar na esquerda, 1º Lugar no centro, 3º Lugar na direita
+                    elif qtd_colunas == 2:
+                        ordem_posicoes = [0, 1]    # 1º Lugar na esquerda, 2º Lugar na direita
+                    else:
+                        ordem_posicoes = [0]       # Apenas 1 coluna centralizada para o 1º Lugar
                     
-                    for idx_visual, idx_ranking in enumerate(ordem_posicoes[:qtd_colunas]):
+                    for idx_coluna, idx_ranking in enumerate(ordem_posicoes):
                         if idx_ranking < total_jogadores:
                             jogador_dados = ranking_completo[idx_ranking]
                             nome_jogador = jogador_dados['jogador']
@@ -514,24 +502,24 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                             avatar_num = jogador_dados.get("forca_avatar_num", None)
                             arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
                             
-                            # Define as regras estritas de tamanho e cores baseadas na classificação
+                            # Configura as proporções exatas solicitadas: 1º > 2º > 3º
                             if idx_ranking == 0:
                                 label_colocacao = "👑 1º LUGAR"
-                                cor_texto = "#10b981"  # Verde esmeralda
-                                tamanho_avatar = 280   # Maior de todos
+                                cor_texto = "#10b981"
+                                tamanho_avatar = 280   # Maior
                             elif idx_ranking == 1:
                                 label_colocacao = "🥈 2º LUGAR"
-                                cor_texto = "#3b82f6"  # Azul
+                                cor_texto = "#3b82f6"
                                 tamanho_avatar = 200   # Médio
                             else:
                                 label_colocacao = "🥉 3º LUGAR"
-                                cor_texto = "#64748b"  # Cinza
-                                tamanho_avatar = 140   # Menor de todos
+                                cor_texto = "#64748b"
+                                tamanho_avatar = 140   # Menor
                                 
-                            with cols_podio[idx_visual]:
+                            with cols_podio[idx_coluna]:
                                 st.markdown(f"<h3 style='text-align: center; color: {cor_texto};'>{label_colocacao}</h3>", unsafe_allow_html=True)
                                 
-                                # Renderização proporcional do Avatar
+                                # Renderiza a imagem do avatar ou fallback de boneco proporcional
                                 if arquivo_av and os.path.exists(arquivo_av):
                                     st.image(arquivo_av, width=tamanho_avatar)
                                 else:
@@ -543,7 +531,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                                     <p style="font-size: 16px; color: #64748b; font-family: monospace; font-weight: bold;">{pts_jogador} PTS</p>
                                 </div>
                                 """, unsafe_allow_html=True)
-            except Exception as erro_podio:
-                st.error("Erro ao processar o pódio dos campeões.")
+            except Exception:
+                st.error("Erro ao gerar os dados visuais do pódio.")
         else:
             st.info("O Pódio dos Campeões será montado automaticamente aqui assim que a Arena da Forca for encerrada pelo Mestre.")
