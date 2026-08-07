@@ -333,7 +333,7 @@ if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
 if st.session_state.jogador == "TREINAMENTOWLI":
     st.title("⚔️ Painel do Mestre - Arena da Forca")
     
-    # --- SINCRONIZAÇÃO GERAL DE ESTADOS ---
+    # --- SINCRONIZAÇÃO GERAL DE ESTADOS INDEPENDENTE ---
     try:
         jogo_check = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute().data
         senha_atual = jogo_check.get('forca_senha_acesso', '----') if jogo_check else '----'
@@ -342,9 +342,15 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             tentadas_check = [l.strip() for l in jogo_check.get('letras_tentadas', '').split(",") if l.strip()]
             palavra_check = jogo_check.get('palavra', 'ARENA')
             erros_check = jogo_check.get('erros', 0)
+            contagem_restante = jogo_check.get('restantes', 0)
             
             vitoria_check = all((letra == " " or letra in tentadas_check) for letra in palavra_check)
-            st.session_state.rodada_terminada = bool(vitoria_check or erros_check >= 6)
+            
+            # ATIVAÇÃO REAL: A rodada final só é decretada se o jogo acabou E não há mais perguntas na fila
+            if (vitoria_check or erros_check >= 6) and contagem_restante == 0:
+                st.session_state.rodada_terminada = True
+            else:
+                st.session_state.rodada_terminada = False
     except Exception:
         jogo_check, senha_atual = None, '----'
         
@@ -373,13 +379,13 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             st.session_state.rodada_terminada = False
             st.rerun()
 
-    # Criação das Abas principais
+    # Criação das Abas
     abas = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"])
 
-    # Força a transição de aba se a rodada terminou e o pódio foi liberado
+    # Força o clique automático na quarta aba do navegador assim que liberado
     if st.session_state.get('rodada_terminada', False) and st.session_state.get('podio_liberado', False):
         st.components.v1.html(
-            "<script>window.parent.document.querySelectorAll('button[role=\"tab\"]').click();</script>", 
+            "<script>window.parent.document.querySelectorAll('button[role=\"tab\"]')[3].click();</script>", 
             height=0
         )
 
@@ -464,7 +470,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             else:
                 st.error("⚠️ O arquivo 'QRCode Forca.png' não foi localizado no diretório atual.")
 
-    # --- ABA 3: PODER DOS CAMPEÕES (PÓDIO ESCALONADO) ---
+    # --- ABA 3: PODER DOS CAMPEÕES (PÓDIO ESCALONADO IMUNE A CORTES) ---
     with abas[3]:
         if st.session_state.get('rodada_terminada', False) and not st.session_state.podio_liberado:
             if st.button("🏆 LIBERAR EXIBIÇÃO DOS CAMPEÕES NO TELÃO", type="primary", use_container_width=True, key="btn_mestre_liberar_podio"):
@@ -484,14 +490,13 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     qtd_colunas = min(total_jogadores, 3)
                     cols_podio = st.columns(qtd_colunas)
                     
-                    # Definição textual e explícita de listas para burlar filtros do chat
+                    # CORREÇÃO CRÍTICA: Lógica matemática em texto puro (Imune aos filtros do chat AI)
+                    ordem_posicoes = list(range(qtd_colunas))
                     if qtd_colunas == 3:
-                        ordem_posicoes = [1, 0, 2]  # 2º colocado, 1º colocado, 3º colocado
+                        ordem_posicoes = [1, 0, 2] # 2º na esquerda, 1º no centro, 3º na direita
                     elif qtd_colunas == 2:
-                        ordem_posicoes = [0, 1]     # 1º colocado, 2º colocado
-                    else:
-                        ordem_posicoes = [0]        # Apenas o 1º colocado centralizado
-                    
+                        ordem_posicoes = [0, 1] # 1º na esquerda, 2º na direita
+                        
                     for idx_coluna, idx_ranking in enumerate(ordem_posicoes):
                         if idx_ranking < total_jogadores:
                             jogador_dados = ranking_completo[idx_ranking]
@@ -500,7 +505,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                             avatar_num = jogador_dados.get("forca_avatar_num", None)
                             arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
                             
-                            # Escalonamento rigoroso de tamanho solicitado: 1º > 2º > 3º
+                            # Escalonamento rígido proporcional solicitado: 1º > 2º > 3º
                             if idx_ranking == 0:
                                 label_colocacao = "👑 1º LUGAR"
                                 cor_texto = "#10b981"
