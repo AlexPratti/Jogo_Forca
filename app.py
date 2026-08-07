@@ -346,7 +346,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             
             vitoria_check = all((letra == " " or letra in tentadas_check) for letra in palavra_check)
             
-            # Ativa o pódio quando o desafio terminar E não houver mais perguntas na fila
+            # O pódio é validado se o desafio encerrou E não há mais questões na fila
             if (vitoria_check or erros_check >= 6) and contagem_restante == 0:
                 st.session_state.rodada_terminada = True
             else:
@@ -390,8 +390,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         )
 
     # --- ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO ---
-    with abas[0]:
-        col_tab, col_menu = st.columns([3, 1])
+    with abas:
+        col_tab, col_menu = st.columns(2)
         with col_tab:
             arena_viva()
         with col_menu:
@@ -444,7 +444,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
                     reiniciar_arena_completa()
     # --- ABA 1: GERENCIAMENTO DE PARTICIPANTES ---
-    with abas[1]:
+    with abas:
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
             supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
@@ -461,7 +461,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     st.rerun()
 
     # --- ABA 2: CONEXÃO VIA QR CODE ---
-    with abas[2]:
+    with abas:
         st.markdown(f"<h1 style='text-align:center; color:#3b82f6; font-family:monospace;'>Chave: {senha_atual}</h1>", unsafe_allow_html=True)
         col_esq_qr, col_cen_qr, col_dir_qr = st.columns(3)
         with col_cen_qr:
@@ -470,8 +470,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             else:
                 st.error("⚠️ O arquivo 'QRCode Forca.png' não foi localizado no diretório atual.")
 
-    # --- ABA 3: PODER DOS CAMPEÕES (PÓDIO ESCALONADO SEGURO) ---
-    with abas[3]:
+    # --- ABA 3: PODER DOS CAMPEÕES (PÓDIO ESCALONADO AUTOMÁTICO) ---
+    with abas:
         if st.session_state.get('rodada_terminada', False) and not st.session_state.podio_liberado:
             if st.button("🏆 LIBERAR EXIBIÇÃO DOS CAMPEÕES NO TELÃO", type="primary", use_container_width=True, key="btn_mestre_liberar_podio"):
                 st.session_state.podio_liberado = True
@@ -484,21 +484,25 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             try:
                 res_v = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").execute().data
                 if res_v:
+                    # Ordena os jogadores por pontos (maior para o menor)
                     ranking_completo = sorted(res_v, key=lambda x: x.get('pontos', x.get('points', 0)), reverse=True)
                     total_jogadores = len(ranking_completo)
                     
-                    qtd_colunas = min(total_jogadores, 3)
+                    # Cria a quantidade exata de colunas necessárias baseada nos jogadores reais
+                    qtd_colunas = 3 if total_jogadores >= 3 else total_jogadores
                     cols_podio = st.columns(qtd_colunas)
                     
-                    # MAPEAMENTO DE TEXTO IMUNE AO FILTRO DE NUMERAÇÃO DO CHAT
-                    if qtd_colunas == 3:
-                        ordem_posicoes = [1, 0, 2]
-                    elif qtd_colunas == 2:
-                        ordem_posicoes = [0, 1]
-                    else:
-                        ordem_posicoes = [0]
-                    
-                    for idx_coluna, idx_ranking in enumerate(ordem_posicoes):
+                    # FÓRMULA ANTIFILTRO: Calcula as posições sem usar listas estáticas de colchetes
+                    for idx_coluna in range(qtd_colunas):
+                        # Se houver 3 jogadores, organiza: 2º Lugar (coluna 0), 1º Lugar (coluna 1), 3º Lugar (coluna 2)
+                        if qtd_colunas == 3:
+                            if idx_coluna == 0: idx_ranking = 1
+                            elif idx_coluna == 1: idx_ranking = 0
+                            else: idx_ranking = 2
+                        else:
+                            # Se houver menos de 3, exibe de forma sequencial linear normal
+                            idx_ranking = idx_coluna
+                            
                         if idx_ranking < total_jogadores:
                             jogador_dados = ranking_completo[idx_ranking]
                             nome_jogador = jogador_dados['jogador']
@@ -506,7 +510,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                             avatar_num = jogador_dados.get("forca_avatar_num", None)
                             arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
                             
-                            # Configura proporções exatas: 1º > 2º > 3º
+                            # Escalonamento rígido proporcional solicitado: 1º > 2º > 3º
                             if idx_ranking == 0:
                                 label_colocacao = "👑 1º LUGAR"
                                 cor_texto = "#10b981"
