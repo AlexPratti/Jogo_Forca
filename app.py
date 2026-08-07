@@ -214,12 +214,6 @@ def arena_viva():
         if os.path.exists("musica.mp3") and "tocando_musica" not in st.session_state:
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
             st.session_state.tocando_musica = True
-
-    
-    if contagem == 0:
-        st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
-        st.session_state.tocando_musica = True
-        
         
     c_img, c_txt = st.columns([1, 4])
     erros_atuais = jogo.get('erros', 0)
