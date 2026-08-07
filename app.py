@@ -215,6 +215,12 @@ def arena_viva():
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
             st.session_state.tocando_musica = True
 
+    
+    if contagem > 0:
+        st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
+        st.session_state.tocando_musica = True
+        
+        
     c_img, c_txt = st.columns([1, 4])
     erros_atuais = jogo.get('erros', 0)
     ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -342,11 +348,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
 
     def avancar_proxima_pergunta():
         if "fila_perguntas" in st.session_state and st.session_state.fila_perguntas:
-            proxima = st.session_state.fila_perguntas.pop(0)
-
-            st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
-            st.session_state.tocando_musica = True
-            
+            proxima = st.session_state.fila_perguntas.pop(0)            
             try:
                 supabase.table("forca_disputa_arena").update({
                     "pergunta": proxima['pergunta'], 
