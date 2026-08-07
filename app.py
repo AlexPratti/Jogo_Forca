@@ -437,12 +437,15 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.write("")
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
                     reiniciar_arena_completa()
+                    
     # --- ABA 1: GERENCIAMENTO DE PARTICIPANTES ---
     with abas[1]:
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
             supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
             supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
+            st.session_state.podio_liberado = False
+            st.session_state.rodada_terminada = False
             st.rerun()
             
         res_j = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").execute().data
@@ -478,21 +481,18 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             try:
                 res_v = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").execute().data
                 if res_v:
-                    # Ordena do maior para o menor no Python de forma estável
                     ranking_completo = sorted(res_v, key=lambda x: x.get('pontos', x.get('points', 0)), reverse=True)
                     total_jogadores = len(ranking_completo)
                     
-                    # Define colunas estritas dinamicamente (máximo 3)
                     qtd_colunas = min(total_jogadores, 3)
                     cols_podio = st.columns(qtd_colunas)
                     
-                    # Mapeia a ordem visual clássica de pódio baseado em quantas colunas existem
                     if qtd_colunas == 3:
-                        ordem_posicoes = [1, 0, 2] # 2º Lugar na esquerda, 1º Lugar no centro, 3º Lugar na direita
+                        ordem_posicoes = [1, 0, 2]
                     elif qtd_colunas == 2:
-                        ordem_posicoes = [0, 1]    # 1º Lugar na esquerda, 2º Lugar na direita
+                        ordem_posicoes = [0, 1]
                     else:
-                        ordem_posicoes = [0]       # Apenas 1 coluna centralizada para o 1º Lugar
+                        ordem_posicoes = [0]
                     
                     for idx_coluna, idx_ranking in enumerate(ordem_posicoes):
                         if idx_ranking < total_jogadores:
@@ -502,24 +502,22 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                             avatar_num = jogador_dados.get("forca_avatar_num", None)
                             arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
                             
-                            # Configura as proporções exatas solicitadas: 1º > 2º > 3º
                             if idx_ranking == 0:
                                 label_colocacao = "👑 1º LUGAR"
                                 cor_texto = "#10b981"
-                                tamanho_avatar = 280   # Maior
+                                tamanho_avatar = 280
                             elif idx_ranking == 1:
                                 label_colocacao = "🥈 2º LUGAR"
                                 cor_texto = "#3b82f6"
-                                tamanho_avatar = 200   # Médio
+                                tamanho_avatar = 200
                             else:
                                 label_colocacao = "🥉 3º LUGAR"
                                 cor_texto = "#64748b"
-                                tamanho_avatar = 140   # Menor
+                                tamanho_avatar = 140
                                 
                             with cols_podio[idx_coluna]:
                                 st.markdown(f"<h3 style='text-align: center; color: {cor_texto};'>{label_colocacao}</h3>", unsafe_allow_html=True)
                                 
-                                # Renderiza a imagem do avatar ou fallback de boneco proporcional
                                 if arquivo_av and os.path.exists(arquivo_av):
                                     st.image(arquivo_av, width=tamanho_avatar)
                                 else:
