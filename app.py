@@ -192,12 +192,6 @@ def reiniciar_arena_completa():
 @st.fragment(run_every=1)
 def arena_viva():
     st.session_state.clique_bloqueado = False
-
-    if jogo['pergunta'] != "Aguardando nova pergunta..." and jogo['erros'] < 6:
-        if os.path.exists("musica.mp3"):
-            st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
-
-    
     if "podio_liberado" not in st.session_state: st.session_state.podio_liberado = False
     if "rodada_terminada" not in st.session_state: st.session_state.rodada_terminada = False
 
