@@ -206,7 +206,7 @@ def arena_viva():
         st.warning("A linha com ID = 1 não foi encontrada na tabela forca_disputa_arena.")
         return
         
-    # Execução controlada de áudio para evitar bugs de loop
+     # Execução controlada de áudio para evitar bugs de loop
     if jogo['pergunta'] != "Aguardando nova pergunta..." and jogo['erros'] < 6:
         if os.path.exists("musica.mp3") and "tocando_musica" not in st.session_state:
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
@@ -299,14 +299,14 @@ def arena_viva():
                     supabase.table("forca_disputa_arena").update({"forca_timestamp_inicio": time.time()}).eq("id", 1).execute()
                 registrar_jogada(letra, jogo)
 
-    # --- NOVO BLOCO UNIFICADO DE ATUALIZAÇÃO DENTRO DO FRAGMENTO ---
+    # --- ATUALIZAÇÃO SINCRONIZADA DOS PLACARES ---
     try:
         res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute().data
         j_competidores = [r for r in res_rank if r['jogador'] != "TREINAMENTOWLI"] if res_rank else []
     except Exception:
         j_competidores = []
 
-    # Se for um jogador comum, desenha o painel horizontal
+    # Se for um jogador comum, desenha o painel horizontal tradicional embaixo
     if st.session_state.jogador != "TREINAMENTOWLI":
         st.divider()
         st.markdown("### 🏆 Placar Global")
@@ -322,16 +322,19 @@ def arena_viva():
                         st.write("👤")
                     st.caption(f"{r.get('pontos', r.get('points', 0))} pts")
                     
-    # SE FOR O MESTRE LOGADO: Renderiza o ranking da barra lateral dentro do ciclo síncrono de 1s!
+    # SE FOR O MESTRE LOGADO: Injeta dinamicamente o texto dentro do espaço reservado na barra lateral!
     else:
-        st.markdown("---")
-        st.markdown("### 🏆 Ranking do Turno (Mestre)")
-        if j_competidores:
-            for i, r in enumerate(j_competidores[:10]):
-                pts = r.get('pontos', r.get('points', 0))
-                st.write(f"{i+1}º {r['jogador']}: **{pts} pts**")
-        else:
-            st.write("Nenhum competidor na arena.")
+        if "marcador_ranking_mestre" in st.session_state and st.session_state.marcador_ranking_mestre is not None:
+            with st.session_state.marcador_ranking_mestre.container():
+                st.write("")
+                st.markdown("### 🏆 Ranking do Turno")
+                if j_competidores:
+                    for i, r in enumerate(j_competidores[:10]):
+                        pts = r.get('pontos', r.get('points', 0))
+                        st.write(f"{i+1}º {r['jogador']}: **{pts} pts**")
+                else:
+                    st.write("Nenhum competidor na arena.")
+
 
 # Executa a tela imediatamente caso seja um participante comum
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
@@ -441,7 +444,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             
         st.stop()
 
-    # Menu padrão de abas estáveis
+    # Menu estável de abas
     abas = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"])
 
     # --------------------------------------------------
@@ -449,12 +452,17 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     with abas[0]:
         col_tab, col_menu = st.columns([4, 1])
-        with col_tab:
-            # O ranking agora é impresso em tempo real diretamente por essa função!
-            arena_viva()
         with col_menu:
             if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): 
                 avancar_proxima_pergunta()
+            
+            # NOVO: Espaço reservado vazio criado exatamente no local original (abaixo do botão Próxima)
+            # A função arena_viva vai preencher este espaço a cada 1 segundo automaticamente
+            st.session_state.marcador_ranking_mestre = st.empty()
+
+        with col_tab:
+            # Chama a arena viva (que vai injetar o ranking em tempo real no marcador criado acima)
+            arena_viva()
 
         st.divider()
         with st.expander("⚙️ CONFIGURAÇÃO DE QUESTÕES", expanded=True):
