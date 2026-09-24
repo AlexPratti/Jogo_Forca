@@ -211,8 +211,8 @@ def arena_viva():
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
             st.session_state.tocando_musica = True
         
-    # Colunas com pesos fixos [1, 4] restauradas com segurança
-    c_img, c_txt = st.columns([1, 4])
+    # Colunas com pesos fixos restauradas com segurança
+    c_img, c_txt = st.columns()
     erros_atuais = jogo.get('erros', 0)
     ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
     modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -303,17 +303,27 @@ def arena_viva():
         st.divider()
         st.markdown("### 🏆 Placar Global")
         
-        # MODIFICAÇÃO CRÍTICA: O estado do turno agora inclui "vitoria" e se "erros >= 6".
-        # Isso força o cache a quebrar instantaneamente quando a resposta é completada ou ocorre enforcamento!
-        estado_turno_atual = f"{ultimo_player}_{proximo_autorizado}_{st.session_state.rodada_terminada}_{contagem}_{vitoria}_{erros_atuais >= 6}"
+        # Estado básico para o andamento das jogadas comuns
+        estado_turno_atual = f"{ultimo_player}_{proximo_autorizado}_{st.session_state.rodada_terminada}_{contagem}"
         
-        if "cache_estado_turno" not in st.session_state or st.session_state.cache_estado_turno != estado_turno_atual or "dados_ranking_cache" not in st.session_state:
+        # CORREÇÃO DEFINITIVA: Se a rodada acabou (vitoria ou enforcamento por erros >= 6)
+        # nós ignoramos o cache e forçamos a leitura em tempo real direto do banco de dados Supabase!
+        if vitoria or erros_atuais >= 6:
             try:
                 res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute().data
                 st.session_state.dados_ranking_cache = [r for r in res_rank if r['jogador'] != "TREINAMENTOWLI"] if res_rank else []
-                st.session_state.cache_estado_turno = estado_turno_atual
+                st.session_state.cache_estado_turno = "MUDANCA_OBRIGATORIA_FIM_RODADA"
             except Exception:
                 pass
+        else:
+            # Para jogadas normais no meio da partida, usamos o cache para economizar requisições
+            if "cache_estado_turno" not in st.session_state or st.session_state.cache_estado_turno != estado_turno_atual or "dados_ranking_cache" not in st.session_state:
+                try:
+                    res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute().data
+                    st.session_state.dados_ranking_cache = [r for r in res_rank if r['jogador'] != "TREINAMENTOWLI"] if res_rank else []
+                    st.session_state.cache_estado_turno = estado_turno_atual
+                except Exception:
+                    pass
 
         j_competidores = st.session_state.get("dados_ranking_cache", [])
         if j_competidores:
@@ -327,6 +337,7 @@ def arena_viva():
                     else: 
                         st.write("👤")
                     st.caption(f"{r.get('pontos', r.get('points', 0))} pts")
+
 
 # Executa a tela imediatamente caso seja um participante comum
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
