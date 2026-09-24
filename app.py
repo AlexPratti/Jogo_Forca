@@ -412,21 +412,23 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 max_p = res_v_ord[0]['pontos']
                 lista_campeoes = [x for x in res_v_ord if x['pontos'] == max_p]
                 
-                col_v_esq, col_v_centro, col_v_dir = st.columns(3)
-                with col_v_centro:
-                    for campeao in lista_campeoes:
+                # MODIFICAÇÃO: Cria dinamicamente colunas lado a lado baseando-se na quantidade de vencedores
+                cols_vencedores = st.columns(len(lista_campeoes))
+                
+                for idx_c, campeao in enumerate(lista_campeoes):
+                    with cols_vencedores[idx_c]:
                         avatar_num = campeao.get("forca_avatar_num", None)
                         arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
                         
                         if arquivo_av and os.path.exists(arquivo_av):
-                            st.image(arquivo_av, width=320)
+                            st.image(arquivo_av, use_container_width=True)
                         else:
-                            st.markdown("<h1 style='text-align: center; font-size: 100px;'>👑</h1>", unsafe_allow_html=True)
+                            st.markdown("<h1 style='text-align: center; font-size: 80px;'>👑</h1>", unsafe_allow_html=True)
                             
                         st.markdown(f"""
-                        <div style="text-align: center; margin-top: 15px; margin-bottom: 30px;">
-                            <h2 style="font-size: 36px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2>
-                            <h3 style="font-size: 24px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
+                        <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+                            <h2 style="font-size: 28px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2>
+                            <h3 style="font-size: 20px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
                         </div>
                         """, unsafe_allow_html=True)
             else:
@@ -434,6 +436,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         except Exception as e:
             st.error(f"Erro ao processar o ranking de vencedores: {e}")
             
+        st.write("")
         if st.button("🔄 INICIAR NOVA PARTIDA (VOLTAR AO MENU)", use_container_width=True):
             if "forcar_podio_visual" in st.session_state:
                 del st.session_state.forcar_podio_visual
@@ -444,20 +447,18 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             
         st.stop()
 
-    # Desempacotamento explícito de cada container de aba individual
+    # Menu estável de abas
     aba0, aba1, aba2, aba3 = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"])
 
     # --------------------------------------------------
     # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
     with aba0:
-        # CORREÇÃO: Restaurada a proporção original das colunas para evitar o TypeError
         col_tab, col_menu = st.columns([4, 1])
         with col_menu:
             if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): 
                 avancar_proxima_pergunta()
             
-            # Espaço reservado para o fragmento síncrono preencher o ranking
             st.session_state.marcador_ranking_mestre = st.empty()
 
         with col_tab:
@@ -495,7 +496,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     if "baloes_disparados" in st.session_state:
                         del st.session_state.baloes_disparados
                     reiniciar_arena_completa()
-
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PARTICIPANTES
     # --------------------------------------------------
@@ -542,7 +542,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.error("⚠️ O arquivo 'QRCode Forca.png' não foi localizado no diretório atual.")
 
     # --------------------------------------------------
-    # ABA 3: PODER DOS CAMPEÕES (PÓDIO SEGURO)
+    # ABA 3: PODER DOS CAMPEÕES (PÓDIO SEGURO HORIZONTAL)
     # --------------------------------------------------
     with aba3:
         if st.session_state.get('podio_liberado', False):
@@ -563,21 +563,23 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     max_p = res_v_ord[0]['pontos']
                     lista_campeoes = [x for x in res_v_ord if x['pontos'] == max_p]
                     
-                    col_v_esq, col_v_centro, col_v_dir = st.columns(3)
-                    with col_v_centro:
-                        for campeao in lista_campeoes:
+                    # MODIFICAÇÃO: Cria dinamicamente colunas lado a lado baseando-se na quantidade de vencedores
+                    cols_vencedores_manual = st.columns(len(lista_campeoes))
+                    
+                    for idx_cm, campeao in enumerate(lista_campeoes):
+                        with cols_vencedores_manual[idx_cm]:
                             avatar_num = campeao.get("forca_avatar_num", None)
                             arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
                             
                             if arquivo_av and os.path.exists(arquivo_av):
-                                st.image(arquivo_av, width=320)
+                                st.image(arquivo_av, use_container_width=True)
                             else:
-                                st.markdown("<h1 style='text-align: center; font-size: 100px;'>👑</h1>", unsafe_allow_html=True)
+                                st.markdown("<h1 style='text-align: center; font-size: 80px;'>👑</h1>", unsafe_allow_html=True)
                                 
                             st.markdown(f"""
-                            <div style="text-align: center; margin-top: 15px; margin-bottom: 30px;">
-                                <h2 style="font-size: 36px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2>
-                                <h3 style="font-size: 24px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
+                            <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+                                <h2 style="font-size: 28px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2>
+                                <h3 style="font-size: 20px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
                             </div>
                             """, unsafe_allow_html=True)
                 else:
