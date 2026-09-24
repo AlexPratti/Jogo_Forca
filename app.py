@@ -421,16 +421,14 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                             avatar_num = campeao.get("forca_avatar_num", None)
                             arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
                             
-                            # CORREÇÃO CRÍTICA: Centralização vertical e horizontal injetando a imagem e os textos no mesmo bloco de layout
                             if arquivo_av and os.path.exists(arquivo_av):
-                                # Convertemos a imagem local para exibir diretamente de forma segura via Streamlit estático
                                 with open(arquivo_av, "rb") as f_img:
                                     import base64
                                     img_data = base64.b64encode(f_img.read()).decode()
                                 
                                 st.markdown(f"""
                                 <div style="display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; margin: 10px auto;">
-                                    <img src="data:image/png;base64,{img_data}" width="180" style="display: block; margin-bottom: 15px; border-radius: 10px;"/>
+                                    <img src="data:image/png;base64,{img_data}" width="180" style="display: block; margin-bottom: 15px; border-radius: 10px Haus;"/>
                                     <h2 style="font-size: 24px; color: #10b981; margin: 5px 0;">👑 {campeao['jogador']}</h2>
                                     <h3 style="font-size: 18px; color: #64748b; font-family: monospace; margin: 0;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
                                 </div>
@@ -468,7 +466,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
     with aba0:
-        col_tab, col_menu = st.columns()
+        # CORREÇÃO CRÍTICA: Recolocada a proporção [4, 1] original para travar o layout de colunas no Streamlit Cloud
+        col_tab, col_menu = st.columns([4, 1])
         with col_menu:
             if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): 
                 avancar_proxima_pergunta()
@@ -510,6 +509,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     if "baloes_disparados" in st.session_state:
                         del st.session_state.baloes_disparados
                     reiniciar_arena_completa()
+
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PARTICIPANTES
     # --------------------------------------------------
