@@ -211,7 +211,7 @@ def arena_viva():
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
             st.session_state.tocando_musica = True
         
-    # CORREÇÃO: Restaurado o peso [1, 4] das colunas para evitar o TypeError no servidor
+    # Colunas com pesos fixos [1, 4] restauradas com segurança
     c_img, c_txt = st.columns([1, 4])
     erros_atuais = jogo.get('erros', 0)
     ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -298,12 +298,14 @@ def arena_viva():
                     supabase.table("forca_disputa_arena").update({"forca_timestamp_inicio": time.time()}).eq("id", 1).execute()
                 registrar_jogada(letra, jogo)
 
-    # --- LÓGICA DE ATUALIZAÇÃO RESTRITA AO FLUXO DE TURNOS OU FIM DO JOGO ---
+    # --- LÓGICA DE ATUALIZAÇÃO DO PLACAR GLOBAL ---
     if st.session_state.jogador != "TREINAMENTOWLI":
         st.divider()
         st.markdown("### 🏆 Placar Global")
         
-        estado_turno_atual = f"{ultimo_player}_{proximo_autorizado}_{st.session_state.rodada_terminada}_{contagem}"
+        # MODIFICAÇÃO CRÍTICA: O estado do turno agora inclui "vitoria" e se "erros >= 6".
+        # Isso força o cache a quebrar instantaneamente quando a resposta é completada ou ocorre enforcamento!
+        estado_turno_atual = f"{ultimo_player}_{proximo_autorizado}_{st.session_state.rodada_terminada}_{contagem}_{vitoria}_{erros_atuais >= 6}"
         
         if "cache_estado_turno" not in st.session_state or st.session_state.cache_estado_turno != estado_turno_atual or "dados_ranking_cache" not in st.session_state:
             try:
