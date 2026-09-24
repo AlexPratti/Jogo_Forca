@@ -205,13 +205,13 @@ def arena_viva():
     if not jogo:
         st.warning("A linha com ID = 1 não foi encontrada na tabela forca_disputa_arena.")
         return
-    # Execução controlada de áudio para evitar bugs de loop
+     # Execução controlada de áudio para evitar bugs de loop
     if jogo['pergunta'] != "Aguardando nova pergunta..." and jogo['erros'] < 6:
         if os.path.exists("musica.mp3") and "tocando_musica" not in st.session_state:
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
             st.session_state.tocando_musica = True
         
-    # CORREÇÃO: Restaurada a proporção exata [1, 4] das colunas para evitar o TypeError no servidor
+    # Peso das colunas fixado para evitar quebras visuais
     c_img, c_txt = st.columns([1, 4])
     erros_atuais = jogo.get('erros', 0)
     ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -298,33 +298,18 @@ def arena_viva():
                     supabase.table("forca_disputa_arena").update({"forca_timestamp_inicio": time.time()}).eq("id", 1).execute()
                 registrar_jogada(letra, jogo)
 
-    # --- LÓGICA DE ATUALIZAÇÃO DO PLACAR GLOBAL ---
+    # --- MESMA LÓGICA DE ATUALIZAÇÃO RESTRITA PARA O JOGADOR E PARA O MESTRE ---
+    # Removido o cache inteiramente. Puxa do banco sempre que o fragmento rodar
+    try:
+        res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute().data
+        j_competidores = [r for r in res_rank if r['jogador'] != "TREINAMENTOWLI"] if res_rank else []
+    except Exception:
+        j_competidores = []
+
+    # Se quem está visualizando for um jogador comum, desenha o placar horizontal embaixo
     if st.session_state.jogador != "TREINAMENTOWLI":
         st.divider()
         st.markdown("### 🏆 Placar Global")
-        
-        # Estado básico para o andamento das jogadas comuns
-        estado_turno_atual = f"{ultimo_player}_{proximo_autorizado}_{st.session_state.rodada_terminada}_{contagem}"
-        
-        # Se a rodada acabou (vitoria ou enforcamento por erros >= 6), ignora o cache e força a leitura síncrona
-        if vitoria or erros_atuais >= 6:
-            try:
-                res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute().data
-                st.session_state.dados_ranking_cache = [r for r in res_rank if r['jogador'] != "TREINAMENTOWLI"] if res_rank else []
-                st.session_state.cache_estado_turno = "MUDANCA_OBRIGATORIA_FIM_RODADA"
-            except Exception:
-                pass
-        else:
-            # Para as jogadas no meio da partida, utiliza o cache normal para desempenho
-            if "cache_estado_turno" not in st.session_state or st.session_state.cache_estado_turno != estado_turno_atual or "dados_ranking_cache" not in st.session_state:
-                try:
-                    res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute().data
-                    st.session_state.dados_ranking_cache = [r for r in res_rank if r['jogador'] != "TREINAMENTOWLI"] if res_rank else []
-                    st.session_state.cache_estado_turno = estado_turno_atual
-                except Exception:
-                    pass
-
-        j_competidores = st.session_state.get("dados_ranking_cache", [])
         if j_competidores:
             cols_r_p = st.columns(min(len(j_competidores), 5))
             for idx, r in enumerate(j_competidores[:10]):
@@ -336,6 +321,10 @@ def arena_viva():
                     else: 
                         st.write("👤")
                     st.caption(f"{r.get('pontos', r.get('points', 0))} pts")
+                    
+    # SE FOR O MESTRE LOGADO: Guarda o ranking atualizado no estado interno para a aba lateral ler
+    else:
+        st.session_state.ranking_mestre_vivo = j_competidores
 
 
 # Executa a tela imediatamente caso seja um participante comum
@@ -389,7 +378,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             tentadas_fim = [l.strip() for l in jogo_fim['letras_tentadas'].split(",") if l.strip()]
             vitoria_fim = all((letra == " " or letra in tentadas_fim) for letra in jogo_fim['palavra'])
             
-            # Se a pergunta final acabou (por acerto ou por erros máximos)
             if (vitoria_fim or jogo_fim.get('erros', 0) >= 6) and jogo_fim.get('restantes', 0) == 0:
                 st.session_state.podio_liberado = True
                 st.session_state.forcar_podio_visual = True
@@ -407,7 +395,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         try:
             res_v = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").execute().data
             if res_v and len(res_v) > 0:
-                # Normalização segura das chaves do banco de dados
                 for r_jog in res_v:
                     if 'pontos' not in r_jog or r_jog['pontos'] is None:
                         r_jog['pontos'] = r_jog.get('points', 0)
@@ -448,7 +435,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             
         st.stop()
 
-    # Se o jogo ainda estiver rolando, renderiza o menu comum de abas estáveis
+    # Caso o jogo ainda esteja rolando, renderiza o menu comum de abas estáveis
     abas = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"])
 
     # --------------------------------------------------
@@ -464,11 +451,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             st.divider()
             st.markdown("### 🏆 Ranking do Turno")
             try:
-                # Buscamos de forma síncrona o estado atualizado do turno salvo no cache da Parte 3
-                j_comp_mestre = st.session_state.get("dados_ranking_cache", [])
-                if not j_comp_mestre:
-                    res_mestre_init = supabase.table("forca_disputa_ranking").select("*").execute().data
-                    j_comp_mestre = [r for r in res_mestre_init if r.get('jogador') != "TREINAMENTOWLI"] if res_mestre_init else []
+                # LÓGICA UNIFICADA: Lemos o estado síncrono injetado pela arena viva a cada segundo
+                j_comp_mestre = st.session_state.get("ranking_mestre_vivo", [])
                 
                 if j_comp_mestre:
                     j_comp_mestre_ord = sorted(j_comp_mestre, key=lambda x: x.get('pontos', x.get('points', 0)), reverse=True)
@@ -558,7 +542,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.error("⚠️ O arquivo 'QRCode Forca.png' não foi localizado no diretório atual.")
 
     # --------------------------------------------------
-    # ABA 3: PODER DOS CAMPEÕES (PÓDIO SEGURO POR CLIQUE)
+    # ABA 3: PODER DOS CAMPEÕES (PÓDIO FINAL AUTOMÁTICO)
     # --------------------------------------------------
     with abas[3]:
         if st.session_state.get('podio_liberado', False):
@@ -571,7 +555,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             try:
                 res_v = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").execute().data
                 if res_v and len(res_v) > 0:
-                    # Normalização segura das chaves para evitar o erro de listagem
                     for r_jog in res_v:
                         if 'pontos' not in r_jog or r_jog['pontos'] is None:
                             r_jog['pontos'] = r_jog.get('points', 0)
