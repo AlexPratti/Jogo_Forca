@@ -145,6 +145,7 @@ def registrar_jogada(letra, jogo_atual):
         st.session_state.clique_bloqueado = False
         return
 
+    # Adiciona a nova letra à lista de letras já tentadas pelo grupo
     novas_letras = (lista_antiga + "," + letra) if lista_antiga else letra
     novos_erros = jogo_atual.get('erros', 0)
     palavra_alvo = jogo_atual.get('palavra', 'ARENA')
@@ -153,8 +154,20 @@ def registrar_jogada(letra, jogo_atual):
     res_p = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", st.session_state.jogador).single().execute()
     pts_atuais = res_p.data["pontos"] if res_p.data else 0
 
+    # Cria uma lista de simulação temporária incluindo a letra atual para checar se a palavra completou agora
+    tentadas_simuladas = tentadas + [letra]
+    palavra_completou_agora = all((l == " " or l in tentadas_simuladas) for l in palavra_alvo)
+
+    # LÓGICA DE PONTUAÇÃO CUMULATIVA:
     if letra in palavra_alvo:
-        supabase.table("forca_disputa_ranking").update({"pontos": pts_atuais + 5}).eq("jogador", st.session_state.jogador).execute()
+        if palavra_completou_agora:
+            # Se a letra está certa E completou a palavra inteira: Ganha 5 do acerto + 10 do bônus (Total: +15)
+            novos_pontos = pts_atuais + 15
+        else:
+            # Se apenas acertou a letra mas ainda faltam outras: Ganha os 5 pontos normais
+            novos_pontos = pts_atuais + 5
+            
+        supabase.table("forca_disputa_ranking").update({"pontos": novos_pontos}).eq("jogador", st.session_state.jogador).execute()
     else:
         novos_erros += 1
         if modo_jogo == "TURNOS":
@@ -206,14 +219,13 @@ def arena_viva():
         st.warning("A linha com ID = 1 não foi encontrada na tabela forca_disputa_arena.")
         return
         
-     # Execução controlada de áudio para evitar bugs de loop
+    # Execução controlada de áudio para evitar bugs de loop
     if jogo['pergunta'] != "Aguardando nova pergunta..." and jogo['erros'] < 6:
         if os.path.exists("musica.mp3") and "tocando_musica" not in st.session_state:
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
             st.session_state.tocando_musica = True
         
-    # Peso das colunas fixado para evitar quebras visuais
-    c_img, c_txt = st.columns([1, 4])
+    c_img, c_txt = st.columns()
     erros_atuais = jogo.get('erros', 0)
     ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
     modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -235,18 +247,6 @@ def arena_viva():
         vitoria = all((letra == " " or letra in tentadas) for letra in palavra_alvo)
 
         st.session_state.rodada_terminada = bool(vitoria or erros_atuais >= 6)
-
-        if vitoria and erros_atuais < 6:
-            id_v = f"vitoria_{palavra_alvo}_{contagem}"
-            if id_v not in st.session_state:
-                if st.session_state.jogador == ultimo_player and st.session_state.jogador != "TREINAMENTOWLI":
-                    try:
-                        res_p = supabase.table("forca_disputa_ranking").select("pontos").eq("jogador", st.session_state.jogador).single().execute()
-                        pts = res_p.data["pontos"] if res_p.data else 0
-                        supabase.table("forca_disputa_ranking").update({"pontos": pts + 10}).eq("jogador", st.session_state.jogador).execute()
-                    except Exception: 
-                        pass
-                st.session_state[id_v] = True
                 
         if (vitoria or erros_atuais >= 6) and contagem == 0:
             st.error("💀 DESAFIO ENCERRADO!")
@@ -299,20 +299,38 @@ def arena_viva():
                     supabase.table("forca_disputa_arena").update({"forca_timestamp_inicio": time.time()}).eq("id", 1).execute()
                 registrar_jogada(letra, jogo)
 
-    # --- ATUALIZAÇÃO SINCRONIZADA DOS PLACARES ---
+    # --- LÓGICA DE ATUALIZAÇÃO DO PLACAR GLOBAL ---
     try:
         res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute().data
         j_competidores = [r for r in res_rank if r['jogador'] != "TREINAMENTOWLI"] if res_rank else []
     except Exception:
         j_competidores = []
 
-    # Se for um jogador comum, desenha o painel horizontal tradicional embaixo
     if st.session_state.jogador != "TREINAMENTOWLI":
         st.divider()
         st.markdown("### 🏆 Placar Global")
-        if j_competidores:
-            cols_r_p = st.columns(min(len(j_competidores), 5))
-            for idx, r in enumerate(j_competidores[:10]):
+        
+        if vitoria or erros_atuais >= 6:
+            try:
+                time.sleep(0.4)
+                res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute().data
+                st.session_state.dados_ranking_cache = [r for r in res_rank if r['jogador'] != "TREINAMENTOWLI"] if res_rank else []
+                st.session_state.cache_estado_turno = "MUDANCA_OBRIGATORIA_FIM_RODADA"
+            except Exception:
+                pass
+        else:
+            if "cache_estado_turno" not in st.session_state or st.session_state.cache_estado_turno != estado_turno_atual or "dados_ranking_cache" not in st.session_state:
+                try:
+                    res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute().data
+                    st.session_state.dados_ranking_cache = [r for r in res_rank if r['jogador'] != "TREINAMENTOWLI"] if res_rank else []
+                    st.session_state.cache_estado_turno = estado_turno_atual
+                except Exception:
+                    pass
+
+        j_competidores_c = st.session_state.get("dados_ranking_cache", [])
+        if j_competidores_c:
+            cols_r_p = st.columns(min(len(j_competidores_c), 5))
+            for idx, r in enumerate(j_competidores_c[:10]):
                 with cols_r_p[idx % 5]:
                     st.write(f"**{idx+1}º {r['jogador']}**")
                     avatar = f"AV{r.get('forca_avatar_num')}.png"
@@ -322,7 +340,6 @@ def arena_viva():
                         st.write("👤")
                     st.caption(f"{r.get('pontos', r.get('points', 0))} pts")
                     
-    # SE FOR O MESTRE LOGADO: Injeta dinamicamente o texto dentro do espaço reservado na barra lateral!
     else:
         if "marcador_ranking_mestre" in st.session_state and st.session_state.marcador_ranking_mestre is not None:
             with st.session_state.marcador_ranking_mestre.container():
