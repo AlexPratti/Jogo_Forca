@@ -542,7 +542,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.error("⚠️ O arquivo 'QRCode Forca.png' não foi localizado no diretório atual.")
 
     # --------------------------------------------------
-    # ABA 3: PODER DOS CAMPEÕES (PÓDIO FINAL AUTOMÁTICO)
+    # ABA 3: PODER DOS CAMPEÕES (PÓDIO SEGURO)
     # --------------------------------------------------
     with abas[3]:
         if st.session_state.get('podio_liberado', False):
