@@ -358,8 +358,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             st.rerun()
 
     # --- SISTEMA DE NAVEGAÇÃO AUTOMÁTICA DE ABAS ---
+    lista_nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
+    
     if "aba_ativa" not in st.session_state:
-        st.session_state.aba_ativa = 0
+        st.session_state.aba_ativa = "🎮 ARENA DO JOGO"
 
     try:
         res_check_fim = supabase.table("forca_disputa_arena").select("restantes", "erros", "palavra", "letras_tentadas").eq("id", 1).single().execute()
@@ -369,23 +371,23 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             vitoria_fim = all((letra == " " or letra in tentadas_fim) for letra in jogo_fim['palavra'])
             
             if (vitoria_fim or jogo_fim.get('erros', 0) >= 6) and jogo_fim.get('restantes', 0) == 0:
-                if st.session_state.aba_ativa != 3:
+                if st.session_state.aba_ativa != "🏆 PODER DOS CAMPEÕES":
                     st.session_state.podio_liberado = True
-                    st.session_state.aba_ativa = 3
+                    st.session_state.aba_ativa = "🏆 PODER DOS CAMPEÕES"
                     st.rerun()
     except Exception:
         pass
 
-    # Criação das abas injetando o controle de estado ativo
+    # Criação das abas injetando o texto correto correspondente ao estado ativo
     abas = st.tabs(
-        ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"],
+        lista_nomes_abas,
         value=st.session_state.aba_ativa
     )
 
     # --------------------------------------------------
     # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
-    with abas:
+    with abas[0]:
         col_tab, col_menu = st.columns()
         with col_tab:
             arena_viva()
@@ -436,10 +438,11 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 
                 st.write("")
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
-                    st.session_state.aba_ativa = 0
+                    st.session_state.aba_ativa = "🎮 ARENA DO JOGO"
                     if "baloes_disparados" in st.session_state:
                         del st.session_state.baloes_disparados
                     reiniciar_arena_completa()
+
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PARTICIPANTES
     # --------------------------------------------------
