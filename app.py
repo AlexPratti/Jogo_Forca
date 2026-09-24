@@ -414,9 +414,9 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             reiniciar_arena_completa()
             st.rerun()
             
-        st.stop() # Interrompe a execução aqui para não desenhar as abas antigas por baixo
+        st.stop()
 
-    # Caso o jogo ainda esteja rolando normalmente, renderiza a visualização padrão de abas estáveis
+    # Caso o jogo ainda esteja rolando, renderiza as abas padrão estáveis
     abas = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"])
 
     # --------------------------------------------------
@@ -476,8 +476,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     if "baloes_disparados" in st.session_state:
                         del st.session_state.baloes_disparados
                     reiniciar_arena_completa()
-
-
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PARTICIPANTES
     # --------------------------------------------------
@@ -488,7 +486,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
             st.session_state.podio_liberado = False
             st.session_state.rodada_terminada = False
-            st.session_state.aba_ativa = 0
             if "baloes_disparados" in st.session_state:
                 del st.session_state.baloes_disparados
             st.rerun()
@@ -529,7 +526,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     with abas:
         if st.session_state.get('podio_liberado', False):
-            # DISPARA OS BALÕES AUTOMATICAMENTE UMA ÚNICA VEZ
             if "baloes_disparados" not in st.session_state:
                 st.balloons()
                 st.session_state.baloes_disparados = True
@@ -539,7 +535,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             try:
                 res_v = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("pontos", desc=True).execute().data
                 if res_v and len(res_v) > 0:
-                    max_p = res_v['pontos']
+                    max_p = res_v[0]['pontos']
                     lista_campeoes = [x for x in res_v if x['pontos'] == max_p]
                     
                     col_v_esq, col_v_centro, col_v_dir = st.columns()
