@@ -219,13 +219,13 @@ def arena_viva():
         st.warning("A linha com ID = 1 não foi encontrada na tabela forca_disputa_arena.")
         return
         
-      # Execução controlada de áudio para evitar bugs de loop
+     # Execução controlada de áudio para evitar bugs de loop
     if jogo['pergunta'] != "Aguardando nova pergunta..." and jogo['erros'] < 6:
         if os.path.exists("musica.mp3") and "tocando_musica" not in st.session_state:
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
             st.session_state.tocando_musica = True
         
-    # CORREÇÃO CRÍTICA: Peso de colunas original [1, 4] restaurado para evitar quebra no Streamlit Cloud
+    # CORREÇÃO DEFINITIVA: Adicionado [1, 4] para criar as duas colunas proporcionais sem quebrar o Streamlit Cloud
     c_img, c_txt = st.columns([1, 4])
     erros_atuais = jogo.get('erros', 0)
     ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
@@ -311,7 +311,6 @@ def arena_viva():
         st.divider()
         st.markdown("### 🏆 Placar Global")
         
-        # Criação de uma string base estável para validar as atualizações comuns das jogadas
         estado_turno_atual = f"{ultimo_player}_{proximo_autorizado}_{st.session_state.rodada_terminada}_{contagem}"
         
         if vitoria or erros_atuais >= 6:
