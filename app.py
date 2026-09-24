@@ -408,29 +408,34 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     if 'pontos' not in r_jog or r_jog['pontos'] is None:
                         r_jog['pontos'] = r_jog.get('points', 0)
                 
-                res_v_ord = sorted(res_v, key=lambda x: x.get('pontos', 0), reverse=True)
-                max_p = res_v_ord[0]['pontos']
-                lista_campeoes = [x for x in res_v_ord if x['pontos'] == max_p]
+                # REQUISITO: Filtra apenas competidores que possuem mais de 0 pontos acumulados
+                competidores_validos = [x for x in res_v if x.get('pontos', 0) > 0]
                 
-                # MODIFICAÇÃO: Cria dinamicamente colunas lado a lado baseando-se na quantidade de vencedores
-                cols_vencedores = st.columns(len(lista_campeoes))
-                
-                for idx_c, campeao in enumerate(lista_campeoes):
-                    with cols_vencedores[idx_c]:
-                        avatar_num = campeao.get("forca_avatar_num", None)
-                        arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
-                        
-                        if arquivo_av and os.path.exists(arquivo_av):
-                            st.image(arquivo_av, use_container_width=True)
-                        else:
-                            st.markdown("<h1 style='text-align: center; font-size: 80px;'>👑</h1>", unsafe_allow_html=True)
+                if competidores_validos:
+                    res_v_ord = sorted(competidores_validos, key=lambda x: x.get('pontos', 0), reverse=True)
+                    max_p = res_v_ord[0]['pontos']
+                    lista_campeoes = [x for x in res_v_ord if x['pontos'] == max_p]
+                    
+                    cols_vencedores = st.columns(len(lista_campeoes))
+                    for idx_c, campeao in enumerate(lista_campeoes):
+                        with cols_vencedores[idx_c]:
+                            avatar_num = campeao.get("forca_avatar_num", None)
+                            arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
                             
-                        st.markdown(f"""
-                        <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
-                            <h2 style="font-size: 28px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2>
-                            <h3 style="font-size: 20px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
-                        </div>
-                        """, unsafe_allow_html=True)
+                            # REQUISITO: Reduzido o tamanho fixo da imagem em 40% (de 320 para 180)
+                            if arquivo_av and os.path.exists(arquivo_av):
+                                st.image(arquivo_av, width=180)
+                            else:
+                                st.markdown("<h1 style='text-align: center; font-size: 60px;'>👑</h1>", unsafe_allow_html=True)
+                                
+                            st.markdown(f"""
+                            <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+                                <h2 style="font-size: 24px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2>
+                                <h3 style="font-size: 18px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
+                            </div>
+                            """, unsafe_allow_html=True)
+                else:
+                    st.warning("Nenhum participante pontuou na arena para a formação do pódio.")
             else:
                 st.warning("Nenhum participante localizado para montar o pódio.")
         except Exception as e:
@@ -559,33 +564,38 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         if 'pontos' not in r_jog or r_jog['pontos'] is None:
                             r_jog['pontos'] = r_jog.get('points', 0)
                     
-                    res_v_ord = sorted(res_v, key=lambda x: x.get('pontos', 0), reverse=True)
-                    max_p = res_v_ord[0]['pontos']
-                    lista_campeoes = [x for x in res_v_ord if x['pontos'] == max_p]
+                    # REQUISITO: Filtra apenas competidores que possuem mais de 0 pontos acumulados
+                    competidores_validos_m = [x for x in res_v if x.get('pontos', 0) > 0]
                     
-                    # MODIFICAÇÃO: Cria dinamicamente colunas lado a lado baseando-se na quantidade de vencedores
-                    cols_vencedores_manual = st.columns(len(lista_campeoes))
-                    
-                    for idx_cm, campeao in enumerate(lista_campeoes):
-                        with cols_vencedores_manual[idx_cm]:
-                            avatar_num = campeao.get("forca_avatar_num", None)
-                            arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
-                            
-                            if arquivo_av and os.path.exists(arquivo_av):
-                                st.image(arquivo_av, use_container_width=True)
-                            else:
-                                st.markdown("<h1 style='text-align: center; font-size: 80px;'>👑</h1>", unsafe_allow_html=True)
+                    if competidores_validos_m:
+                        res_v_ord = sorted(competidores_validos_m, key=lambda x: x.get('pontos', 0), reverse=True)
+                        max_p = res_v_ord[0]['pontos']
+                        lista_campeoes = [x for x in res_v_ord if x['pontos'] == max_p]
+                        
+                        cols_vencedores_manual = st.columns(len(lista_campeoes))
+                        for idx_cm, campeao in enumerate(lista_campeoes):
+                            with cols_vencedores_manual[idx_cm]:
+                                avatar_num = campeao.get("forca_avatar_num", None)
+                                arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
                                 
-                            st.markdown(f"""
-                            <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
-                                <h2 style="font-size: 28px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2>
-                                <h3 style="font-size: 20px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
-                            </div>
-                            """, unsafe_allow_html=True)
+                                # REQUISITO: Reduzido o tamanho fixo da imagem em 40% (de 320 para 180)
+                                if arquivo_av and os.path.exists(arquivo_av):
+                                    st.image(arquivo_av, width=180)
+                                else:
+                                    st.markdown("<h1 style='text-align: center; font-size: 60px;'>👑</h1>", unsafe_allow_html=True)
+                                    
+                                st.markdown(f"""
+                                <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+                                    <h2 style="font-size: 24px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2>
+                                    <h3 style="font-size: 18px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
+                                </div>
+                                """, unsafe_allow_html=True)
+                    else:
+                        st.warning("Nenhum participante pontuou na arena para a formação do pódio.")
                 else:
                     st.warning("Nenhum participante localizado para montar o pódio.")
             except Exception as e:
-                st.error(f"Erro ao gerar a lista de vencedores: {e}")
+                st.error("Erro ao gerar a lista de vencedores.")
         else:
             if st.button("🏆 LIBERAR EXIBIÇÃO DO CAMPEÃO NO TELÃO", type="primary", use_container_width=True, key="btn_mestre_liberar_podio"):
                 st.session_state.podio_liberado = True
