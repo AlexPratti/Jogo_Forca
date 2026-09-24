@@ -409,7 +409,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         r_jog['pontos'] = r_jog.get('points', 0)
                 
                 res_v_ord = sorted(res_v, key=lambda x: x.get('pontos', 0), reverse=True)
-                # CORREÇÃO CRÍTICA: Pegamos os pontos do primeiro item da lista de forma segura [0]
                 max_p = res_v_ord[0]['pontos']
                 lista_campeoes = [x for x in res_v_ord if x['pontos'] == max_p]
                 
@@ -445,18 +444,19 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             
         st.stop()
 
-    # Menu estável de abas
-    abas = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"])
+    # Desempacotamento explícito de cada container de aba individual
+    aba0, aba1, aba2, aba3 = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"])
 
     # --------------------------------------------------
     # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
-    with abas:
+    with aba0:
         col_tab, col_menu = st.columns()
         with col_menu:
             if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): 
                 avancar_proxima_pergunta()
             
+            # Espaço reservado para o fragmento síncrono preencher o ranking
             st.session_state.marcador_ranking_mestre = st.empty()
 
         with col_tab:
@@ -494,12 +494,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     if "baloes_disparados" in st.session_state:
                         del st.session_state.baloes_disparados
                     reiniciar_arena_completa()
-
-
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PARTICIPANTES
     # --------------------------------------------------
-    with abas[1]: 
+    with aba1: 
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
             supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
@@ -532,7 +530,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 2: CONEXÃO VIA QR CODE
     # --------------------------------------------------
-    with abas[2]:
+    with aba2:
         st.markdown(f"<h1 style='text-align:center; color:#3b82f6; font-family:monospace;'>Chave: {senha_atual}</h1>", unsafe_allow_html=True)
         col_esq_qr, col_cen_qr, col_dir_qr = st.columns(3)
         with col_cen_qr:
@@ -544,7 +542,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 3: PODER DOS CAMPEÕES (PÓDIO SEGURO)
     # --------------------------------------------------
-    with abas[3]:
+    with aba3:
         if st.session_state.get('podio_liberado', False):
             if "baloes_disparados" not in st.session_state:
                 st.balloons()
