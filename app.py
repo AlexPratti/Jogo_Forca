@@ -357,12 +357,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 del st.session_state.baloes_disparados
             st.rerun()
 
-    # --- SISTEMA DE NAVEGAÇÃO AUTOMÁTICA DE ABAS ---
-    lista_nomes_abas = ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"]
-    
-    if "aba_ativa" not in st.session_state:
-        st.session_state.aba_ativa = "🎮 ARENA DO JOGO"
-
+    # --- MONITORAMENTO DO FIM DO JOGO PARA REDIRECIONAMENTO ---
     try:
         res_check_fim = supabase.table("forca_disputa_arena").select("restantes", "erros", "palavra", "letras_tentadas").eq("id", 1).single().execute()
         if res_check_fim.data:
@@ -370,25 +365,65 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             tentadas_fim = [l.strip() for l in jogo_fim['letras_tentadas'].split(",") if l.strip()]
             vitoria_fim = all((letra == " " or letra in tentadas_fim) for letra in jogo_fim['palavra'])
             
+            # Se o jogo acabou de verdade na pergunta final, forçamos a exibição direta do Pódio
             if (vitoria_fim or jogo_fim.get('erros', 0) >= 6) and jogo_fim.get('restantes', 0) == 0:
-                if st.session_state.aba_ativa != "🏆 PODER DOS CAMPEÕES":
-                    st.session_state.podio_liberado = True
-                    st.session_state.aba_ativa = "🏆 PODER DOS CAMPEÕES"
-                    st.rerun()
+                st.session_state.podio_liberado = True
+                st.session_state.forcar_podio_visual = True
     except Exception:
         pass
 
-    # Criação das abas injetando o texto correto correspondente ao estado ativo
-    abas = st.tabs(
-        lista_nomes_abas,
-        value=st.session_state.aba_ativa
-    )
+    # Se o gatilho acima foi ativado, pulamos as abas padrão e mostramos o Pódio com os Balões
+    if st.session_state.get("forcar_podio_visual", False):
+        if "baloes_disparados" not in st.session_state:
+            st.balloons()
+            st.session_state.baloes_disparados = True
+
+        st.markdown("<h1 style='text-align: center; color: #ffb703;'>🏆 PÓDIO DA ARENA DA FORCA 🏆</h1>", unsafe_allow_html=True)
+        st.write("")
+        try:
+            res_v = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("pontos", desc=True).execute().data
+            if res_v and len(res_v) > 0:
+                max_p = res_v[0]['pontos']
+                lista_campeoes = [x for x in res_v if x['pontos'] == max_p]
+                
+                col_v_esq, col_v_centro, col_v_dir = st.columns([1, 2, 1])
+                with col_v_centro:
+                    for campeao in lista_campeoes:
+                        avatar_num = campeao.get("forca_avatar_num", None)
+                        arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
+                        
+                        if arquivo_av and os.path.exists(arquivo_av):
+                            st.image(arquivo_av, width=320)
+                        else:
+                            st.markdown("<h1 style='text-align: center; font-size: 100px;'>👑</h1>", unsafe_allow_html=True)
+                            
+                        st.markdown(f"""
+                        <div style="text-align: center; margin-top: 15px; margin-bottom: 30px;">
+                            <h2 style="font-size: 36px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2>
+                            <h3 style="font-size: 24px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
+                        </div>
+                        """, unsafe_allow_html=True)
+        except Exception:
+            st.error("Erro ao gerar a lista de vencedores.")
+            
+        if st.button("🔄 INICIAR NOVA PARTIDA (VOLTAR AO MENU)", use_container_width=True):
+            if "forcar_podio_visual" in st.session_state:
+                del st.session_state.forcar_podio_visual
+            if "baloes_disparados" in st.session_state:
+                del st.session_state.baloes_disparados
+            reiniciar_arena_completa()
+            st.rerun()
+            
+        st.stop() # Interrompe a execução aqui para não desenhar as abas antigas por baixo
+
+    # Caso o jogo ainda esteja rolando normalmente, renderiza a visualização padrão de abas estáveis
+    abas = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"])
 
     # --------------------------------------------------
     # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
     with abas[0]:
-        col_tab, col_menu = st.columns()
+        col_tab, col_menu = st.columns([4, 1])
         with col_tab:
             arena_viva()
         with col_menu:
@@ -438,10 +473,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 
                 st.write("")
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
-                    st.session_state.aba_ativa = "🎮 ARENA DO JOGO"
                     if "baloes_disparados" in st.session_state:
                         del st.session_state.baloes_disparados
                     reiniciar_arena_completa()
+
 
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PARTICIPANTES
