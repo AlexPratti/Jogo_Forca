@@ -408,7 +408,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     if 'pontos' not in r_jog or r_jog['pontos'] is None:
                         r_jog['pontos'] = r_jog.get('points', 0)
                 
-                # REQUISITO: Filtra apenas competidores que possuem mais de 0 pontos acumulados
                 competidores_validos = [x for x in res_v if x.get('pontos', 0) > 0]
                 
                 if competidores_validos:
@@ -422,18 +421,28 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                             avatar_num = campeao.get("forca_avatar_num", None)
                             arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
                             
-                            # REQUISITO: Reduzido o tamanho fixo da imagem em 40% (de 320 para 180)
+                            # CORREÇÃO CRÍTICA: Centralização vertical e horizontal injetando a imagem e os textos no mesmo bloco de layout
                             if arquivo_av and os.path.exists(arquivo_av):
-                                st.image(arquivo_av, width=180)
-                            else:
-                                st.markdown("<h1 style='text-align: center; font-size: 60px;'>👑</h1>", unsafe_allow_html=True)
+                                # Convertemos a imagem local para exibir diretamente de forma segura via Streamlit estático
+                                with open(arquivo_av, "rb") as f_img:
+                                    import base64
+                                    img_data = base64.b64encode(f_img.read()).decode()
                                 
-                            st.markdown(f"""
-                            <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
-                                <h2 style="font-size: 24px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2>
-                                <h3 style="font-size: 18px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
-                            </div>
-                            """, unsafe_allow_html=True)
+                                st.markdown(f"""
+                                <div style="display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; margin: 10px auto;">
+                                    <img src="data:image/png;base64,{img_data}" width="180" style="display: block; margin-bottom: 15px; border-radius: 10px;"/>
+                                    <h2 style="font-size: 24px; color: #10b981; margin: 5px 0;">👑 {campeao['jogador']}</h2>
+                                    <h3 style="font-size: 18px; color: #64748b; font-family: monospace; margin: 0;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
+                                </div>
+                                """, unsafe_allow_html=True)
+                            else:
+                                st.markdown(f"""
+                                <div style="display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; margin: 10px auto;">
+                                    <h1 style="font-size: 60px; margin-bottom: 15px;">👑</h1>
+                                    <h2 style="font-size: 24px; color: #10b981; margin: 5px 0;">👑 {campeao['jogador']}</h2>
+                                    <h3 style="font-size: 18px; color: #64748b; font-family: monospace; margin: 0;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
+                                </div>
+                                """, unsafe_allow_html=True)
                 else:
                     st.warning("Nenhum participante pontuou na arena para a formação do pódio.")
             else:
@@ -459,7 +468,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
     with aba0:
-        col_tab, col_menu = st.columns([4, 1])
+        col_tab, col_menu = st.columns()
         with col_menu:
             if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): 
                 avancar_proxima_pergunta()
@@ -547,7 +556,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.error("⚠️ O arquivo 'QRCode Forca.png' não foi localizado no diretório atual.")
 
     # --------------------------------------------------
-    # ABA 3: PODER DOS CAMPEÕES (PÓDIO SEGURO HORIZONTAL)
+    # ABA 3: PODER DOS CAMPEÕES (PÓDIO SEGURO HORIZONTAL CORRIGIDO)
     # --------------------------------------------------
     with aba3:
         if st.session_state.get('podio_liberado', False):
@@ -564,7 +573,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         if 'pontos' not in r_jog or r_jog['pontos'] is None:
                             r_jog['pontos'] = r_jog.get('points', 0)
                     
-                    # REQUISITO: Filtra apenas competidores que possuem mais de 0 pontos acumulados
                     competidores_validos_m = [x for x in res_v if x.get('pontos', 0) > 0]
                     
                     if competidores_validos_m:
@@ -578,18 +586,27 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                                 avatar_num = campeao.get("forca_avatar_num", None)
                                 arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
                                 
-                                # REQUISITO: Reduzido o tamanho fixo da imagem em 40% (de 320 para 180)
+                                # CORREÇÃO CRÍTICA MÓDULO MANUAL: Injeta imagem e textos de forma estruturada no mesmo container HTML
                                 if arquivo_av and os.path.exists(arquivo_av):
-                                    st.image(arquivo_av, width=180)
-                                else:
-                                    st.markdown("<h1 style='text-align: center; font-size: 60px;'>👑</h1>", unsafe_allow_html=True)
+                                    with open(arquivo_av, "rb") as f_img:
+                                        import base64
+                                        img_data_m = base64.b64encode(f_img.read()).decode()
                                     
-                                st.markdown(f"""
-                                <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
-                                    <h2 style="font-size: 24px; color: #10b981; margin-bottom: 5px;">👑 {campeao['jogador']}</h2>
-                                    <h3 style="font-size: 18px; color: #64748b; font-family: monospace;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
-                                </div>
-                                """, unsafe_allow_html=True)
+                                    st.markdown(f"""
+                                    <div style="display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; margin: 10px auto;">
+                                        <img src="data:image/png;base64,{img_data_m}" width="180" style="display: block; margin-bottom: 15px; border-radius: 10px;"/>
+                                        <h2 style="font-size: 24px; color: #10b981; margin: 5px 0;">👑 {campeao['jogador']}</h2>
+                                        <h3 style="font-size: 18px; color: #64748b; font-family: monospace; margin: 0;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                else:
+                                    st.markdown(f"""
+                                    <div style="display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; margin: 10px auto;">
+                                        <h1 style="font-size: 60px; margin-bottom: 15px;">👑</h1>
+                                        <h2 style="font-size: 24px; color: #10b981; margin: 5px 0;">👑 {campeao['jogador']}</h2>
+                                        <h3 style="font-size: 18px; color: #64748b; font-family: monospace; margin: 0;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
+                                    </div>
+                                    """, unsafe_allow_html=True)
                     else:
                         st.warning("Nenhum participante pontuou na arena para a formação do pódio.")
                 else:
