@@ -451,7 +451,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
     with aba0:
-        col_tab, col_menu = st.columns()
+        # CORREÇÃO: Restaurada a proporção original das colunas para evitar o TypeError
+        col_tab, col_menu = st.columns([4, 1])
         with col_menu:
             if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): 
                 avancar_proxima_pergunta()
@@ -494,6 +495,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     if "baloes_disparados" in st.session_state:
                         del st.session_state.baloes_disparados
                     reiniciar_arena_completa()
+
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PARTICIPANTES
     # --------------------------------------------------
