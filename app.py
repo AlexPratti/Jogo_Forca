@@ -514,7 +514,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     with abas[2]:
         st.markdown(f"<h1 style='text-align:center; color:#3b82f6; font-family:monospace;'>Chave: {senha_atual}</h1>", unsafe_allow_html=True)
-        col_esq_qr, col_cen_qr, col_dir_qr = st.columns()
+        col_esq_qr, col_cen_qr, col_dir_qr = st.columns([1, 2, 1])
         with col_cen_qr:
             if os.path.exists("QRCode Forca.png"):
                 st.image("QRCode Forca.png", width=550) 
@@ -538,7 +538,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     max_p = res_v[0]['pontos']
                     lista_campeoes = [x for x in res_v if x['pontos'] == max_p]
                     
-                    col_v_esq, col_v_centro, col_v_dir = st.columns()
+                    col_v_esq, col_v_centro, col_v_dir = st.columns([1, 2, 1])
                     with col_v_centro:
                         for campeao in lista_campeoes:
                             avatar_num = campeao.get("forca_avatar_num", None)
