@@ -211,8 +211,8 @@ def arena_viva():
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
             st.session_state.tocando_musica = True
         
-    # Colunas com pesos fixos restauradas com segurança
-    c_img, c_txt = st.columns()
+    # CORREÇÃO: Restaurada a proporção exata [1, 4] das colunas para evitar o TypeError no servidor
+    c_img, c_txt = st.columns([1, 4])
     erros_atuais = jogo.get('erros', 0)
     ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
     modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -306,8 +306,7 @@ def arena_viva():
         # Estado básico para o andamento das jogadas comuns
         estado_turno_atual = f"{ultimo_player}_{proximo_autorizado}_{st.session_state.rodada_terminada}_{contagem}"
         
-        # CORREÇÃO DEFINITIVA: Se a rodada acabou (vitoria ou enforcamento por erros >= 6)
-        # nós ignoramos o cache e forçamos a leitura em tempo real direto do banco de dados Supabase!
+        # Se a rodada acabou (vitoria ou enforcamento por erros >= 6), ignora o cache e força a leitura síncrona
         if vitoria or erros_atuais >= 6:
             try:
                 res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute().data
@@ -316,7 +315,7 @@ def arena_viva():
             except Exception:
                 pass
         else:
-            # Para jogadas normais no meio da partida, usamos o cache para economizar requisições
+            # Para as jogadas no meio da partida, utiliza o cache normal para desempenho
             if "cache_estado_turno" not in st.session_state or st.session_state.cache_estado_turno != estado_turno_atual or "dados_ranking_cache" not in st.session_state:
                 try:
                     res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute().data
