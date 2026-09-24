@@ -383,10 +383,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
         try:
             res_v = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("pontos", desc=True).execute().data
             if res_v and len(res_v) > 0:
-                max_p = res_v[0]['pontos']
+                max_p = res_v['pontos']
                 lista_campeoes = [x for x in res_v if x['pontos'] == max_p]
                 
-                col_v_esq, col_v_centro, col_v_dir = st.columns([1, 2, 1])
+                col_v_esq, col_v_centro, col_v_dir = st.columns()
                 with col_v_centro:
                     for campeao in lista_campeoes:
                         avatar_num = campeao.get("forca_avatar_num", None)
@@ -479,7 +479,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PARTICIPANTES
     # --------------------------------------------------
-    with abas: 
+    with abas[1]: 
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
             supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
@@ -512,7 +512,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 2: CONEXÃO VIA QR CODE
     # --------------------------------------------------
-    with abas:
+    with abas[2]:
         st.markdown(f"<h1 style='text-align:center; color:#3b82f6; font-family:monospace;'>Chave: {senha_atual}</h1>", unsafe_allow_html=True)
         col_esq_qr, col_cen_qr, col_dir_qr = st.columns()
         with col_cen_qr:
@@ -524,7 +524,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 3: PODER DOS CAMPEÕES (PÓDIO FINAL AUTOMÁTICO)
     # --------------------------------------------------
-    with abas:
+    with abas[3]:
         if st.session_state.get('podio_liberado', False):
             if "baloes_disparados" not in st.session_state:
                 st.balloons()
