@@ -409,7 +409,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                         r_jog['pontos'] = r_jog.get('points', 0)
                 
                 res_v_ord = sorted(res_v, key=lambda x: x.get('pontos', 0), reverse=True)
-                max_p = res_v_ord['pontos']
+                # CORREÇÃO CRÍTICA: Pegamos os pontos do primeiro item da lista de forma segura [0]
+                max_p = res_v_ord[0]['pontos']
                 lista_campeoes = [x for x in res_v_ord if x['pontos'] == max_p]
                 
                 col_v_esq, col_v_centro, col_v_dir = st.columns(3)
@@ -450,18 +451,15 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
-    with abas[0]:
-        col_tab, col_menu = st.columns([4, 1])
+    with abas:
+        col_tab, col_menu = st.columns()
         with col_menu:
             if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): 
                 avancar_proxima_pergunta()
             
-            # NOVO: Espaço reservado vazio criado exatamente no local original (abaixo do botão Próxima)
-            # A função arena_viva vai preencher este espaço a cada 1 segundo automaticamente
             st.session_state.marcador_ranking_mestre = st.empty()
 
         with col_tab:
-            # Chama a arena viva (que vai injetar o ranking em tempo real no marcador criado acima)
             arena_viva()
 
         st.divider()
@@ -496,6 +494,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     if "baloes_disparados" in st.session_state:
                         del st.session_state.baloes_disparados
                     reiniciar_arena_completa()
+
 
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PARTICIPANTES
