@@ -211,7 +211,8 @@ def arena_viva():
             st.audio("musica.mp3", format="audio/mp3", loop=True, autoplay=True)
             st.session_state.tocando_musica = True
         
-    c_img, c_txt = st.columns()
+    # CORREÇÃO: Restaurado o peso [1, 4] das colunas para evitar o TypeError no servidor
+    c_img, c_txt = st.columns([1, 4])
     erros_atuais = jogo.get('erros', 0)
     ultimo_player = jogo.get('ultimo_jogador', "SISTEMA")
     modo_jogo = jogo.get('forca_modo_jogo', "LIVRE")
@@ -302,10 +303,8 @@ def arena_viva():
         st.divider()
         st.markdown("### 🏆 Placar Global")
         
-        # Identificadores para saber se o turno mudou ou o jogo acabou
         estado_turno_atual = f"{ultimo_player}_{proximo_autorizado}_{st.session_state.rodada_terminada}_{contagem}"
         
-        # Se mudou o estado ou se ainda não buscamos os dados, fazemos o select no banco
         if "cache_estado_turno" not in st.session_state or st.session_state.cache_estado_turno != estado_turno_atual or "dados_ranking_cache" not in st.session_state:
             try:
                 res_rank = supabase.table("forca_disputa_ranking").select("*").order("pontos", desc=True).execute().data
@@ -314,7 +313,6 @@ def arena_viva():
             except Exception:
                 pass
 
-        # Desenha o placar usando as informações seguras do cache controlado
         j_competidores = st.session_state.get("dados_ranking_cache", [])
         if j_competidores:
             cols_r_p = st.columns(min(len(j_competidores), 5))
