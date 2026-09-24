@@ -449,7 +449,7 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                                 
                                 st.markdown(f"""
                                 <div style="display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center; margin: 10px auto;">
-                                    <img src="data:image/png;base64,{img_data}" width="180" style="display: block; margin-bottom: 15px; border-radius: 10px Haus;"/>
+                                    <img src="data:image/png;base64,{img_data}" width="180" style="display: block; margin-bottom: 15px; border-radius: 10px;"/>
                                     <h2 style="font-size: 24px; color: #10b981; margin: 5px 0;">👑 {campeao['jogador']}</h2>
                                     <h3 style="font-size: 18px; color: #64748b; font-family: monospace; margin: 0;">GRANDE CAMPEÃO COM {max_p} PTS</h3>
                                 </div>
@@ -480,15 +480,14 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             
         st.stop()
 
-    # Menu estável de abas
-    aba0, aba1, aba2, aba3 = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"])
+    # REQUISITO ADICIONADO: Nova aba "📜 REGRAS DA ARENA" injetada na lista do desempacotamento
+    aba0, aba1, aba2, aba3, aba4 = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES", "📜 REGRAS DA ARENA"])
 
     # --------------------------------------------------
     # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
     with aba0:
-        # CORREÇÃO CRÍTICA: Recolocada a proporção [4, 1] original para travar o layout de colunas no Streamlit Cloud
-        col_tab, col_menu = st.columns([4, 1])
+        col_tab, col_menu = st.columns([3, 1])
         with col_menu:
             if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): 
                 avancar_proxima_pergunta()
@@ -530,7 +529,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     if "baloes_disparados" in st.session_state:
                         del st.session_state.baloes_disparados
                     reiniciar_arena_completa()
-
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PARTICIPANTES
     # --------------------------------------------------
@@ -575,9 +573,8 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 st.image("QRCode Forca.png", width=550) 
             else:
                 st.error("⚠️ O arquivo 'QRCode Forca.png' não foi localizado no diretório atual.")
-
     # --------------------------------------------------
-    # ABA 3: PODER DOS CAMPEÕES (PÓDIO SEGURO HORIZONTAL CORRIGIDO)
+    # ABA 3: PODER DOS CAMPEÕES (PÓDIO SEGURO HORIZONTAL VIVO)
     # --------------------------------------------------
     with aba3:
         if st.session_state.get('podio_liberado', False):
@@ -607,7 +604,6 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                                 avatar_num = campeao.get("forca_avatar_num", None)
                                 arquivo_av = f"AV{avatar_num}.png" if avatar_num else None
                                 
-                                # CORREÇÃO CRÍTICA MÓDULO MANUAL: Injeta imagem e textos de forma estruturada no mesmo container HTML
                                 if arquivo_av and os.path.exists(arquivo_av):
                                     with open(arquivo_av, "rb") as f_img:
                                         import base64
@@ -643,3 +639,41 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 except Exception:
                     pass
                 st.rerun()
+
+    # --------------------------------------------------
+    # ABA 4: MANUAL E REGRAS DA ARENA
+    # --------------------------------------------------
+    with aba4:
+        st.markdown("<h2 style='text-align: center; color: #3b82f6; font-family: monospace; margin-bottom: 25px;'>📜 MANUAL DE COMBATE: ARENA DA FORCA</h2>", unsafe_allow_html=True)
+        
+        col_regras_texto, col_regras_imagem = st.columns([3, 1])
+        
+        with col_regras_texto:
+            st.markdown("""
+            ### 🛡️ Dinâmica e Turnos
+            * **Abertura Marcial:** Assim que a questão é lançada na arena pelo Mestre, a **primeira jogada é totalmente livre**. Qualquer competidor rápido pode chutar a primeira letra.
+            * **Ordem de Combate:** A partir da primeira jogada livre, o sistema trava o formato e define a ordem de jogadas estritamente por **ordem alfabética dos nomes**, começando pelo jogador que abriu o round.
+            * **Turno Único:** Cada gladiador terá a sua vez com direito a apenas **uma tentativa de letra** por vez.
+            
+            ### ⏱️ Tempo Limite e Penalidades
+            * **Contagem Regressiva:** Cada competidor possui um tempo limite de **20 segundos** para efetuar sua jogada.
+            * **Falta de Ação:** Caso o tempo expire sem que o jogador escolha uma letra, sua vez será passada para o próximo da fila e o jogador **perderá 5 pontos** como punição por inatividade.
+            
+            ### ⚔️ Sistema de Pontuação e Energia
+            * **Letra Correta (+5 pts):** Cada letra certa preenchida na resposta (independente se ela se repete uma ou mais vezes na palavra) concede **5 pontos** ao atacante.
+            * **Letra Errada (-5 pts):** Cada erro remove **5 pontos** do jogador atual (no modo turnos) e materializa uma parte do corpo do competidor na estrutura da Forca.
+            * **Limite Vital (6 Erros):** A equipe tem o limite coletivo de **6 erros**. Se a forca for preenchida por completo, a rodada é dada como perdida.
+            * **Golpe de Misericórdia (+15 pts):** Caso a letra acertada seja exatamente a **letra de fechamento** (a última letra que faltava para decifrar a palavra), o jogador realiza o combo perfeito fazendo **15 pontos de uma vez só** (5 do acerto + 10 do bônus de encerramento).
+            
+            ### 🏆 Encerramento e Glória
+            * **O Desafio Final:** O jogo transiciona automaticamente e chega ao fim imediatamente após a resolução da **pergunta final** contida no arquivo.
+            * **Exibição Real:** Ao término do combate, o Mestre do Jogo liberará o grande **Pódio dos Campeões no Telão**, consagrando o vencedor isolado ou os vencedores que dividirem o topo do ranking (em caso de empate técnico), exibindo seus avatares personalizados!
+            """)
+            
+        with col_regras_imagem:
+            st.write("")
+            st.write("")
+            if os.path.exists("erro0.png"):
+                st.image("erro0.png", caption="⚔️ A Arena aguarda os desafiantes", width=200)
+            else:
+                st.markdown("<h1 style='text-align: center; font-size: 90px; margin-top: 30px;'>🎯</h1>", unsafe_allow_html=True)
