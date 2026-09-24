@@ -91,7 +91,7 @@ if not st.session_state.jogador:
                 nome_upper = nome.strip().upper()
                 
                 if nome_upper == "TREINAMENTOWLI":
-                    st.error("Use a opção de perfil Administrador para acessar com este nome.")
+                    st.error("Use a opção de perfil Administrator para acessar com este nome.")
                 else:
                     try:
                         res_arena = supabase.table("forca_disputa_arena").select("forca_senha_acesso").eq("id", 1).single().execute()
@@ -116,7 +116,6 @@ if not st.session_state.jogador:
             else:
                 st.warning("Preencha todos os campos obrigatórios.")
     st.stop()
-
 # ==================================================
 # 3. LÓGICA DE JOGO CORE
 # ==================================================
@@ -186,6 +185,7 @@ def reiniciar_arena_completa():
         pass
     st.session_state.clique_bloqueado = False
     st.rerun()
+
 # ==================================================
 # 4. INTERFACE GRÁFICA VIVA DA ARENA
 # ==================================================
@@ -196,19 +196,15 @@ def arena_viva():
     if "rodada_terminada" not in st.session_state: st.session_state.rodada_terminada = False
 
     try:
-        # Buscamos o registro e guardamos o resultado bruto
         resposta_banco = supabase.table("forca_disputa_arena").select("*").eq("id", 1).single().execute()
         jogo = resposta_banco.data
     except Exception as erro_conexao:
-        # CORREÇÃO: Mostra o erro real na tela caso falhe
         st.warning(f"Erro de Conexão com a Arena: {erro_conexao}")
         return
         
     if not jogo:
         st.warning("A linha com ID = 1 não foi encontrada na tabela forca_disputa_arena.")
         return
-
-
     # Execução controlada de áudio para evitar bugs de loop
     if jogo['pergunta'] != "Aguardando nova pergunta..." and jogo['erros'] < 6:
         if os.path.exists("musica.mp3") and "tocando_musica" not in st.session_state:
@@ -291,7 +287,6 @@ def arena_viva():
         cols_tec = st.columns(13)
         for i, letra in enumerate(letras_abc):
             ja_foi = letra in tentadas
-            # O .get() retorna None se a variável sumir, impedindo o app de quebrar
             is_admin = st.session_state.get("jogador") == "TREINAMENTOWLI"
 
             disabled = ja_foi or (not autorizado_a_jogar) or st.session_state.clique_bloqueado or is_admin
@@ -321,11 +316,11 @@ def arena_viva():
                         st.caption(f"{r['pontos']} pts")
         except Exception:
             pass
-
 # Executa a tela imediatamente caso seja um participante comum
 if st.session_state.jogador and st.session_state.jogador != "TREINAMENTOWLI":
     st.title("⚔️ Arena da Forca")
     arena_viva()
+
 # ==================================================
 # 5. PAINEL ADM (FORA DO CONTEXTO DE FRAGMENTO)
 # ==================================================
@@ -358,19 +353,45 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 pass
             st.session_state.podio_liberado = False
             st.session_state.rodada_terminada = False
+            if "baloes_disparados" in st.session_state:
+                del st.session_state.baloes_disparados
             st.rerun()
 
-    abas = st.tabs(["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"])
+    # --- SISTEMA DE NAVEGAÇÃO AUTOMÁTICA DE ABAS ---
+    if "aba_ativa" not in st.session_state:
+        st.session_state.aba_ativa = 0
+
+    try:
+        res_check_fim = supabase.table("forca_disputa_arena").select("restantes", "erros", "palavra", "letras_tentadas").eq("id", 1).single().execute()
+        if res_check_fim.data:
+            jogo_fim = res_check_fim.data
+            tentadas_fim = [l.strip() for l in jogo_fim['letras_tentadas'].split(",") if l.strip()]
+            vitoria_fim = all((letra == " " or letra in tentadas_fim) for letra in jogo_fim['palavra'])
+            
+            if (vitoria_fim or jogo_fim.get('erros', 0) >= 6) and jogo_fim.get('restantes', 0) == 0:
+                if st.session_state.aba_ativa != 3:
+                    st.session_state.podio_liberado = True
+                    st.session_state.aba_ativa = 3
+                    st.rerun()
+    except Exception:
+        pass
+
+    # Criação das abas injetando o controle de estado ativo
+    abas = st.tabs(
+        ["🎮 ARENA DO JOGO", "👥 CONTROLE DE PARTICIPANTES", "📱 QR CODE", "🏆 PODER DOS CAMPEÕES"],
+        value=st.session_state.aba_ativa
+    )
 
     # --------------------------------------------------
     # ABA 0: CONTEÚDO EXCLUSIVO DA ARENA DO JOGO
     # --------------------------------------------------
-    with abas[0]:
-        col_tab, col_menu = st.columns([4, 1])
+    with abas:
+        col_tab, col_menu = st.columns()
         with col_tab:
             arena_viva()
         with col_menu:
-            if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): avancar_proxima_pergunta()
+            if st.button("➡️ Próxima", use_container_width=True, key="btn_prox_mestre"): 
+                avancar_proxima_pergunta()
             st.divider()
             st.markdown("### 🏆 Ranking")
             try:
@@ -381,8 +402,10 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                     for i, r in enumerate(jogadores_f[:10]):
                         pts = r.get('pontos', r.get('points', 0))
                         st.write(f"{i+1}º {r['jogador']}: **{pts} pts**")
-                else: st.write("Nenhum competidor na arena.")
-            except Exception: st.write("Sincronizando placar...")
+                else: 
+                    st.write("Nenhum competidor na arena.")
+            except Exception: 
+                st.write("Sincronizando placar...")
 
         st.divider()
         with st.expander("⚙️ CONFIGURAÇÃO DE QUESTÕES", expanded=True):
@@ -413,30 +436,30 @@ if st.session_state.jogador == "TREINAMENTOWLI":
                 
                 st.write("")
                 if st.button("🔄 REINICIAR ARENA COMPLETA", use_container_width=True):
+                    st.session_state.aba_ativa = 0
+                    if "baloes_disparados" in st.session_state:
+                        del st.session_state.baloes_disparados
                     reiniciar_arena_completa()
-
-
     # --------------------------------------------------
     # ABA 1: GERENCIAMENTO DE PARTICIPANTES
     # --------------------------------------------------
-    with abas[1]: 
+    with abas: 
         st.markdown("### 👥 Gerenciamento de Participantes na Sala")
         if st.button("🗑️ EXPULSAR TODOS OS JOGADORES DA ARENA", use_container_width=True, type="primary"):
             supabase.table("forca_disputa_ranking").delete().neq("jogador", "TREINAMENTOWLI").execute()
             supabase.table("forca_disputa_arena").update({"forca_proximo_turno": ""}).eq("id", 1).execute()
             st.session_state.podio_liberado = False
             st.session_state.rodada_terminada = False
+            st.session_state.aba_ativa = 0
+            if "baloes_disparados" in st.session_state:
+                del st.session_state.baloes_disparados
             st.rerun()
         st.write("")
         
         try:
-            # CORREÇÃO: Removemos o .order("jogador") da consulta do banco para não dar APIError
             res_jogadores = supabase.table("forca_disputa_ranking").select("jogador").neq("jogador", "TREINAMENTOWLI").execute()
-            
             if res_jogadores.data:
-                # Ordenamos a lista alfabeticamente direto no Python de forma segura
                 jogadores_ordenados = sorted(res_jogadores.data, key=lambda x: x['jogador'])
-                
                 for j in jogadores_ordenados:
                     c1, c2 = st.columns(2)
                     c1.markdown(f"👤 **{j['jogador']}**")
@@ -454,41 +477,34 @@ if st.session_state.jogador == "TREINAMENTOWLI":
     # --------------------------------------------------
     # ABA 2: CONEXÃO VIA QR CODE
     # --------------------------------------------------
-    with abas[2]:
+    with abas:
         st.markdown(f"<h1 style='text-align:center; color:#3b82f6; font-family:monospace;'>Chave: {senha_atual}</h1>", unsafe_allow_html=True)
-        col_esq_qr, col_cen_qr, col_dir_qr = st.columns([1, 2, 1])
+        col_esq_qr, col_cen_qr, col_dir_qr = st.columns()
         with col_cen_qr:
             if os.path.exists("QRCode Forca.png"):
-                # ALTERADO: use_container_width removido e adicionado um tamanho fixo menor
                 st.image("QRCode Forca.png", width=550) 
             else:
                 st.error("⚠️ O arquivo 'QRCode Forca.png' não foi localizado no diretório atual.")
 
+    # --------------------------------------------------
+    # ABA 3: PODER DOS CAMPEÕES (PÓDIO FINAL AUTOMÁTICO)
+    # --------------------------------------------------
+    with abas:
+        if st.session_state.get('podio_liberado', False):
+            # DISPARA OS BALÕES AUTOMATICAMENTE UMA ÚNICA VEZ
+            if "baloes_disparados" not in st.session_state:
+                st.balloons()
+                st.session_state.baloes_disparados = True
 
-    # --------------------------------------------------
-    # ABA 3: PODER DOS CAMPEÕES (PÓDIO FINAL)
-    # --------------------------------------------------
-    with abas[3]:
-        if st.session_state.get('rodada_terminada', False) and not st.session_state.podio_liberado:
-            if st.button("🏆 LIBERAR EXIBIÇÃO DO CAMPEÃO NO TELÃO", type="primary", use_container_width=True, key="btn_mestre_liberar_podio"):
-                st.session_state.podio_liberado = True
-                st.toast("Pódio liberado na aba 4!")
-                try:
-                    supabase.table("forca_disputa_arena").update({"ultimo_jogador": "SISTEMA"}).eq("id", 1).execute()
-                except Exception:
-                    pass
-                st.rerun()
-                
-        elif st.session_state.get('rodada_terminada', False) and st.session_state.podio_liberado:
             st.markdown("<h1 style='text-align: center; color: #ffb703;'>🏆 PÓDIO DA ARENA DA FORCA 🏆</h1>", unsafe_allow_html=True)
             st.write("")
             try:
                 res_v = supabase.table("forca_disputa_ranking").select("*").neq("jogador", "TREINAMENTOWLI").order("pontos", desc=True).execute().data
                 if res_v and len(res_v) > 0:
-                    max_p = res_v[0]['pontos']
+                    max_p = res_v['pontos']
                     lista_campeoes = [x for x in res_v if x['pontos'] == max_p]
                     
-                    col_v_esq, col_v_centro, col_v_dir = st.columns([1, 2, 1])
+                    col_v_esq, col_v_centro, col_v_dir = st.columns()
                     with col_v_centro:
                         for campeao in lista_campeoes:
                             avatar_num = campeao.get("forca_avatar_num", None)
@@ -508,4 +524,11 @@ if st.session_state.jogador == "TREINAMENTOWLI":
             except Exception:
                 st.error("Erro ao gerar a lista de vencedores.")
         else:
-            st.info("O Pódio dos Campeões será montado aqui assim que a Arena da Forca for encerrada.")
+            if st.button("🏆 LIBERAR EXIBIÇÃO DO CAMPEÃO NO TELÃO", type="primary", use_container_width=True, key="btn_mestre_liberar_podio"):
+                st.session_state.podio_liberado = True
+                st.toast("Pódio liberado!")
+                try:
+                    supabase.table("forca_disputa_arena").update({"ultimo_jogador": "SISTEMA"}).eq("id", 1).execute()
+                except Exception:
+                    pass
+                st.rerun()
